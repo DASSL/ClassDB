@@ -35,7 +35,7 @@ GRANT CONNECT ON DATABASE current_database() TO Student;
 
 --The following procedure creates a user, given a username and password. It also creates a
 -- schema for the new user and gives them appropriate permissions for that schema.
-CREATE OR REPLACE FUNCTION classdb.createUser(userName name, initialPassword text) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION classdb.createUser(userName NAME, initialPassword TEXT) RETURNS VOID AS
 $$
 DECLARE
     valueExists BOOLEAN;
