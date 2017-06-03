@@ -74,7 +74,7 @@ BEGIN
     ELSIF schoolID IS NOT NULL THEN
         PERFORM classdb.createUser(userName, schoolID);
     ELSE
-        PERFORM classdb.createUser(userName, (userName::TEXT));
+        PERFORM classdb.createUser(userName, userName::TEXT);
     END IF;
     EXECUTE format('GRANT Student TO %I', userName);
     EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', userName);
@@ -83,11 +83,11 @@ END
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION createStudent(userName NAME, studentName VARCHAR(100),
+REVOKE ALL ON FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
     schoolID VARCHAR(20) DEFAULT NULL, initialPassword TEXT DEFAULT NULL) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION createStudent(userName NAME, studentName VARCHAR(100),
+GRANT EXECUTE ON FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
     schoolID VARCHAR(20) DEFAULT NULL, initialPassword TEXT DEFAULT NULL) TO DBManager;
-GRANT EXECUTE ON FUNCTION createStudent(userName NAME, studentName VARCHAR(100),
+GRANT EXECUTE ON FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
     schoolID VARCHAR(20) DEFAULT NULL, initialPassword TEXT DEFAULT NULL) TO Instructor;
 
 
