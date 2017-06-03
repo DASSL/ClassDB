@@ -2,7 +2,7 @@
 --
 --createGroups.sql
 --
---Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-01
+--Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-02
 
 --This script should be run as a superuser or equivalent role, due to the functions being
 -- declared SECURITY DEFINER, along with the need to properly set object ownership.
@@ -35,27 +35,31 @@ GRANT CONNECT ON DATABASE current_database() TO Student;
 
 --The following procedure creates a user, given a username and password. It also creates a
 -- schema for the new user and gives them appropriate permissions for that schema.
-CREATE OR REPLACE FUNCTION createUser(userName VARCHAR(25), password VARCHAR(128)) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION admin.createUser(userName name, initialPassword text) RETURNS VOID AS
 $$
 DECLARE
-    userExists BOOLEAN;
+    valueExists BOOLEAN;
 BEGIN
-    EXECUTE format('SELECT 1 FROM pg_roles WHERE rolname = %L', userName) INTO userExists;
-    IF userExists THEN
-        RAISE EXCEPTION 'User: "%" already exists', userName;
+    EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO valueExists;
+    IF valueExists THEN
+        RAISE NOTICE 'User "%" already exists', userName;
     ELSE
-        userName := lower(userName);
-        EXECUTE format('CREATE USER %I ENCRYPTED PASSWORD %L', userName, password);
-        EXECUTE format('CREATE SCHEMA %I', userName);
-        EXECUTE format('GRANT ALL PRIVILEGES ON SCHEMA %I TO %I', userName, userName);
-        EXECUTE format('ALTER USER %I SET search_path = %I', userName, userName);
+        EXECUTE format('CREATE USER %I ENCRYPTED PASSWORD %L', userName, initialPassword);
     END IF;
+
+    EXECUTE format('SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname = %L', userName) INTO valueExists;
+    IF valueExists THEN
+        RAISE NOTICE 'Schema "%" already exists', userName;
+    ELSE
+        EXECUTE format('CREATE SCHEMA %I', userName);
+    END IF;
+
+    EXECUTE format('GRANT ALL PRIVILEGES ON SCHEMA %I TO %I', userName, userName);
 END
-$$ LANGUAGE plpgsql
-    SECURITY DEFINER
-    SET search_path = public, pg_catalog, pg_temp;
-REVOKE ALL ON FUNCTION createUser(userName VARCHAR(25), password VARCHAR(128)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION createUser(userName VARCHAR(25), password VARCHAR(128)) TO Admin;
+$$  LANGUAGE plpgsql
+    SECURITY DEFINER;
+REVOKE ALL ON FUNCTION createUser(userName name, initialPassword text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION createUser(userName name, initialPassword text) TO Admin;
 
 
 --Creates a role for a student given a username and password. This procedure gives both the
