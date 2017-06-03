@@ -113,32 +113,41 @@ REVOKE ALL ON FUNCTION classdb.createInstructor(userName NAME, instructorName VA
 GRANT EXECUTE ON FUNCTION classdb.createInstructor(userName NAME, instructorName VARCHAR(100),
     initialPassword TEXT DEFAULT NULL) TO DBManager;
 
---The folowing procedure removes a student. The student's schema, and the objects contained within
--- are removed, along with the the role representing the student, and the student's entry in
--- the Student table.
-CREATE OR REPLACE FUNCTION dropStudent(userName VARCHAR(25)) RETURNS VOID AS
+--The folowing procedure revokes the Student role from a student, along with their entry in the
+-- classdb.Student table. If the Student role was the only role that the student was a member
+-- of, the student's schema, and the objects contained within, are removed along with the the
+-- role representing the student.
+CREATE OR REPLACE FUNCTION classdb.dropStudent(userName NAME) RETURNS VOID AS
 $$
 DECLARE
     userExists BOOLEAN;
+    hasOtherRoles BOOLEAN;
 BEGIN
-    EXECUTE format('SELECT 1 FROM pg_roles WHERE rolname = %L', userName) INTO userExists;
+    EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
     IF
         userExists AND
         pg_has_role(userName, 'student', 'member')
     THEN
-        EXECUTE format('DROP SCHEMA %I CASCADE', userName);
-        EXECUTE format('DELETE FROM Student S WHERE S.userName = %L', userName);
-        EXECUTE format('DROP ROLE %I', userName);
+        EXECUTE format('REVOKE Student FROM %I', userName);
+        --EXECUTE format('DELETE FROM classdb.Student S WHERE S.userName = %L', userName);
+        EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_has_role(%L, oid, ''member'')'
+            || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
+        IF hasOtherRoles THEN
+            RAISE NOTICE 'User "%" is a member of one or more additional roles', userName;
+        ELSE
+            EXECUTE format('DROP SCHEMA %I CASCADE', userName);
+            EXECUTE format('DROP ROLE %I', userName);
+        END IF;
     ELSE
-        RAISE EXCEPTION 'User: "%" is not a registered student', userName;
+        RAISE NOTICE 'User "%" is not a registered student', userName;
     END IF;
 END
 $$  LANGUAGE plpgsql
-    SECURITY DEFINER
-    SET search_path = classdb, public, pg_catalog, pg_temp;
-REVOKE ALL ON FUNCTION dropStudent(userName VARCHAR(25)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO DBManager;
-GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO Instructor;
+    SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION classdb.dropStudent(userName NAME) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO Instructor;
 
 --The folowing procedure removes a instructor. The instructor's schema, and the objects contained
 -- within are removed, along with the the role representing the instructor, and the instructor's
