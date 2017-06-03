@@ -62,22 +62,33 @@ REVOKE ALL ON FUNCTION createUser(userName name, initialPassword text) FROM PUBL
 GRANT EXECUTE ON FUNCTION createUser(userName name, initialPassword text) TO DBManager;
 
 
---Creates a role for a student given a username and password. This procedure gives both the
--- student and Instructors appropriate privilages.
-CREATE OR REPLACE FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) RETURNS VOID AS
+--Creates a role for a student and assigns them to the Student role, given a username, name,
+-- and optional schoolID and password. This proceedure also gives Instructors read access
+-- (USAGE) to the new student's schema.
+CREATE OR REPLACE FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
+    schoolID VARCHAR(20) DEFAULT NULL, initialPassword TEXT DEFAULT NULL) RETURNS VOID AS
 $$
 BEGIN
-  PERFORM createUser(userName, ID);
-  EXECUTE format('GRANT Student TO %I', lower(userName));
-  EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', userName);
-  EXECUTE format('INSERT INTO Student VALUES(%L, %L, %L)', ID, lower(userName), name);
+    IF initialPassword IS NOT NULL THEN
+        PERFORM classdb.createUser(userName, initialPassword);
+    ELSIF schoolID IS NOT NULL THEN
+        PERFORM classdb.createUser(userName, schoolID);
+    ELSE
+        PERFORM classdb.createUser(userName, (userName::TEXT));
+    END IF;
+    EXECUTE format('GRANT Student TO %I', userName);
+    EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', userName);
+    --EXECUTE format('INSERT INTO classdb.Student VALUES(%L, %L, %L)', schoolID, userName, studentName);
 END
 $$  LANGUAGE plpgsql
-    SECURITY DEFINER
-    SET search_path = classdb, public, pg_catalog, pg_temp;
-REVOKE ALL ON FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO DBManager;
-GRANT EXECUTE ON FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO Instructor;
+    SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION createStudent(userName NAME, studentName VARCHAR(100),
+    schoolID VARCHAR(20) DEFAULT NULL, initialPassword TEXT DEFAULT NULL) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION createStudent(userName NAME, studentName VARCHAR(100),
+    schoolID VARCHAR(20) DEFAULT NULL, initialPassword TEXT DEFAULT NULL) TO DBManager;
+GRANT EXECUTE ON FUNCTION createStudent(userName NAME, studentName VARCHAR(100),
+    schoolID VARCHAR(20) DEFAULT NULL, initialPassword TEXT DEFAULT NULL) TO Instructor;
 
 
 --Creates a role for an instructor given a username and password. The procedure also
