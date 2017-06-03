@@ -91,20 +91,27 @@ GRANT EXECUTE ON FUNCTION createStudent(userName NAME, studentName VARCHAR(100),
     schoolID VARCHAR(20) DEFAULT NULL, initialPassword TEXT DEFAULT NULL) TO Instructor;
 
 
---Creates a role for an instructor given a username and password. The procedure also
--- adds this new instuctor to the appropriate group, but does not create any schemas.
-CREATE OR REPLACE FUNCTION createInstructor(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) RETURNS VOID AS
+--Creates a role for an instructor given a username, name, and optional password.
+-- The procedure also gives appropriate permission to the instructor.
+CREATE OR REPLACE FUNCTION classdb.createInstructor(userName NAME, instructorName VARCHAR(100),
+    initialPassword TEXT DEFAULT NULL) RETURNS VOID AS
 $$
 BEGIN
-  PERFORM createUser(userName, ID);
-  EXECUTE format('GRANT Instructor TO %I', lower(userName));
-  EXECUTE format('INSERT INTO Instructor VALUES(%L, %L, %L)', ID, lower(userName), name);
+    IF initialPassword IS NOT NULL THEN
+        PERFORM classdb.createUser(userName, initialPassword);
+    ELSE
+        PERFORM classdb.createUser(userName, userName::TEXT);
+    END IF;
+    EXECUTE format('GRANT Instructor TO %I', userName);
+    --EXECUTE format('INSERT INTO classdb.Instructor VALUES(%L, %L, %L)', ID, userName, name);
 END
 $$  LANGUAGE plpgsql
-    SECURITY DEFINER
-    SET search_path = classdb, public, pg_catalog, pg_temp;
-REVOKE ALL ON FUNCTION createInstructor(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION createInstructor(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO DBManager;
+    SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION classdb.createInstructor(userName NAME, instructorName VARCHAR(100),
+    initialPassword TEXT DEFAULT NULL) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.createInstructor(userName NAME, instructorName VARCHAR(100),
+    initialPassword TEXT DEFAULT NULL) TO DBManager;
 
 --The folowing procedure removes a student. The student's schema, and the objects contained within
 -- are removed, along with the the role representing the student, and the student's entry in
