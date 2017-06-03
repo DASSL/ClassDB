@@ -7,11 +7,11 @@
 --This script should be run as a superuser or equivalent role, due to the functions being
 -- declared SECURITY DEFINER, along with the need to properly set object ownership.
 
---This script creates roles for students, instructors, and admins. Then, sudents are prevented
--- from modiying the public schema, and a classdb schema is created. Following that, a stored
--- procedure for creating any type of user is defined. Finally, procedures for creating and
--- dropping students and instructors are defined. Currently this script also creates Student
--- and Instructor tables in the classdb schema.
+--This script creates roles for students, instructors, and database managers (administrators).
+-- Then, sudents are prevented from modiying the public schema, and a classdb schema is created.
+-- Following that, a stored procedure for creating any type of user is defined. Finally,
+-- procedures for creating and dropping students and instructors are defined. Currently this
+-- script also creates Student and Instructor tables in the classdb schema.
 
 --TODO: Test for to see if current user is a superuser or equivalent; raise exception if not
 
@@ -59,7 +59,7 @@ END
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
 REVOKE ALL ON FUNCTION createUser(userName name, initialPassword text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION createUser(userName name, initialPassword text) TO Admin;
+GRANT EXECUTE ON FUNCTION createUser(userName name, initialPassword text) TO DBManager;
 
 
 --Creates a role for a student given a username and password. This procedure gives both the
@@ -76,7 +76,7 @@ $$  LANGUAGE plpgsql
     SECURITY DEFINER
     SET search_path = classdb, public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO Admin;
+GRANT EXECUTE ON FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO DBManager;
 GRANT EXECUTE ON FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO Instructor;
 
 
@@ -93,7 +93,7 @@ $$  LANGUAGE plpgsql
     SECURITY DEFINER
     SET search_path = classdb, public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION createInstructor(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION createInstructor(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO Admin;
+GRANT EXECUTE ON FUNCTION createInstructor(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO DBManager;
 
 --The folowing procedure removes a student. The student's schema, and the objects contained within
 -- are removed, along with the the role representing the student, and the student's entry in
@@ -119,7 +119,7 @@ $$  LANGUAGE plpgsql
     SECURITY DEFINER
     SET search_path = classdb, public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION dropStudent(userName VARCHAR(25)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO Admin;
+GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO DBManager;
 GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO Instructor;
 
 --The folowing procedure removes a instructor. The instructor's schema, and the objects contained
@@ -146,7 +146,7 @@ $$  LANGUAGE plpgsql
     SECURITY DEFINER
     SET search_path = classdb, public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION dropStudent(userName VARCHAR(25)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO Admin;
+GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO DBManager;
 
 --The following procedure sets a user's search_path to "$userName, shelter, pvfc, public". An
 -- exception is raised if the user does not exist.
@@ -168,7 +168,7 @@ $$  LANGUAGE plpgsql
     SECURITY DEFINER
     SET search_path = public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION setCS205SearchPath(userName VARCHAR(25)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION setCS205SearchPath(userName VARCHAR(25)) TO Admin;
+GRANT EXECUTE ON FUNCTION setCS205SearchPath(userName VARCHAR(25)) TO DBManager;
 GRANT EXECUTE ON FUNCTION setCS205SearchPath(userName VARCHAR(25)) TO Instructor;
 
 
