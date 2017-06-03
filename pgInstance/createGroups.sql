@@ -8,10 +8,10 @@
 -- declared SECURITY DEFINER, along with the need to properly set object ownership.
 
 --This script creates roles for students, instructors, and admins. Then, sudents are prevented
--- from modiying the public schema, and an admin schema is created. Following that, a stored
+-- from modiying the public schema, and a classdb schema is created. Following that, a stored
 -- procedure for creating any type of user is defined. Finally, procedures for creating and
 -- dropping students and instructors are defined. Currently this script also creates Student
--- and Instructor tables in the admin schema.
+-- and Instructor tables in the classdb schema.
 
 --TODO: Test for to see if current user is a superuser or equivalent; raise exception if not
 
@@ -26,7 +26,7 @@ CREATE ROLE Instructor;
 --Group equivalent for managing permissions for users who manage the database
 CREATE ROLE DBManager;
 --Creates a schema for holding administrative information
-CREATE SCHEMA admin;
+CREATE SCHEMA classdb;
 
 --Allows appropriate users to connect to the database
 GRANT CONNECT ON DATABASE current_database() TO DBManager;
@@ -35,7 +35,7 @@ GRANT CONNECT ON DATABASE current_database() TO Student;
 
 --The following procedure creates a user, given a username and password. It also creates a
 -- schema for the new user and gives them appropriate permissions for that schema.
-CREATE OR REPLACE FUNCTION admin.createUser(userName name, initialPassword text) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION classdb.createUser(userName name, initialPassword text) RETURNS VOID AS
 $$
 DECLARE
     valueExists BOOLEAN;
@@ -74,7 +74,7 @@ BEGIN
 END
 $$  LANGUAGE plpgsql
     SECURITY DEFINER
-    SET search_path = admin, public, pg_catalog, pg_temp;
+    SET search_path = classdb, public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO Admin;
 GRANT EXECUTE ON FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO Instructor;
@@ -91,7 +91,7 @@ BEGIN
 END
 $$  LANGUAGE plpgsql
     SECURITY DEFINER
-    SET search_path = admin, public, pg_catalog, pg_temp;
+    SET search_path = classdb, public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION createInstructor(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION createInstructor(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO Admin;
 
@@ -117,7 +117,7 @@ BEGIN
 END
 $$  LANGUAGE plpgsql
     SECURITY DEFINER
-    SET search_path = admin, public, pg_catalog, pg_temp;
+    SET search_path = classdb, public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION dropStudent(userName VARCHAR(25)) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO Admin;
 GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO Instructor;
@@ -144,7 +144,7 @@ BEGIN
 END
 $$  LANGUAGE plpgsql
     SECURITY DEFINER
-    SET search_path = admin, public, pg_catalog, pg_temp;
+    SET search_path = classdb, public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION dropStudent(userName VARCHAR(25)) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO Admin;
 
@@ -173,14 +173,14 @@ GRANT EXECUTE ON FUNCTION setCS205SearchPath(userName VARCHAR(25)) TO Instructor
 
 
 --The following tables hold the list of currently registered students and instructors
-CREATE TABLE admin.Student
+CREATE TABLE classdb.Student
 (
 	ID VARCHAR(20) PRIMARY KEY,
 	UserName VARCHAR(25),
 	Name VARCHAR(100)
 );
 
-CREATE TABLE admin.Instructor
+CREATE TABLE classdb.Instructor
 (
 	ID VARCHAR(20) PRIMARY KEY,
 	UserName VARCHAR(25),
