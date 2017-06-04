@@ -2,7 +2,7 @@
 --
 --createGroups.sql
 --
---Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-02
+--Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-03
 
 --This script should be run as a superuser or equivalent role, due to the functions being
 -- declared SECURITY DEFINER, along with the need to properly set object ownership.
@@ -15,23 +15,24 @@
 
 --TODO: Test for to see if current user is a superuser or equivalent; raise exception if not
 
---Group equivalent for managing permissions for students
+--Group equivalents for managing permissions for students, instructors, and managers of the DB
 CREATE ROLE Student;
---Removes the ability for students to modify the "public" schema for the current database
-REVOKE CREATE ON SCHEMA public FROM Student;
-
---Group equivalent for managing permissions for instructors
 CREATE ROLE Instructor;
-
---Group equivalent for managing permissions for users who manage the database
 CREATE ROLE DBManager;
---Creates a schema for holding administrative information
-CREATE SCHEMA classdb;
+
 
 --Allows appropriate users to connect to the database
 GRANT CONNECT ON DATABASE current_database() TO DBManager;
 GRANT CONNECT ON DATABASE current_database() TO Instructor;
 GRANT CONNECT ON DATABASE current_database() TO Student;
+
+--Removes the ability for students to modify the "public" schema for the current database
+REVOKE CREATE ON SCHEMA public FROM Student;
+
+
+--Creates a schema for holding administrative information
+CREATE SCHEMA classdb;
+
 
 --The following procedure creates a user, given a username and password. It also creates a
 -- schema for the new user and gives them appropriate permissions for that schema.
@@ -58,6 +59,7 @@ BEGIN
 END
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
+
 REVOKE ALL ON FUNCTION createUser(userName name, initialPassword text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION createUser(userName name, initialPassword text) TO DBManager;
 
@@ -113,6 +115,7 @@ REVOKE ALL ON FUNCTION classdb.createInstructor(userName NAME, instructorName VA
 GRANT EXECUTE ON FUNCTION classdb.createInstructor(userName NAME, instructorName VARCHAR(100),
     initialPassword TEXT DEFAULT NULL) TO DBManager;
 
+
 --The folowing procedure revokes the Student role from a student, along with their entry in the
 -- classdb.Student table. If the Student role was the only role that the student was a member
 -- of, the student's schema, and the objects contained within, are removed along with the the
@@ -149,6 +152,7 @@ REVOKE ALL ON FUNCTION classdb.dropStudent(userName NAME) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO Instructor;
 
+
 --The folowing procedure revokes the Instructor role from an Instructor, along with their entry
 -- in the classdb.Instructor table. If the Instructor role was the only role that the
 -- instructor was a member of, the instructor's schema, and the objects contained within, are
@@ -183,6 +187,7 @@ $$  LANGUAGE plpgsql
 
 REVOKE ALL ON FUNCTION classdb.dropStudent(userName NAME) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO DBManager;
+
 
 --The following procedure sets a user's search_path to a new specified search_path. An
 -- notice is raised if the user does not exist.
@@ -221,11 +226,3 @@ CREATE TABLE classdb.Instructor
 	userName NAME NOT NULL PRIMARY KEY,
 	instructorName VARCHAR(100)
 );
-
-
---Creates a sample student and instructor
---SELECT createStudent('Ramsey033', '50045123');
---SELECT createInstructor('WestP', '123999888');
-
---Note that in order to drop the roles, all objects beloging to the role must also be
--- dropped before doing so.
