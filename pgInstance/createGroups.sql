@@ -211,16 +211,15 @@ GRANT EXECUTE ON FUNCTION classdb.setSearchPath(userName NAME, newPath TEXT) TO 
 --The following tables hold the list of currently registered students and instructors
 CREATE TABLE classdb.Student
 (
-	ID VARCHAR(20) PRIMARY KEY,
-	UserName VARCHAR(25),
-	Name VARCHAR(100)
+	userName NAME NOT NULL PRIMARY KEY,
+	studentName VARCHAR(100),
+    schoolID VARCHAR(20)
 );
 
 CREATE TABLE classdb.Instructor
 (
-	ID VARCHAR(20) PRIMARY KEY,
-	UserName VARCHAR(25),
-	Name VARCHAR(100)
+	userName NAME NOT NULL PRIMARY KEY,
+	instructorName VARCHAR(100)
 );
 
 
