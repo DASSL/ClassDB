@@ -184,28 +184,28 @@ $$  LANGUAGE plpgsql
 REVOKE ALL ON FUNCTION classdb.dropStudent(userName NAME) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO DBManager;
 
---The following procedure sets a user's search_path to "$userName, shelter, pvfc, public". An
--- exception is raised if the user does not exist.
-CREATE OR REPLACE FUNCTION setCS205SearchPath(userName VARCHAR(25)) RETURNS VOID AS
+--The following procedure sets a user's search_path to a new specified search_path. An
+-- notice is raised if the user does not exist.
+CREATE OR REPLACE FUNCTION classdb.setSearchPath(userName NAME, newPath TEXT) RETURNS VOID AS
 $$
 DECLARE
     userExists BOOLEAN;
 BEGIN
-    EXECUTE format('SELECT 1 FROM pg_roles WHERE rolname = %L', userName) INTO userExists;
+    EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
     IF
         userExists
     THEN
-        EXECUTE format('ALTER USER %I SET search_path = %I, shelter, pvfc, public', userName, userName);
+        EXECUTE format('ALTER USER %I SET search_path = %L', userName, newPath);
     ELSE
-        RAISE EXCEPTION 'User: "%" does not exist', userName;
+        RAISE NOTICE 'User "%" does not exist', userName;
     END IF;
 END
 $$  LANGUAGE plpgsql
-    SECURITY DEFINER
-    SET search_path = public, pg_catalog, pg_temp;
-REVOKE ALL ON FUNCTION setCS205SearchPath(userName VARCHAR(25)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION setCS205SearchPath(userName VARCHAR(25)) TO DBManager;
-GRANT EXECUTE ON FUNCTION setCS205SearchPath(userName VARCHAR(25)) TO Instructor;
+    SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION classdb.setSearchPath(userName NAME, newPath TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.setSearchPath(userName NAME, newPath TEXT) TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.setSearchPath(userName NAME, newPath TEXT) TO Instructor;
 
 
 --The following tables hold the list of currently registered students and instructors
