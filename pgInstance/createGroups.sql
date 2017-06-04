@@ -149,31 +149,40 @@ REVOKE ALL ON FUNCTION classdb.dropStudent(userName NAME) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO Instructor;
 
---The folowing procedure removes a instructor. The instructor's schema, and the objects contained
--- within are removed, along with the the role representing the instructor, and the instructor's
--- entry in the instructor table.
-CREATE OR REPLACE FUNCTION dropInstructor(userName VARCHAR(25)) RETURNS VOID AS
+--The folowing procedure revokes the Instructor role from an Instructor, along with their entry
+-- in the classdb.Instructor table. If the Instructor role was the only role that the
+-- instructor was a member of, the instructor's schema, and the objects contained within, are
+-- removed along with the the role representing the instructor.
+CREATE OR REPLACE FUNCTION classdb.dropInstructor(userName NAME) RETURNS VOID AS
 $$
 DECLARE
     userExists BOOLEAN;
+    hasOtherRoles BOOLEAN;
 BEGIN
-    EXECUTE format('SELECT 1 FROM pg_roles WHERE rolname = %L', userName) INTO userExists;
+    EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
     IF
         userExists AND
         pg_has_role(userName, 'instructor', 'member')
     THEN
-        EXECUTE format('DROP SCHEMA %I CASCADE', userName);
-        EXECUTE format('DELETE FROM Instructor S WHERE S.userName = %L', userName);
-        EXECUTE format('DROP ROLE %I', userName);
+        EXECUTE format('REVOKE Instructor FROM %I', userName);
+        --EXECUTE format('DELETE FROM classdb.Instructor S WHERE S.userName = %L', userName);
+        EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_has_role(%L, oid, ''member'')'
+            || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
+        IF hasOtherRoles THEN
+            RAISE NOTICE 'User "%" remains a member of one or more additional roles', userName;
+        ELSE
+            EXECUTE format('DROP SCHEMA %I CASCADE', userName);
+            EXECUTE format('DROP ROLE %I', userName);
+        END IF;
     ELSE
-        RAISE EXCEPTION 'User: "%" is not a registered instructor', userName;
+        RAISE NOTICE 'User "%" is not a registered instructor', userName;
     END IF;
 END
 $$  LANGUAGE plpgsql
-    SECURITY DEFINER
-    SET search_path = classdb, public, pg_catalog, pg_temp;
-REVOKE ALL ON FUNCTION dropStudent(userName VARCHAR(25)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO DBManager;
+    SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION classdb.dropStudent(userName NAME) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO DBManager;
 
 --The following procedure sets a user's search_path to "$userName, shelter, pvfc, public". An
 -- exception is raised if the user does not exist.
