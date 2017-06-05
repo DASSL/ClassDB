@@ -1,8 +1,8 @@
---Andrew Figueroa
+--Andrew Figueroa, Steven Rollo
 --
 --createGroups.sql
 --
---Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-01
+--Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-05
 
 --This script should be run as a superuser or equivalent role, due to the functions being
 -- declared SECURITY DEFINER, along with the need to properly set object ownership.
@@ -12,7 +12,7 @@
 -- procedure for creating any type of user is defined. Finally, procedures for creating and
 -- dropping students and instructors are defined. Currently this script also creates Student
 -- and Instructor tables in the admin schema.
-
+--Additionally, an event trigger records the timestamp of the last ddl statement issued by each student
 --TODO: Test for to see if current user is a superuser or equivalent; raise exception if not
 
 --Group equivalent for managing permissions for students
@@ -29,9 +29,19 @@ CREATE ROLE DBManager;
 CREATE SCHEMA admin;
 
 --Allows appropriate users to connect to the database
-GRANT CONNECT ON DATABASE current_database() TO DBManager;
-GRANT CONNECT ON DATABASE current_database() TO Instructor;
-GRANT CONNECT ON DATABASE current_database() TO Student;
+DO
+$$
+DECLARE
+	currentDB TEXT;
+BEGIN
+	currentDB := current_database();
+	--Postgres grants CONNECT to public by default
+	EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM PUBLIC', currentDB);
+	EXECUTE format('GRANT CONNECT ON DATABASE %I TO DBManager', currentDB);
+	EXECUTE format('GRANT CONNECT ON DATABASE %I TO Instructor', currentDB);
+	EXECUTE format('GRANT CONNECT ON DATABASE %I TO Student', currentDB);
+END 
+$$;
 
 --The following procedure creates a user, given a username and password. It also creates a
 -- schema for the new user and gives them appropriate permissions for that schema.
@@ -55,7 +65,7 @@ $$ LANGUAGE plpgsql
     SECURITY DEFINER
     SET search_path = public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION createUser(userName VARCHAR(25), password VARCHAR(128)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION createUser(userName VARCHAR(25), password VARCHAR(128)) TO Admin;
+GRANT EXECUTE ON FUNCTION createUser(userName VARCHAR(25), password VARCHAR(128)) TO dbmanager;
 
 
 --Creates a role for a student given a username and password. This procedure gives both the
@@ -72,7 +82,7 @@ $$  LANGUAGE plpgsql
     SECURITY DEFINER
     SET search_path = admin, public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO Admin;
+GRANT EXECUTE ON FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO dbmanager;
 GRANT EXECUTE ON FUNCTION createStudent(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO Instructor;
 
 
@@ -89,7 +99,7 @@ $$  LANGUAGE plpgsql
     SECURITY DEFINER
     SET search_path = admin, public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION createInstructor(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION createInstructor(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO Admin;
+GRANT EXECUTE ON FUNCTION createInstructor(ID VARCHAR(20), userName VARCHAR(25), name VARCHAR(100)) TO dbmanager;
 
 --The folowing procedure removes a student. The student's schema, and the objects contained within
 -- are removed, along with the the role representing the student, and the student's entry in
@@ -115,7 +125,7 @@ $$  LANGUAGE plpgsql
     SECURITY DEFINER
     SET search_path = admin, public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION dropStudent(userName VARCHAR(25)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO Admin;
+GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO dbmanager;
 GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO Instructor;
 
 --The folowing procedure removes a instructor. The instructor's schema, and the objects contained
@@ -142,7 +152,7 @@ $$  LANGUAGE plpgsql
     SECURITY DEFINER
     SET search_path = admin, public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION dropStudent(userName VARCHAR(25)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO Admin;
+GRANT EXECUTE ON FUNCTION dropStudent(userName VARCHAR(25)) TO dbmanager;
 
 --The following procedure sets a user's search_path to "$userName, shelter, pvfc, public". An
 -- exception is raised if the user does not exist.
@@ -164,7 +174,7 @@ $$  LANGUAGE plpgsql
     SECURITY DEFINER
     SET search_path = public, pg_catalog, pg_temp;
 REVOKE ALL ON FUNCTION setCS205SearchPath(userName VARCHAR(25)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION setCS205SearchPath(userName VARCHAR(25)) TO Admin;
+GRANT EXECUTE ON FUNCTION setCS205SearchPath(userName VARCHAR(25)) TO dbmanager;
 GRANT EXECUTE ON FUNCTION setCS205SearchPath(userName VARCHAR(25)) TO Instructor;
 
 
@@ -173,7 +183,8 @@ CREATE TABLE admin.Student
 (
 	ID VARCHAR(20) PRIMARY KEY,
 	UserName VARCHAR(25),
-	Name VARCHAR(100)
+	Name VARCHAR(100),
+	LastActivity TIMESTAMPTZ --Will hold timestamp of the last ddl command issued by the student
 );
 
 CREATE TABLE admin.Instructor
@@ -183,6 +194,28 @@ CREATE TABLE admin.Instructor
 	Name VARCHAR(100)
 );
 
+--This function updates the LastActivity field for a given student
+CREATE OR REPLACE FUNCTION admin.UpdateStudentActivity()
+RETURNS event_trigger
+AS
+$$
+BEGIN
+	UPDATE admin.Student 
+	SET LastActivity = (SELECT statement_timestamp())
+	WHERE UserName = session_user::text;
+END;
+$$
+LANGUAGE plpgsql
+SECURITY DEFINER;
+
+--Event triggers to update user last activity time on DDL events
+CREATE EVENT TRIGGER UpdateStudentActivityDDL
+ON ddl_command_end
+EXECUTE PROCEDURE admin.UpdateStudentActivity();
+
+CREATE EVENT TRIGGER UpdateStudentActivityDrop
+ON sql_drop
+EXECUTE PROCEDURE admin.UpdateStudentActivity();
 
 --Creates a sample student and instructor
 --SELECT createStudent('Ramsey033', '50045123');
