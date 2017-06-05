@@ -80,7 +80,7 @@ BEGIN
     END IF;
     EXECUTE format('GRANT Student TO %I', userName);
     EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', userName);
-    --EXECUTE format('INSERT INTO classdb.Student VALUES(%L, %L, %L)', schoolID, userName, studentName);
+    EXECUTE format('INSERT INTO classdb.Student VALUES(%L, %L, %L)', userName, studentName, schoolID);
 END
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
@@ -105,7 +105,7 @@ BEGIN
         PERFORM classdb.createUser(userName, userName::TEXT);
     END IF;
     EXECUTE format('GRANT Instructor TO %I', userName);
-    --EXECUTE format('INSERT INTO classdb.Instructor VALUES(%L, %L, %L)', ID, userName, name);
+    EXECUTE format('INSERT INTO classdb.Instructor VALUES(%L, %L, %L)', userName, instructorName);
 END
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
@@ -132,7 +132,7 @@ BEGIN
         pg_has_role(userName, 'student', 'member')
     THEN
         EXECUTE format('REVOKE Student FROM %I', userName);
-        --EXECUTE format('DELETE FROM classdb.Student S WHERE S.userName = %L', userName);
+        EXECUTE format('DELETE FROM classdb.Student S WHERE S.userName = %L', userName);
         EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_has_role(%L, oid, ''member'')'
             || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
         IF hasOtherRoles THEN
@@ -169,7 +169,7 @@ BEGIN
         pg_has_role(userName, 'instructor', 'member')
     THEN
         EXECUTE format('REVOKE Instructor FROM %I', userName);
-        --EXECUTE format('DELETE FROM classdb.Instructor S WHERE S.userName = %L', userName);
+        EXECUTE format('DELETE FROM classdb.Instructor S WHERE S.userName = %L', userName);
         EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_has_role(%L, oid, ''member'')'
             || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
         IF hasOtherRoles THEN
