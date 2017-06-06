@@ -86,11 +86,11 @@ $$  LANGUAGE plpgsql
     SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
-    schoolID VARCHAR(20) DEFAULT NULL, initialPassword TEXT DEFAULT NULL) FROM PUBLIC;
+    schoolID VARCHAR(20), initialPassword TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
-    schoolID VARCHAR(20) DEFAULT NULL, initialPassword TEXT DEFAULT NULL) TO DBManager;
+    schoolID VARCHAR(20), initialPassword TEXT) TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
-    schoolID VARCHAR(20) DEFAULT NULL, initialPassword TEXT DEFAULT NULL) TO Instructor;
+    schoolID VARCHAR(20), initialPassword TEXT) TO Instructor;
 
 
 --Creates a role for an instructor given a username, name, and optional password.
@@ -111,9 +111,9 @@ $$  LANGUAGE plpgsql
     SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.createInstructor(userName NAME, instructorName VARCHAR(100),
-    initialPassword TEXT DEFAULT NULL) FROM PUBLIC;
+    initialPassword TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.createInstructor(userName NAME, instructorName VARCHAR(100),
-    initialPassword TEXT DEFAULT NULL) TO DBManager;
+    initialPassword TEXT) TO DBManager;
 
 
 --The folowing procedure revokes the Student role from a student, along with their entry in the
