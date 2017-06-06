@@ -105,7 +105,7 @@ BEGIN
         PERFORM classdb.createUser(userName, userName::TEXT);
     END IF;
     EXECUTE format('GRANT Instructor TO %I', userName);
-    EXECUTE format('INSERT INTO classdb.Instructor VALUES(%L, %L, %L)', userName, instructorName);
+    EXECUTE format('INSERT INTO classdb.Instructor VALUES(%L, %L)', userName, instructorName);
 END
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
