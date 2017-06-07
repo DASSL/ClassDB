@@ -2,7 +2,7 @@
 --
 --testCreateGroups.sql
 --
---Users and Roles for CS205; Created: 2017-06-05; Modified 2017-06-05
+--Users and Roles for CS205; Created: 2017-06-05; Modified 2017-06-06
 
 --The following test script should be run as a superuser
 
@@ -10,27 +10,20 @@ CREATE OR REPlACE FUNCTION classdb.createUserTest() RETURNS TEXT AS
 $$
 BEGIN
     --Test createUser
-    PERFORM classdb.createUser('testUser0', 'Yvette Alexander');
-    PERFORM classdb.createUser('testUser1', 'Edwin Morrison', '101');
-    PERFORM classdb.createUser('testUser2', 'Ramon Harrington', '102', 'passw0rd');
-    PERFORM classdb.createStudent('testUser3', 'Cathy Young', NULL, 'testpass2');
+    PERFORM classdb.createUser('testUser0', 'password');
+    PERFORM classdb.createUser('lowercaseuser', 'password');
 
     -- These users should not be able to connect to the database, and since passwords are
     --  encrypted, there is not a straightfoward way to test the passwords set. However,
     --  login abilities and passwords can be tested though the creation of User and user
     --  roles in the following functions.
 
-    -- If the above lines created the roles correctly, the following 6 lines should not result
+    -- If the above lines created the roles correctly, the following 4 lines should not result
     --  in an exception.
-
-    DROP SCHEMA testUser0;
-    DROP ROLE testUser0;
-    DROP SCHEMA testUser1;
-    DROP ROLE testUser1;
-    DROP SCHEMA testUser2;
-    DROP ROLE testUser2;
-    DROP SCHEMA testUser3;
-    DROP ROLE testUser3;
+    DROP SCHEMA "testUser0";
+    DROP ROLE "testUser0";
+    DROP SCHEMA lowercaseuser;
+    DROP ROLE lowercaseuser;
 
     RETURN 'PASS';
 END
@@ -52,9 +45,7 @@ BEGIN
     PERFORM classdb.createStudent('testStudent3', 'Cathy Young', NULL, 'testpass2');
     --Multi-role: Should not result in an exception or error (NOTICE is expected), password
     -- should not change
-    CREATE ROLE testStuInst0 ENCRYPTED PASSWORD 'testPass3';
-    GRANT Instructor TO testStuInst0;
-    EXECUTE 'INSERT INTO classdb.Instructor VALUES (''testStuInst0'', ''Katie Bates'')';
+    PERFORM classdb.createInstructor('testStuInst0', 'Edwin Morrison', 'testpass3');
     PERFORM classdb.createStudent('testStuInst0', 'Edwin Morrison', '102', 'notPass');
 
     --Test existance of all schemas
@@ -127,6 +118,7 @@ BEGIN
     EXECUTE 'SELECT 1 FROM information_schema.schemata WHERE schema_name = ''testStudent4''' INTO valueExists;
     IF valueExists THEN
         RETURN 'FAIL: Code 2';
+    END IF;
 
     --Multi-role case, user is a member of both Student and Instructor roles: Schema and Role
     -- should still exist
@@ -141,10 +133,10 @@ BEGIN
             PERFORM classdb.dropInstructor('testStuInst2');
         ELSE
             RETURN 'FAIL: Code 4';
+        END IF;
     ELSE
         RETURN 'FAIL: Code 3';
     END IF;
-
     RETURN 'PASS';
 END
 $$ LANGUAGE plpgsql;
@@ -156,7 +148,7 @@ DECLARE
     valueExists BOOLEAN;
 BEGIN
     --"Normal" case, Regular Instructor: Role and schema should be dropped
-    PERFORM classdb.createInstructor('testInstructor2', 'Wayne Bates', '102', 'testpass');
+    PERFORM classdb.createInstructor('testInstructor2', 'Wayne Bates', 'testpass');
     PERFORM classdb.dropInstructor('testInstructor2');
     EXECUTE 'SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = ''testInstructor2''' INTO valueExists;
     IF valueExists THEN
@@ -165,12 +157,13 @@ BEGIN
     EXECUTE 'SELECT 1 FROM information_schema.schemata WHERE schema_name = ''testInstructor2''' INTO valueExists;
     IF valueExists THEN
         RETURN 'FAIL: Code 2';
+    END IF;
 
     --Multi-role case, user is a member of both Student and Instructor roles: Schema and Role
     -- should still exist
     PERFORM classdb.createInstructor('testStuInst3', 'Julius Patton');
     PERFORM classdb.createStudent('testStuInst3', 'Julius Paton');
-    PERFORM classdb.dropInstructor('testStuInst2');
+    PERFORM classdb.dropInstructor('testStuInst3');
 
     EXECUTE 'SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = ''testStuInst3''' INTO valueExists;
     IF valueExists THEN
@@ -179,36 +172,11 @@ BEGIN
             PERFORM classdb.dropStudent('testStuInst3');
         ELSE
             RETURN 'FAIL: Code 4';
+        END IF;
     ELSE
         RETURN 'FAIL: Code 3';
     END IF;
-
     RETURN 'PASS';
-END
-$$ LANGUAGE plpgsql;
-
-
-CREATE OR REPLACE FUNCTION classdb.setSearchPathTest() RETURNS TEXT AS
-$$
-DECLARE
-    results TEXT;
-BEGIN
-    PERFORM classdb.createStudent('testSudent5');
-    PERFORM classdb.setSearchPath('testSudent5', '$user, _pvfc, _shelter');
-
-    EXECUTE 'SELECT rs.setconfig
-        FROM   pg_db_role_setting rs
-        LEFT   JOIN pg_roles      r ON r.oid = rs.setrole
-        LEFT   JOIN pg_database   d ON d.oid = rs.setdatabase
-        WHERE  r.rolname = ''testStudent5''' INTO results;
-
-    IF results = '{"search_path=\"$user, _pvfc, _shelter\""}' THEN
-        classdb.dropStudent('testSudent5');
-        RETURN 'PASS';
-    ELSE
-        PERFORM classdb.dropStudent('testSudent5');
-        RETURN 'FAIL';
-    END IF;
 END
 $$ LANGUAGE plpgsql;
 
@@ -216,12 +184,11 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION classdb.createGroupsTest() RETURNS VOID AS
 $$
 BEGIN
-    RAISE NOTICE '%    createUserTest()', classdb.createUserTest();
-    RAISE NOTICE '%    createStudentTest()', classdb.createStudentTest();
-    RAISE NOTICE '%    createInstructorTest()' classdb.createInstructorTest();
-    RAISE NOTICE '%    dropStudentTest()', classdb.createStudentTest();
-    RAISE NOTICE '%    dropInstructorTest()', classdb.createInstructorTest();
-    RAISE NOTICE '%    setSearchPathTest()', classdb.setSearchPathTest();
+    RAISE INFO '%    createUserTest()', classdb.createUserTest();
+    RAISE INFO '%    createStudentTest()', classdb.createStudentTest();
+    RAISE INFO '%    createInstructorTest()', classdb.createInstructorTest();
+    RAISE INFO '%    dropStudentTest()', classdb.dropStudentTest();
+    RAISE INFO '%    dropInstructorTest()', classdb.dropInstructorTest();
 END
 $$  LANGUAGE plpgsql;
 

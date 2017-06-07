@@ -2,7 +2,7 @@ Andrew Figueroa
 
 testCreateGroupsREADME.txt
 
-Users and Roles for CS205; Created: 2017-06-05; Modified 2017-06-05
+Users and Roles for CS205; Created: 2017-06-05; Modified 2017-06-06
 
 ---
 Tests are run in the following order:
@@ -11,16 +11,15 @@ createStudentTest()
 createInstructorTest()
 dropStudentTest()
 dropInstructorTest()
-setSearchPathTest()
 
 ---
 PENDING Tests:
 
 In order to properly test the login capabilities and password for the Student
-and Instructor roles created, these have to be manually tested by logging in 
+and Instructor roles created, these have to be manually tested by logging in
 to the DBMS using the following usernames and passwords. Keep in mind that
-usernames and passwords are CASE SENSITIVE. After testing, please run 
-testCreateGroupsCleanup.sql
+usernames and passwords are CASE SENSITIVE. After testing, please log back in
+as a superuser and run testCreateGroupsCleanup.sql
 
 
 Students:
@@ -62,4 +61,23 @@ SELECT * FROM classdb.Instructor;
 
 The results should appear as so:
 
+SELECT * FROM classdb.Student;
+   username   |   studentname    | schooid
+--------------+------------------+---------
+ testStudent0 | Yvette Alexander |
+ testStudent1 | Edwin Morrison   | 101
+ testStudent2 | Ramon Harrington | 102
+ testStudent3 | Cathy Young      |
+ testStuInst0 | Edwin Morrison   | 102
+ testStuInst1 | Rosalie Flowers  | 106
+(6 rows)
 
+
+cs205testing=# SELECT * FROM classdb.Instructor;
+    username     | instructorname
+-----------------+-----------------
+ testStuInst0    | Edwin Morrison
+ testInstructor0 | Dave Paul
+ testInstructor1 | Dianna Wilson
+ testStuInst1    | Rosalie Flowers
+(4 rows)
