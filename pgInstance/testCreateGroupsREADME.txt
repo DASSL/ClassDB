@@ -62,7 +62,7 @@ SELECT * FROM classdb.Instructor;
 The results should appear as so:
 
 SELECT * FROM classdb.Student;
-   username   |   studentname    | schooid
+   username   |   studentname    | schoolid
 --------------+------------------+---------
  testStudent0 | Yvette Alexander |
  testStudent1 | Edwin Morrison   | 101
@@ -73,7 +73,7 @@ SELECT * FROM classdb.Student;
 (6 rows)
 
 
-cs205testing=# SELECT * FROM classdb.Instructor;
+SELECT * FROM classdb.Instructor;
     username     | instructorname
 -----------------+-----------------
  testStuInst0    | Edwin Morrison
