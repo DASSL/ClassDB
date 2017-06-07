@@ -2,7 +2,7 @@
 --
 --createGroups.sql
 --
---Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-03
+--Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-06
 
 --This script should be run as a superuser or equivalent role, due to the functions being
 -- declared SECURITY DEFINER, along with the need to properly set object ownership.
@@ -187,30 +187,6 @@ $$  LANGUAGE plpgsql
 
 REVOKE ALL ON FUNCTION classdb.dropStudent(userName NAME) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO DBManager;
-
-
---The following procedure sets a user's search_path to a new specified search_path. An
--- notice is raised if the user does not exist.
-CREATE OR REPLACE FUNCTION classdb.setSearchPath(userName NAME, newPath TEXT) RETURNS VOID AS
-$$
-DECLARE
-    userExists BOOLEAN;
-BEGIN
-    EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
-    IF
-        userExists
-    THEN
-        EXECUTE format('ALTER USER %I SET search_path = %L', userName, newPath);
-    ELSE
-        RAISE NOTICE 'User "%" does not exist', userName;
-    END IF;
-END
-$$  LANGUAGE plpgsql
-    SECURITY DEFINER;
-
-REVOKE ALL ON FUNCTION classdb.setSearchPath(userName NAME, newPath TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.setSearchPath(userName NAME, newPath TEXT) TO DBManager;
-GRANT EXECUTE ON FUNCTION classdb.setSearchPath(userName NAME, newPath TEXT) TO Instructor;
 
 
 --The following tables hold the list of currently registered students and instructors
