@@ -12,7 +12,7 @@
 --This schema has been ported to pgSQL for implementation in Postgres 9.6 while making the
 -- fewest changes possible.
 
-CREATE TABLE dog
+CREATE TABLE IF NOT EXISTS dog
 (
   dog_id        CHAR(3) NOT NULL,
   name          VARCHAR(15),
@@ -23,7 +23,7 @@ CREATE TABLE dog
   PRIMARY KEY(dog_id)
 );
 
-CREATE TABLE adopter
+CREATE TABLE IF NOT EXISTS adopter
 (
   adopter_id CHAR(3),
   fname      VARCHAR(10),
@@ -36,7 +36,7 @@ CREATE TABLE adopter
   PRIMARY KEY(adopter_id)
 );
 
-CREATE TABLE volunteer
+CREATE TABLE IF NOT EXISTS volunteer
 (
   vol_id CHAR(3),
   fname  VARCHAR(10),
@@ -46,13 +46,13 @@ CREATE TABLE volunteer
   PRIMARY KEY(vol_id)
 );
 
-CREATE TABLE responsibility
+CREATE TABLE IF NOT EXISTS responsibility
 (
   title VARCHAR(20),
   PRIMARY KEY(title)
 );
 
-CREATE TABLE vet
+CREATE TABLE IF NOT EXISTS vet
 (
   vet_id  CHAR(1),
   fname   VARCHAR(10),
@@ -65,7 +65,7 @@ CREATE TABLE vet
   PRIMARY KEY(vet_id)
 );
 
-CREATE TABLE adoption
+CREATE TABLE IF NOT EXISTS adoption
 (
   dog_id        CHAR(3),
   adopter_id    CHAR(3),
@@ -78,7 +78,7 @@ CREATE TABLE adoption
   PRIMARY KEY(dog_id, adopter_id, vol_id)
 );
 
-CREATE TABLE treatment
+CREATE TABLE IF NOT EXISTS treatment
 (
   treatment_id   CHAR(3),
   vet_id         CHAR(1),
@@ -92,7 +92,7 @@ CREATE TABLE treatment
   PRIMARY KEY(treatment_id)
 );
 
-CREATE TABLE return
+CREATE TABLE IF NOT EXISTS return
 (
   dog_id      CHAR(3),
   adopter_id  CHAR(3),
@@ -103,7 +103,7 @@ CREATE TABLE return
   PRIMARY KEY(dog_id, adopter_id)
 );
 
-CREATE TABLE assignment
+CREATE TABLE IF NOT EXISTS assignment
 (
   vol_id         CHAR(3),
   responsibility VARCHAR(20),
