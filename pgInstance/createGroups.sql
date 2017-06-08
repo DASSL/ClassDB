@@ -5,7 +5,7 @@
 --Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-07
 
 
---This script should be run as a superuser or equivalent role, due to the functions being
+--This script should be run as a user with createrole privilages, due to the functions being
 -- declared SECURITY DEFINER, along with the need to properly set object ownership.
 
 --This script creates roles for students, instructors, and database managers (administrators).
@@ -15,12 +15,38 @@
 -- script also creates Student and Instructor tables in the classdb schema, and an event trigger
 -- that records the timestamp of the last ddl statement issued by each student.
 
---TODO: Test for to see if current user is a superuser or equivalent; raise exception if not
+START TRANSACTION;
+--Tests for suepruser privilage on current_user
+DO
+$$
+DECLARE
+	isSuper BOOLEAN;
+BEGIN
+	EXECUTE 'SELECT rolsuper FROM pg_catalog.pg_roles WHERE rolname = current_user' INTO isSuper;
+	IF isSuper THEN --do nothing
+	ELSE
+		RAISE EXCEPTION 'Insufficient privilages for script: must be run as a superuser';
+	END IF;
+END
+$$;
 
 --Group equivalents for managing permissions for students, instructors, and managers of the DB
-CREATE ROLE Student;
-CREATE ROLE Instructor;
-CREATE ROLE DBManager;
+DO
+$$
+BEGIN
+	IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'student') THEN
+		CREATE ROLE Student;
+	END IF;
+
+	IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'instructor') THEN
+		CREATE ROLE Instructor;
+	END IF;
+
+	IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'dbmanager') THEN
+		CREATE ROLE DBManager;
+	END IF;
+END
+$$;
 
 
 --Allows appropriate users to connect to the database
@@ -43,7 +69,7 @@ REVOKE CREATE ON SCHEMA public FROM Student;
 
 
 --Creates a schema for holding administrative information
-CREATE SCHEMA classdb;
+CREATE SCHEMA IF NOT EXISTS classdb;
 
 
 --The following procedure creates a user, given a username and password. It also creates a
@@ -202,7 +228,7 @@ GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName NAME) TO DBManager;
 
 
 --The following tables hold the list of currently registered students and instructors
-CREATE TABLE classdb.Student
+CREATE TABLE IF NOT EXISTS classdb.Student
 (
 	userName NAME NOT NULL PRIMARY KEY,
 	studentName VARCHAR(100),
@@ -210,7 +236,7 @@ CREATE TABLE classdb.Student
 	LastActivity TIMESTAMPTZ --holds timestamp of the last ddl command issued by the student
 );
 
-CREATE TABLE classdb.Instructor
+CREATE TABLE IF NOT EXISTS classdb.Instructor
 (
 	userName NAME NOT NULL PRIMARY KEY,
 	instructorName VARCHAR(100)
@@ -228,10 +254,17 @@ $$  LANGUAGE plpgsql
 	SECURITY DEFINER;
 
 --Event triggers to update user last activity time on DDL events
+DROP EVENT TRIGGER IF EXISTS UpdateStudentActivityDDL;
+
 CREATE EVENT TRIGGER UpdateStudentActivityDDL
 ON ddl_command_end
 EXECUTE PROCEDURE classdb.UpdateStudentActivity();
 
+
+DROP EVENT TRIGGER IF EXISTS UpdateStudentActivityDrop;
+
 CREATE EVENT TRIGGER UpdateStudentActivityDrop
 ON sql_drop
 EXECUTE PROCEDURE classdb.UpdateStudentActivity();
+
+COMMIT;
