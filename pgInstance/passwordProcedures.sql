@@ -39,32 +39,39 @@ $$  LANGUAGE plpgsql
 REVOKE ALL ON FUNCTION classdb.changeUserPassword(userName NAME, password TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.changeUserPassword(userName NAME, password TEXT) TO DBManager;
 
---The following procedure resets a users password to the default password given a username
 
-CREATE OR REPLACE FUNCTION resetUserPassword(userName VARCHAR(63)) RETURNS VOID AS
+--The following procedure resets a users password to the default password given a username.
+-- NOTE: The default password is not the same as the initialpassword that may have been given
+-- at the time of role creation. It is either the ID or username for a student and the username
+-- for an instructor.
+
+CREATE OR REPLACE FUNCTION classdb.resetUserPassword(userName NAME) RETURNS VOID AS
 $$
 DECLARE
-    defaultPass VARCHAR(128);
+    studentID TEXT;
 BEGIN
     IF
-        pg_has_role(userName, 'Student', 'member')
+        pg_catalog.pg_has_role(userName, 'student', 'member')
     THEN
-        EXECUTE format('SELECT ID FROM Student S WHERE S.userName = %L', userName) INTO defaultPass;
-        PERFORM changeUserPassword(userName, defaultPass);
+        EXECUTE format('SELECT ID FROM classdb.Student WHERE userName = %L', userName) INTO studentID;
+        IF studentID IS NULL THEN
+            PERFORM classdb.changeUserPassword(userName, userName);
+        ELSE
+            PERFORM classdb.changeUserPassword(userName, studentID);
+        END IF;
     ELSIF
-        pg_has_role(userName, 'Instructor', 'member')
+        pg_catalog.pg_has_role(userName, 'instructor', 'member')
     THEN
-        EXECUTE format('SELECT ID FROM Instructor I WHERE I.userName = %L', userName) INTO defaultPass;
-        PERFORM changeUserPassword(userName, defaultPass);
+        PERFORM classdb.changeUserPassword(userName, userName);
     ELSE
-        RAISE EXCEPTION 'User: "%" not found among registered users', userName;
+        RAISE NOTICE 'User "%" not found among registered users', userName;
     END IF;
 END
 $$  LANGUAGE plpgsql
-    SECURITY DEFINER
-    SET search_path = admin, public, pg_catalog, pg_temp;
-REVOKE ALL ON FUNCTION resetUserPassword(userName VARCHAR(63)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION resetUserPassword(userName VARCHAR(63)) TO Admin;
+    SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION classdb.resetUserPassword(userName NAME) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.resetUserPassword(userName NAME) TO DBManager;
 
 
 --The folowing procedure allows a user to change their password to a specified one
