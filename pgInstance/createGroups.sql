@@ -5,8 +5,9 @@
 --Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-07
 
 
---This script should be run as a user with createrole privilages, due to the functions being
--- declared SECURITY DEFINER, along with the need to properly set object ownership.
+--This script should be run as a user with superuser privileges, due to the functions being
+-- declared SECURITY DEFINER, along with the need to properly set object ownership and define
+-- event triggers.
 
 --This script creates roles for students, instructors, and database managers (administrators).
 -- Then, sudents are prevented from modiying the public schema, and a classdb schema is created.
@@ -16,7 +17,8 @@
 -- that records the timestamp of the last ddl statement issued by each student.
 
 START TRANSACTION;
---Tests for suepruser privilage on current_user
+
+--Tests for superuser privilege on current_user
 DO
 $$
 DECLARE
@@ -25,10 +27,11 @@ BEGIN
 	EXECUTE 'SELECT rolsuper FROM pg_catalog.pg_roles WHERE rolname = current_user' INTO isSuper;
 	IF isSuper THEN --do nothing
 	ELSE
-		RAISE EXCEPTION 'Insufficient privilages for script: must be run as a superuser';
+		RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
 	END IF;
 END
 $$;
+
 
 --Group equivalents for managing permissions for students, instructors, and managers of the DB
 DO
@@ -63,6 +66,7 @@ BEGIN
 	EXECUTE format('GRANT CONNECT ON DATABASE %I TO Student', currentDB);
 END
 $$;
+
 
 --Removes the ability for students to modify the "public" schema for the current database
 REVOKE CREATE ON SCHEMA public FROM Student;
@@ -242,6 +246,7 @@ CREATE TABLE IF NOT EXISTS classdb.Instructor
 	instructorName VARCHAR(100)
 );
 
+
 --This function updates the LastActivity field for a given student
 CREATE OR REPLACE FUNCTION classdb.UpdateStudentActivity() RETURNS event_trigger AS
 $$
@@ -252,6 +257,7 @@ BEGIN
 END;
 $$  LANGUAGE plpgsql
 	SECURITY DEFINER;
+
 
 --Event triggers to update user last activity time on DDL events
 DROP EVENT TRIGGER IF EXISTS UpdateStudentActivityDDL;
