@@ -170,11 +170,11 @@ BEGIN
     EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
     IF
         userExists AND
-        pg_has_role(userName, 'student', 'member')
+        pg_catalog.pg_has_role(userName, 'student', 'member')
     THEN
         EXECUTE format('REVOKE Student FROM %I', userName);
         EXECUTE format('DELETE FROM classdb.Student S WHERE S.userName = %L', userName);
-        EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_has_role(%L, oid, ''member'')'
+        EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role(%L, oid, ''member'')'
             || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
         IF hasOtherRoles THEN
             RAISE NOTICE 'User "%" is a member of one or more additional roles', userName;
@@ -207,11 +207,11 @@ BEGIN
     EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
     IF
         userExists AND
-        pg_has_role(userName, 'instructor', 'member')
+        pg_catalog.pg_has_role(userName, 'instructor', 'member')
     THEN
         EXECUTE format('REVOKE Instructor FROM %I', userName);
         EXECUTE format('DELETE FROM classdb.Instructor S WHERE S.userName = %L', userName);
-        EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_has_role(%L, oid, ''member'')'
+        EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role(%L, oid, ''member'')'
             || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
         IF hasOtherRoles THEN
             RAISE NOTICE 'User "%" remains a member of one or more additional roles', userName;
