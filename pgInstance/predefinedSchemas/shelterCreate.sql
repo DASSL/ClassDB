@@ -4,8 +4,6 @@
 --
 --Schemas for CS205; Created: 2017-05-31; Modified 2017-06-07
 
---The following script should be run as the role desired to be the owner of the shelter schema.
-
 --This shelter schema was originally created by Dr. Gancho Ganchev and Julie Gordon as a part
 -- of a workbook to introduce SQL*Plus. This schema was originally implemented for Oracle as
 -- a part of a term project by Julie Gordon, a Student at Western Connecticut State University
