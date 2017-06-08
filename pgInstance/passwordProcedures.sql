@@ -2,42 +2,42 @@
 --
 --passwordProcedures.sql
 --
---Users and Roles for CS205; Created: 2017-05-30; Modified 2017-05-31
+--Users and Roles for CS205; Created: 2017-05-30; Modified 2017-06-08
 
---This script should be run as an Admin, due to the functions being declared SECURITY DEFINER
+--This script should be run as a superuser, or a user with the createrole privilege, due to the
+-- functions being declared SECURITY DEFINER.
 
 --The following procedure allows changing the password for a given username, given both the
--- username and password. Exceptions are raised if the user does not exist or if the password
+-- username and password. NOTICEs are raised if the user does not exist or if the password
 -- does not meet the requirements.
-
 --Current password requirements:
 -- - Must be 6 or more characters
 -- - Must contain at least one numerical digit (0-9)
 
-CREATE OR REPLACE FUNCTION changeUserPassword(userName VARCHAR(63), password VARCHAR(128)) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION classdb.changeUserPassword(userName NAME, password TEXT) RETURNS VOID AS
 $$
 DECLARE
     userExists BOOLEAN;
 BEGIN
-    EXECUTE format('SELECT 1 FROM pg_roles WHERE rolname = %L', userName) INTO userExists;
+    EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
     IF userExists THEN
         IF
             LENGTH(password) > 5 AND
             SUBSTRING(password from '[0-9]') IS NOT NULL
         THEN
-            EXECUTE format('ALTER ROLE %I ENCRYPTED PASSWORD %L', username, password);
+            EXECUTE format('ALTER ROLE %I ENCRYPTED PASSWORD %L', userName, password);
         ELSE
-            RAISE EXCEPTION 'Password does not meet requirements. Must be 6 or more characters and contain at least 1 number';
+            RAISE NOTICE 'Password does not meet requirements. Must be 6 or more characters and contain at least 1 number';
         END IF;
     ELSE
-        RAISE EXCEPTION 'User: "%" does not exist', userName;
+        RAISE NOTICE 'User: "%" does not exist', userName;
     END IF;
 END
 $$  LANGUAGE plpgsql
-    SECURITY DEFINER
-    SET search_path = public, pg_catalog, pg_temp;
-REVOKE ALL ON FUNCTION changeUserPassword(userName VARCHAR(63), password VARCHAR(128)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION changeUserPassword(userName VARCHAR(63), password VARCHAR(128)) TO Admin;
+    SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION classdb.changeUserPassword(userName NAME, password TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.changeUserPassword(userName NAME, password TEXT) TO DBManager;
 
 --The following procedure resets a users password to the default password given a username
 
