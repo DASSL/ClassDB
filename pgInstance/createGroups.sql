@@ -1,8 +1,8 @@
---Andrew Figueroa, Steven Rollo
+--Andrew Figueroa, Steven Rollo, Sean Murthy
 --
 --createGroups.sql
 --
---Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-07
+--Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-08
 
 
 --This script should be run as a user with superuser privileges, due to the functions being
@@ -85,7 +85,7 @@ DECLARE
 BEGIN
     EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO valueExists;
     IF valueExists THEN
-        RAISE NOTICE 'User "%" already exists', userName;
+        RAISE NOTICE 'User "%" already exists, password not modified', userName;
     ELSE
         EXECUTE format('CREATE USER %I ENCRYPTED PASSWORD %L', userName, initialPassword);
     END IF;
@@ -95,9 +95,8 @@ BEGIN
         RAISE NOTICE 'Schema "%" already exists', userName;
     ELSE
         EXECUTE format('CREATE SCHEMA %I', userName);
+		EXECUTE format('GRANT ALL PRIVILEGES ON SCHEMA %I TO %I', userName, userName);
     END IF;
-
-    EXECUTE format('GRANT ALL PRIVILEGES ON SCHEMA %I TO %I', userName, userName);
 END;
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
