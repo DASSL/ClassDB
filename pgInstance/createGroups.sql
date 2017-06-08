@@ -101,8 +101,8 @@ END;
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION classdb.createUser(userName name, initialPassword text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.createUser(userName name, initialPassword text) TO DBManager;
+REVOKE ALL ON FUNCTION classdb.createUser(userName NAME, initialPassword TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.createUser(userName NAME, initialPassword TEXT) TO DBManager;
 
 
 --Creates a role for a student and assigns them to the Student role, given a username, name,
