@@ -7,6 +7,22 @@
 --This script should be run as a superuser, or a user with the createrole privilege, due to the
 -- functions being declared SECURITY DEFINER.
 
+START TRANSACTION;
+
+--Tests for superuser privilege on current_user
+DO
+$$
+DECLARE
+	isSuper BOOLEAN;
+BEGIN
+	EXECUTE 'SELECT rolsuper FROM pg_catalog.pg_roles WHERE rolname = current_user' INTO isSuper;
+	IF isSuper THEN --do nothing
+	ELSE
+		RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
+	END IF;
+END
+$$;
+
 --The following procedure allows changing the password for a given username, given both the
 -- username and password. NOTICEs are raised if the user does not exist or if the password
 -- does not meet the requirements.
@@ -32,7 +48,7 @@ BEGIN
     ELSE
         RAISE NOTICE 'User: "%" does not exist', userName;
     END IF;
-END
+END;
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
 
@@ -66,7 +82,7 @@ BEGIN
     ELSE
         RAISE NOTICE 'User "%" not found among registered users', userName;
     END IF;
-END
+END;
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
 
@@ -81,6 +97,8 @@ $$
 BEGIN
     PERFORM classdb.changeUserPassword(session_user, newPass);
     RAISE INFO 'Password successfully changed';
-END
+END;
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
+
+COMMIT;
