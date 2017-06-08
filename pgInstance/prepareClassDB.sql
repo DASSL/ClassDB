@@ -1,6 +1,6 @@
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --
---createGroups.sql
+--prepareClassDB.sql
 --
 --Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-08
 

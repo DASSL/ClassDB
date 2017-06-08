@@ -1,6 +1,6 @@
 --Andrew Figueroa
 --
---testCreateGroups.sql
+--testPrepareClassDB.sql
 --
 --Users and Roles for CS205; Created: 2017-06-05; Modified 2017-06-06
 
@@ -63,7 +63,7 @@ BEGIN
         pg_has_role('testStudent3', 'student', 'member') AND
         pg_has_role('testStuInst0', 'student', 'member') AND
         pg_has_role('testStuInst0', 'instructor', 'member') THEN
-        RETURN 'PENDING - see testCreateGroupsREADME.txt';
+        RETURN 'PENDING - see testPrepareClassDBREADME.txt';
     ELSE
         RETURN 'FAIL: Code 2';
     END IF;
@@ -95,7 +95,7 @@ BEGIN
 
     IF  pg_has_role('testInstructor0', 'instructor', 'member') AND
         pg_has_role('testInstructor1', 'instructor', 'member') THEN
-        RETURN 'PENDING - see testCreateGroupsREADME.txt';
+        RETURN 'PENDING - see testPrepareClassDBREADME.txt';
     ELSE
         RETURN 'FAIL: Code 2';
     END IF;
@@ -181,7 +181,7 @@ END
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION classdb.createGroupsTest() RETURNS VOID AS
+CREATE OR REPLACE FUNCTION classdb.prepareClassDBTest() RETURNS VOID AS
 $$
 BEGIN
     RAISE INFO '%    createUserTest()', classdb.createUserTest();
@@ -192,4 +192,4 @@ BEGIN
 END
 $$  LANGUAGE plpgsql;
 
-SELECT classdb.createGroupsTest();
+SELECT classdb.prepareClassDBTest();

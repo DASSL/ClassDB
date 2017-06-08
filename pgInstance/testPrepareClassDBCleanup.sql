@@ -1,6 +1,6 @@
 --Andrew Figueroa
 --
---testCreateGroupsCleanup.sql
+--testPrepareClassDBCleanup.sql
 --
 --Users and Roles for CS205; Created: 2017-06-05; Modified 2017-06-06
 
@@ -39,7 +39,7 @@ DELETE FROM classdb.Student WHERE userName = 'testStuInst1';
 DELETE FROM classdb.Instructor WHERE userName = 'testStuInst1';
 
 
-DROP FUNCTION classdb.createGroupsTest();
+DROP FUNCTION classdb.prepareClassDBTest();
 DROP FUNCTION classdb.createUserTest();
 DROP FUNCTION classdb.createInstructorTest();
 DROP FUNCTION classdb.dropStudentTest();

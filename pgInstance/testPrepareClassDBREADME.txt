@@ -1,6 +1,6 @@
 Andrew Figueroa
 
-testCreateGroupsREADME.txt
+testPrepareClassDBREADME.txt
 
 Users and Roles for CS205; Created: 2017-06-05; Modified 2017-06-06
 
@@ -19,7 +19,7 @@ In order to properly test the login capabilities and password for the Student
 and Instructor roles created, these have to be manually tested by logging in
 to the DBMS using the following usernames and passwords. Keep in mind that
 usernames and passwords are CASE SENSITIVE. After testing, please log back in
-as a superuser and run testCreateGroupsCleanup.sql
+as a superuser and run testPrepareClassDBCleanup.sql
 
 
 Students:
