@@ -1,8 +1,9 @@
---Andrew Figueroa
+--Andrew Figueroa, Steven Rollo
 --
 --createGroups.sql
 --
---Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-06
+--Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-07
+
 
 --This script should be run as a superuser or equivalent role, due to the functions being
 -- declared SECURITY DEFINER, along with the need to properly set object ownership.
@@ -11,7 +12,8 @@
 -- Then, sudents are prevented from modiying the public schema, and a classdb schema is created.
 -- Following that, a stored procedure for creating any type of user is defined. Finally,
 -- procedures for creating and dropping students and instructors are defined. Currently this
--- script also creates Student and Instructor tables in the classdb schema.
+-- script also creates Student and Instructor tables in the classdb schema, and an event trigger
+-- that records the timestamp of the last ddl statement issued by each student.
 
 --TODO: Test for to see if current user is a superuser or equivalent; raise exception if not
 
@@ -22,9 +24,19 @@ CREATE ROLE DBManager;
 
 
 --Allows appropriate users to connect to the database
-GRANT CONNECT ON DATABASE current_database() TO DBManager;
-GRANT CONNECT ON DATABASE current_database() TO Instructor;
-GRANT CONNECT ON DATABASE current_database() TO Student;
+DO
+$$
+DECLARE
+	currentDB TEXT;
+BEGIN
+	currentDB := current_database();
+	--Postgres grants CONNECT to public by default
+	EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM PUBLIC', currentDB);
+	EXECUTE format('GRANT CONNECT ON DATABASE %I TO DBManager', currentDB);
+	EXECUTE format('GRANT CONNECT ON DATABASE %I TO Instructor', currentDB);
+	EXECUTE format('GRANT CONNECT ON DATABASE %I TO Student', currentDB);
+END
+$$;
 
 --Removes the ability for students to modify the "public" schema for the current database
 REVOKE CREATE ON SCHEMA public FROM Student;
@@ -56,12 +68,12 @@ BEGIN
     END IF;
 
     EXECUTE format('GRANT ALL PRIVILEGES ON SCHEMA %I TO %I', userName, userName);
-END
+END;
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION createUser(userName name, initialPassword text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION createUser(userName name, initialPassword text) TO DBManager;
+REVOKE ALL ON FUNCTION classdb.createUser(userName name, initialPassword text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.createUser(userName name, initialPassword text) TO DBManager;
 
 
 --Creates a role for a student and assigns them to the Student role, given a username, name,
@@ -81,7 +93,7 @@ BEGIN
     EXECUTE format('GRANT Student TO %I', userName);
     EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', userName);
     EXECUTE format('INSERT INTO classdb.Student VALUES(%L, %L, %L)', userName, studentName, schoolID);
-END
+END;
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
 
@@ -106,7 +118,7 @@ BEGIN
     END IF;
     EXECUTE format('GRANT Instructor TO %I', userName);
     EXECUTE format('INSERT INTO classdb.Instructor VALUES(%L, %L)', userName, instructorName);
-END
+END;
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
 
@@ -144,7 +156,7 @@ BEGIN
     ELSE
         RAISE NOTICE 'User "%" is not a registered student', userName;
     END IF;
-END
+END;
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
 
@@ -181,12 +193,12 @@ BEGIN
     ELSE
         RAISE NOTICE 'User "%" is not a registered instructor', userName;
     END IF;
-END
+END;
 $$  LANGUAGE plpgsql
     SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION classdb.dropStudent(userName NAME) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO DBManager;
+REVOKE ALL ON FUNCTION classdb.dropInstructor(userName NAME) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName NAME) TO DBManager;
 
 
 --The following tables hold the list of currently registered students and instructors
@@ -194,7 +206,8 @@ CREATE TABLE classdb.Student
 (
 	userName NAME NOT NULL PRIMARY KEY,
 	studentName VARCHAR(100),
-    schoolID VARCHAR(20)
+    schoolID VARCHAR(20),
+	LastActivity TIMESTAMPTZ --holds timestamp of the last ddl command issued by the student
 );
 
 CREATE TABLE classdb.Instructor
@@ -202,3 +215,23 @@ CREATE TABLE classdb.Instructor
 	userName NAME NOT NULL PRIMARY KEY,
 	instructorName VARCHAR(100)
 );
+
+--This function updates the LastActivity field for a given student
+CREATE OR REPLACE FUNCTION classdb.UpdateStudentActivity() RETURNS event_trigger AS
+$$
+BEGIN
+	UPDATE classdb.Student
+	SET LastActivity = (SELECT statement_timestamp())
+	WHERE UserName = session_user::text;
+END;
+$$  LANGUAGE plpgsql
+	SECURITY DEFINER;
+
+--Event triggers to update user last activity time on DDL events
+CREATE EVENT TRIGGER UpdateStudentActivityDDL
+ON ddl_command_end
+EXECUTE PROCEDURE classdb.UpdateStudentActivity();
+
+CREATE EVENT TRIGGER UpdateStudentActivityDrop
+ON sql_drop
+EXECUTE PROCEDURE classdb.UpdateStudentActivity();
