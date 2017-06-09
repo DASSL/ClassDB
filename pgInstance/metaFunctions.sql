@@ -17,8 +17,7 @@ DROP TYPE IF EXISTS public.describe_retrun;
 --Prototype of a row that will be returned by the public.list_tables function
 --Matches the output of the contained SELECT query
 CREATE TYPE public.list_tables_return AS (
-	"Name" NAME,
-	"Owner" NAME,
+	"Name" TEXT,
 	"Type" TEXT
 );
 
@@ -36,13 +35,9 @@ CREATE TYPE public.describe_retrun AS (
 CREATE OR REPLACE FUNCTION public.list_tables()
 RETURNS SETOF public.list_tables_return
 AS $$
-	SELECT tablename, tableowner, 'Table'
-	FROM pg_tables
-	WHERE schemaname = SESSION_USER
-	UNION
-	SELECT viewname, viewowner, 'View'
-	FROM pg_views
-	WHERE schemaname = SESSION_USER;
+	SELECT table_name, table_type
+	FROM INFORMATION_SCHEMA.TABLES
+	WHERE table_schema = current_user;
 $$
 LANGUAGE SQL;
 
@@ -50,13 +45,9 @@ LANGUAGE SQL;
 CREATE OR REPLACE FUNCTION public.list_tables(TEXT)
 RETURNS SETOF public.list_tables_return
 AS $$
-	SELECT tablename, tableowner, 'Table'
-	FROM pg_tables
-	WHERE schemaname = $1
-	UNION
-	SELECT viewname, viewowner, 'View'
-	FROM pg_views
-	WHERE schemaname = $1;
+	SELECT table_name, table_type
+	FROM INFORMATION_SCHEMA.TABLES
+	WHERE table_schema = $1;
 $$
 LANGUAGE SQL;
 
@@ -66,7 +57,7 @@ AS $$
 	SELECT table_name, column_name, data_type, character_maximum_length 
 	FROM INFORMATION_SCHEMA.COLUMNS 
 	WHERE table_name = $1
-	AND table_schema = SESSION_USER;
+	AND table_schema =  current_user;
 $$
 LANGUAGE SQL;
 
