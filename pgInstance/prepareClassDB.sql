@@ -25,9 +25,8 @@ $$
 DECLARE
    isSuper BOOLEAN;
 BEGIN
-   EXECUTE 'SELECT rolsuper FROM pg_catalog.pg_roles WHERE rolname = current_user' INTO isSuper;
-   IF isSuper THEN --do nothing
-   ELSE
+   EXECUTE 'SELECT COALESCE(rolsuper, FALSE) FROM pg_catalog.pg_roles WHERE rolname = current_user' INTO isSuper;
+   IF NOT isSuper THEN
       RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
    END IF;
 END
