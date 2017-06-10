@@ -3,19 +3,19 @@
 --
 --prepareClassDB.sql
 --
---ClassDB - Created: 2017-05-29; Modified 2017-06-08
+--ClassDB - Created: 2017-05-29; Modified 2017-06-09
 
 
 --This script should be run as a user with superuser privileges, due to the functions being
 -- declared SECURITY DEFINER, along with the need to properly set object ownership and define
 -- event triggers.
 
---This script creates roles for students, instructors, and database managers (administrators).
--- Then, sudents are prevented from modiying the public schema, and a classdb schema is created.
--- Following that, a stored procedure for creating any type of user is defined. Finally,
--- procedures for creating and dropping students and instructors are defined. Currently this
--- script also creates Student and Instructor tables in the classdb schema, and an event trigger
--- that records the timestamp of the last ddl statement issued by each student.
+
+--This script first prevents student roles from modiying the public schema, and then creates a
+-- classdb schema. Following that, a stored procedure for creating any type of user is defined.
+-- Finally, procedures for creating and dropping students and instructors are defined. This script
+-- also creates Student and Instructor tables in the classdb schema, and an event trigger that 
+-- records the timestamp of the last ddl statement issued by each student.
 
 START TRANSACTION;
 
@@ -32,24 +32,6 @@ BEGIN
 END
 $$;
 
-
---Group equivalents for managing permissions for students, instructors, and managers of the DB
-DO
-$$
-BEGIN
-   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'student') THEN
-      CREATE ROLE Student;
-   END IF;
-
-   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'instructor') THEN
-      CREATE ROLE Instructor;
-   END IF;
-
-   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'dbmanager') THEN
-      CREATE ROLE DBManager;
-   END IF;
-END
-$$;
 
 
 --Allows appropriate users to connect to the database
