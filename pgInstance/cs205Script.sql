@@ -1,8 +1,9 @@
---Andrew Figueroa
+--Andrew Figueroa, Steven Rollo, Sean Murthy
+--Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
 --
 --cs205Script.sql
 --
---Users and Roles for CS205; Created: 2017-06-06; Modified 2017-06-06
+--Schemas for CS205; Created: 2017-06-06; Modified 2017-06-06
 
 --The following procedure sets a user's search_path to a new specified search_path. An
 -- notice is raised if the user does not exist.

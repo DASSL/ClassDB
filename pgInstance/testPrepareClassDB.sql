@@ -1,8 +1,9 @@
---Andrew Figueroa
+--Andrew Figueroa, Steven Rollo, Sean Murthy
+--Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
 --
 --testPrepareClassDB.sql
 --
---Users and Roles for CS205; Created: 2017-06-05; Modified 2017-06-06
+--ClassDB - Created: 2017-06-05; Modified 2017-06-06
 
 --The following test script should be run as a superuser
 

@@ -1,8 +1,9 @@
---Andrew Figueroa
+--Andrew Figueroa, Steven Rollo, Sean Murthy
+--Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
 --
 --passwordProcedures.sql
 --
---Users and Roles for CS205; Created: 2017-05-30; Modified 2017-06-08
+--ClassDB - Created: 2017-05-30; Modified 2017-06-08
 
 --This script should be run as a superuser, or a user with the createrole privilege, due to the
 -- functions being declared SECURITY DEFINER.

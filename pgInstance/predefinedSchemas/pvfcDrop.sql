@@ -1,4 +1,5 @@
---Andrew Figueroa
+--Andrew Figueroa, Steven Rollo, Sean Murthy
+--Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
 --
 --pvfcDrop.sql
 --

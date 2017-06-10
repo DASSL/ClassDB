@@ -1,8 +1,9 @@
---Andrew Figueroa
+--Andrew Figueroa, Steven Rollo, Sean Murthy
+--Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
 --
 --dropSampleUsers.sql
 --
---Users and Roles for CS205; Created: 2017-05-31; Modified 2017-06-02
+--Class DB - Created: 2017-05-31; Modified 2017-06-02
 
 --This script can only be run after createUsers.sql has been run.
 

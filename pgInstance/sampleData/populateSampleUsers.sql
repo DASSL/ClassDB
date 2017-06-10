@@ -1,8 +1,9 @@
---Andrew Figueroa
+--Andrew Figueroa, Steven Rollo, Sean Murthy
+--Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
 --
 --populateSampleUsers.sql
 --
---Users and Roles for CS205; Created: 2017-05-29; Modified 2017-06-02
+--Class DB - Created: 2017-05-29; Modified 2017-06-02
 
 
 --The following query executes the createStudent procedure for every row in SampleStudent by using the

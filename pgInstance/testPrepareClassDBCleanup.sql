@@ -1,8 +1,9 @@
---Andrew Figueroa
+--Andrew Figueroa, Steven Rollo, Sean Murthy
+--Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
 --
 --testPrepareClassDBCleanup.sql
 --
---Users and Roles for CS205; Created: 2017-06-05; Modified 2017-06-06
+--ClassDB - Created: 2017-06-05; Modified 2017-06-06
 
 DROP SCHEMA "testStudent0";
 DROP ROLE "testStudent0";

@@ -1,4 +1,4 @@
---Andrew Figueroa
+--Andrew Figueroa, Steven Rollo, Sean Murthy
 --
 --shelterCreate.sql
 --
