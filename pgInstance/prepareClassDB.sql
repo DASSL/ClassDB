@@ -23,13 +23,13 @@ START TRANSACTION;
 DO
 $$
 DECLARE
-	isSuper BOOLEAN;
+   isSuper BOOLEAN;
 BEGIN
-	EXECUTE 'SELECT rolsuper FROM pg_catalog.pg_roles WHERE rolname = current_user' INTO isSuper;
-	IF isSuper THEN --do nothing
-	ELSE
-		RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
-	END IF;
+   EXECUTE 'SELECT rolsuper FROM pg_catalog.pg_roles WHERE rolname = current_user' INTO isSuper;
+   IF isSuper THEN --do nothing
+   ELSE
+      RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
+   END IF;
 END
 $$;
 
@@ -38,17 +38,17 @@ $$;
 DO
 $$
 BEGIN
-	IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'student') THEN
-		CREATE ROLE Student;
-	END IF;
+   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'student') THEN
+      CREATE ROLE Student;
+   END IF;
 
-	IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'instructor') THEN
-		CREATE ROLE Instructor;
-	END IF;
+   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'instructor') THEN
+      CREATE ROLE Instructor;
+   END IF;
 
-	IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'dbmanager') THEN
-		CREATE ROLE DBManager;
-	END IF;
+   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'dbmanager') THEN
+      CREATE ROLE DBManager;
+   END IF;
 END
 $$;
 
@@ -57,14 +57,14 @@ $$;
 DO
 $$
 DECLARE
-	currentDB TEXT;
+   currentDB TEXT;
 BEGIN
-	currentDB := current_database();
-	--Postgres grants CONNECT to public by default
-	EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM PUBLIC', currentDB);
-	EXECUTE format('GRANT CONNECT ON DATABASE %I TO DBManager', currentDB);
-	EXECUTE format('GRANT CONNECT ON DATABASE %I TO Instructor', currentDB);
-	EXECUTE format('GRANT CONNECT ON DATABASE %I TO Student', currentDB);
+   currentDB := current_database();
+   --Postgres grants CONNECT to public by default
+   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM PUBLIC', currentDB);
+   EXECUTE format('GRANT CONNECT ON DATABASE %I TO DBManager', currentDB);
+   EXECUTE format('GRANT CONNECT ON DATABASE %I TO Instructor', currentDB);
+   EXECUTE format('GRANT CONNECT ON DATABASE %I TO Student', currentDB);
 END
 $$;
 
@@ -82,25 +82,25 @@ CREATE SCHEMA IF NOT EXISTS classdb;
 CREATE OR REPLACE FUNCTION classdb.createUser(userName NAME, initialPassword TEXT) RETURNS VOID AS
 $$
 DECLARE
-    valueExists BOOLEAN;
+   valueExists BOOLEAN;
 BEGIN
-    EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO valueExists;
-    IF valueExists THEN
-        RAISE NOTICE 'User "%" already exists, password not modified', userName;
-    ELSE
-        EXECUTE format('CREATE USER %I ENCRYPTED PASSWORD %L', userName, initialPassword);
-    END IF;
+   EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO valueExists;
+   IF valueExists THEN
+      RAISE NOTICE 'User "%" already exists, password not modified', userName;
+   ELSE
+      EXECUTE format('CREATE USER %I ENCRYPTED PASSWORD %L', userName, initialPassword);
+   END IF;
 
-    EXECUTE format('SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname = %L', userName) INTO valueExists;
-    IF valueExists THEN
-        RAISE NOTICE 'Schema "%" already exists', userName;
-    ELSE
-        EXECUTE format('CREATE SCHEMA %I', userName);
-		EXECUTE format('GRANT ALL PRIVILEGES ON SCHEMA %I TO %I', userName, userName);
-    END IF;
+   EXECUTE format('SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname = %L', userName) INTO valueExists;
+   IF valueExists THEN
+      RAISE NOTICE 'Schema "%" already exists', userName;
+   ELSE
+      EXECUTE format('CREATE SCHEMA %I', userName);
+      EXECUTE format('GRANT ALL PRIVILEGES ON SCHEMA %I TO %I', userName, userName);
+   END IF;
 END;
-$$  LANGUAGE plpgsql
-    SECURITY DEFINER;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.createUser(userName NAME, initialPassword TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.createUser(userName NAME, initialPassword TEXT) TO DBManager;
@@ -110,52 +110,52 @@ GRANT EXECUTE ON FUNCTION classdb.createUser(userName NAME, initialPassword TEXT
 -- and optional schoolID and password. This proceedure also gives Instructors read access
 -- (USAGE) to the new student's schema.
 CREATE OR REPLACE FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
-    schoolID VARCHAR(20) DEFAULT NULL, initialPassword TEXT DEFAULT NULL) RETURNS VOID AS
+   schoolID VARCHAR(20) DEFAULT NULL, initialPassword TEXT DEFAULT NULL) RETURNS VOID AS
 $$
 BEGIN
-    IF initialPassword IS NOT NULL THEN
-        PERFORM classdb.createUser(userName, initialPassword);
-    ELSIF schoolID IS NOT NULL THEN
-        PERFORM classdb.createUser(userName, schoolID);
-    ELSE
-        PERFORM classdb.createUser(userName, userName::TEXT);
-    END IF;
-    EXECUTE format('GRANT Student TO %I', userName);
-    EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', userName);
-    EXECUTE format('INSERT INTO classdb.Student VALUES(%L, %L, %L)', userName, studentName, schoolID);
+   IF initialPassword IS NOT NULL THEN
+      PERFORM classdb.createUser(userName, initialPassword);
+   ELSIF schoolID IS NOT NULL THEN
+      PERFORM classdb.createUser(userName, schoolID);
+   ELSE
+      PERFORM classdb.createUser(userName, userName::TEXT);
+   END IF;
+   EXECUTE format('GRANT Student TO %I', userName);
+   EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', userName);
+   EXECUTE format('INSERT INTO classdb.Student VALUES(%L, %L, %L)', userName, studentName, schoolID);
 END;
-$$  LANGUAGE plpgsql
-    SECURITY DEFINER;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
-    schoolID VARCHAR(20), initialPassword TEXT) FROM PUBLIC;
+   schoolID VARCHAR(20), initialPassword TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
-    schoolID VARCHAR(20), initialPassword TEXT) TO DBManager;
+   schoolID VARCHAR(20), initialPassword TEXT) TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
-    schoolID VARCHAR(20), initialPassword TEXT) TO Instructor;
+   schoolID VARCHAR(20), initialPassword TEXT) TO Instructor;
 
 
 --Creates a role for an instructor given a username, name, and optional password.
 -- The procedure also gives appropriate permission to the instructor.
 CREATE OR REPLACE FUNCTION classdb.createInstructor(userName NAME, instructorName VARCHAR(100),
-    initialPassword TEXT DEFAULT NULL) RETURNS VOID AS
+   initialPassword TEXT DEFAULT NULL) RETURNS VOID AS
 $$
 BEGIN
-    IF initialPassword IS NOT NULL THEN
-        PERFORM classdb.createUser(userName, initialPassword);
-    ELSE
-        PERFORM classdb.createUser(userName, userName::TEXT);
-    END IF;
-    EXECUTE format('GRANT Instructor TO %I', userName);
-    EXECUTE format('INSERT INTO classdb.Instructor VALUES(%L, %L)', userName, instructorName);
+   IF initialPassword IS NOT NULL THEN
+      PERFORM classdb.createUser(userName, initialPassword);
+   ELSE
+      PERFORM classdb.createUser(userName, userName::TEXT);
+   END IF;
+   EXECUTE format('GRANT Instructor TO %I', userName);
+   EXECUTE format('INSERT INTO classdb.Instructor VALUES(%L, %L)', userName, instructorName);
 END;
-$$  LANGUAGE plpgsql
-    SECURITY DEFINER;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.createInstructor(userName NAME, instructorName VARCHAR(100),
-    initialPassword TEXT) FROM PUBLIC;
+   initialPassword TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.createInstructor(userName NAME, instructorName VARCHAR(100),
-    initialPassword TEXT) TO DBManager;
+   initialPassword TEXT) TO DBManager;
 
 
 --The folowing procedure revokes the Student role from a student, along with their entry in the
@@ -165,30 +165,30 @@ GRANT EXECUTE ON FUNCTION classdb.createInstructor(userName NAME, instructorName
 CREATE OR REPLACE FUNCTION classdb.dropStudent(userName NAME) RETURNS VOID AS
 $$
 DECLARE
-    userExists BOOLEAN;
-    hasOtherRoles BOOLEAN;
+   userExists BOOLEAN;
+   hasOtherRoles BOOLEAN;
 BEGIN
-    EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
-    IF
-        userExists AND
-        pg_catalog.pg_has_role(userName, 'student', 'member')
-    THEN
-        EXECUTE format('REVOKE Student FROM %I', userName);
-        EXECUTE format('DELETE FROM classdb.Student S WHERE S.userName = %L', userName);
-        EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role(%L, oid, ''member'')'
-            || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
-        IF hasOtherRoles THEN
-            RAISE NOTICE 'User "%" is a member of one or more additional roles', userName;
-        ELSE
-            EXECUTE format('DROP SCHEMA %I CASCADE', userName);
-            EXECUTE format('DROP ROLE %I', userName);
-        END IF;
-    ELSE
-        RAISE NOTICE 'User "%" is not a registered student', userName;
-    END IF;
+   EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
+   IF
+      userExists AND
+      pg_catalog.pg_has_role(userName, 'student', 'member')
+   THEN
+      EXECUTE format('REVOKE Student FROM %I', userName);
+      EXECUTE format('DELETE FROM classdb.Student S WHERE S.userName = %L', userName);
+      EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role(%L, oid, ''member'')'
+         || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
+      IF hasOtherRoles THEN
+         RAISE NOTICE 'User "%" is a member of one or more additional roles', userName;
+      ELSE
+         EXECUTE format('DROP SCHEMA %I CASCADE', userName);
+         EXECUTE format('DROP ROLE %I', userName);
+      END IF;
+   ELSE
+      RAISE NOTICE 'User "%" is not a registered student', userName;
+   END IF;
 END;
-$$  LANGUAGE plpgsql
-    SECURITY DEFINER;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.dropStudent(userName NAME) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO DBManager;
@@ -202,30 +202,30 @@ GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO Instructor;
 CREATE OR REPLACE FUNCTION classdb.dropInstructor(userName NAME) RETURNS VOID AS
 $$
 DECLARE
-    userExists BOOLEAN;
-    hasOtherRoles BOOLEAN;
+   userExists BOOLEAN;
+   hasOtherRoles BOOLEAN;
 BEGIN
-    EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
-    IF
-        userExists AND
-        pg_catalog.pg_has_role(userName, 'instructor', 'member')
-    THEN
-        EXECUTE format('REVOKE Instructor FROM %I', userName);
-        EXECUTE format('DELETE FROM classdb.Instructor S WHERE S.userName = %L', userName);
-        EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role(%L, oid, ''member'')'
-            || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
-        IF hasOtherRoles THEN
-            RAISE NOTICE 'User "%" remains a member of one or more additional roles', userName;
-        ELSE
-            EXECUTE format('DROP SCHEMA %I CASCADE', userName);
-            EXECUTE format('DROP ROLE %I', userName);
-        END IF;
-    ELSE
-        RAISE NOTICE 'User "%" is not a registered instructor', userName;
-    END IF;
+   EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
+   IF
+      userExists AND
+      pg_catalog.pg_has_role(userName, 'instructor', 'member')
+   THEN
+      EXECUTE format('REVOKE Instructor FROM %I', userName);
+      EXECUTE format('DELETE FROM classdb.Instructor S WHERE S.userName = %L', userName);
+      EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role(%L, oid, ''member'')'
+         || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
+      IF hasOtherRoles THEN
+         RAISE NOTICE 'User "%" remains a member of one or more additional roles', userName;
+      ELSE
+         EXECUTE format('DROP SCHEMA %I CASCADE', userName);
+         EXECUTE format('DROP ROLE %I', userName);
+      END IF;
+   ELSE
+      RAISE NOTICE 'User "%" is not a registered instructor', userName;
+   END IF;
 END;
-$$  LANGUAGE plpgsql
-    SECURITY DEFINER;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.dropInstructor(userName NAME) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName NAME) TO DBManager;
@@ -234,16 +234,16 @@ GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName NAME) TO DBManager;
 --The following tables hold the list of currently registered students and instructors
 CREATE TABLE IF NOT EXISTS classdb.Student
 (
-	userName NAME NOT NULL PRIMARY KEY,
-	studentName VARCHAR(100),
-    schoolID VARCHAR(20),
-	LastActivity TIMESTAMPTZ --holds timestamp of the last ddl command issued by the student
+   userName NAME NOT NULL PRIMARY KEY,
+   studentName VARCHAR(100),
+   schoolID VARCHAR(20),
+   LastActivity TIMESTAMPTZ --holds timestamp of the last ddl command issued by the student
 );
 
 CREATE TABLE IF NOT EXISTS classdb.Instructor
 (
-	userName NAME NOT NULL PRIMARY KEY,
-	instructorName VARCHAR(100)
+   userName NAME NOT NULL PRIMARY KEY,
+   instructorName VARCHAR(100)
 );
 
 
@@ -251,12 +251,12 @@ CREATE TABLE IF NOT EXISTS classdb.Instructor
 CREATE OR REPLACE FUNCTION classdb.UpdateStudentActivity() RETURNS event_trigger AS
 $$
 BEGIN
-	UPDATE classdb.Student
-	SET LastActivity = (SELECT statement_timestamp())
-	WHERE UserName = session_user::text;
+   UPDATE classdb.Student
+   SET LastActivity = (SELECT statement_timestamp())
+   WHERE UserName = session_user::text;
 END;
-$$  LANGUAGE plpgsql
-	SECURITY DEFINER;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
 
 
 --Event triggers to update user last activity time on DDL events

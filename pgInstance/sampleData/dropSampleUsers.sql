@@ -12,11 +12,11 @@
 
 SELECT lat.msg
 FROM SampleStudent S, LATERAL
-    (SELECT 'Student role for "' || S.name || '" removed.' msg, dropStudent(S.userName)) lat;
+   (SELECT 'Student role for "' || S.name || '" removed.' msg, dropStudent(S.userName)) lat;
 
 --The following query executes the dropInstructor procedure for every row in SampleInstructor by
 -- using the LATERAL keyword.
 --This statement can only be run after the SampleInstructor table has been populated.
 SELECT lat.msg
 FROM SampleInstructor I, LATERAL
-    (SELECT 'Instructor role for "' || I.name || '" removed.' msg, dropInstructor(I.userName)) lat;
+   (SELECT 'Instructor role for "' || I.name || '" removed.' msg, dropInstructor(I.userName)) lat;

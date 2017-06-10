@@ -14,102 +14,102 @@
 
 CREATE TABLE IF NOT EXISTS dog
 (
-  dog_id        CHAR(3) NOT NULL,
-  name          VARCHAR(15),
-  arrival_date  DATE,
-  breed         VARCHAR(20),
-  date_of_birth DATE,
-  weight        NUMERIC(3),
-  PRIMARY KEY(dog_id)
+   dog_id        CHAR(3) NOT NULL,
+   name          VARCHAR(15),
+   arrival_date  DATE,
+   breed         VARCHAR(20),
+   date_of_birth DATE,
+   weight        NUMERIC(3),
+   PRIMARY KEY(dog_id)
 );
 
 CREATE TABLE IF NOT EXISTS adopter
 (
-  adopter_id CHAR(3),
-  fname      VARCHAR(10),
-  lname      VARCHAR(10) NOT NULL,
-  address    VARCHAR(20),
-  city       VARCHAR(15),
-  state      CHAR(2),
-  zip        CHAR(5),
-  phone      CHAR(13),
-  PRIMARY KEY(adopter_id)
+   adopter_id CHAR(3),
+   fname      VARCHAR(10),
+   lname      VARCHAR(10) NOT NULL,
+   address    VARCHAR(20),
+   city       VARCHAR(15),
+   state      CHAR(2),
+   zip        CHAR(5),
+   phone      CHAR(13),
+   PRIMARY KEY(adopter_id)
 );
 
 CREATE TABLE IF NOT EXISTS volunteer
 (
-  vol_id CHAR(3),
-  fname  VARCHAR(10),
-  lname  VARCHAR(10) NOT NULL,
-  phone  CHAR(13),
-  email  VARCHAR(15),
-  PRIMARY KEY(vol_id)
+   vol_id CHAR(3),
+   fname  VARCHAR(10),
+   lname  VARCHAR(10) NOT NULL,
+   phone  CHAR(13),
+   email  VARCHAR(15),
+   PRIMARY KEY(vol_id)
 );
 
 CREATE TABLE IF NOT EXISTS responsibility
 (
-  title VARCHAR(20),
-  PRIMARY KEY(title)
+   title VARCHAR(20),
+   PRIMARY KEY(title)
 );
 
 CREATE TABLE IF NOT EXISTS vet
 (
-  vet_id  CHAR(1),
-  fname   VARCHAR(10),
-  lname   VARCHAR(10) NOT NULL,
-  address VARCHAR(20),
-  city    VARCHAR(15),
-  state   CHAR(2),
-  zip     CHAR(5),
-  phone   CHAR(13),
-  PRIMARY KEY(vet_id)
+   vet_id  CHAR(1),
+   fname   VARCHAR(10),
+   lname   VARCHAR(10) NOT NULL,
+   address VARCHAR(20),
+   city    VARCHAR(15),
+   state   CHAR(2),
+   zip     CHAR(5),
+   phone   CHAR(13),
+   PRIMARY KEY(vet_id)
 );
 
 CREATE TABLE IF NOT EXISTS adoption
 (
-  dog_id        CHAR(3),
-  adopter_id    CHAR(3),
-  vol_id        CHAR(3),
-  adoption_date DATE,
-  adoption_fee  NUMERIC(5, 2),
-  FOREIGN KEY(dog_id) REFERENCES dog(dog_id),
-  FOREIGN KEY(adopter_id) REFERENCES adopter(adopter_id),
-  FOREIGN KEY(vol_id) REFERENCES volunteer(vol_id),
-  PRIMARY KEY(dog_id, adopter_id, vol_id)
+   dog_id        CHAR(3),
+   adopter_id    CHAR(3),
+   vol_id        CHAR(3),
+   adoption_date DATE,
+   adoption_fee  NUMERIC(5, 2),
+   FOREIGN KEY(dog_id) REFERENCES dog(dog_id),
+   FOREIGN KEY(adopter_id) REFERENCES adopter(adopter_id),
+   FOREIGN KEY(vol_id) REFERENCES volunteer(vol_id),
+   PRIMARY KEY(dog_id, adopter_id, vol_id)
 );
 
 CREATE TABLE IF NOT EXISTS treatment
 (
-  treatment_id   CHAR(3),
-  vet_id         CHAR(1),
-  dog_id         CHAR(3),
-  treatment_date DATE,
-  description    VARCHAR(20),
-  fee            NUMERIC(5, 2),
-  discount_rate  NUMERIC(4, 2),
-  FOREIGN KEY(vet_id) REFERENCES vet(vet_id),
-  FOREIGN KEY(dog_id) REFERENCES dog(dog_id),
-  PRIMARY KEY(treatment_id)
+   treatment_id   CHAR(3),
+   vet_id         CHAR(1),
+   dog_id         CHAR(3),
+   treatment_date DATE,
+   description    VARCHAR(20),
+   fee            NUMERIC(5, 2),
+   discount_rate  NUMERIC(4, 2),
+   FOREIGN KEY(vet_id) REFERENCES vet(vet_id),
+   FOREIGN KEY(dog_id) REFERENCES dog(dog_id),
+   PRIMARY KEY(treatment_id)
 );
 
 CREATE TABLE IF NOT EXISTS return
 (
-  dog_id      CHAR(3),
-  adopter_id  CHAR(3),
-  return_date DATE,
-  reason      VARCHAR(30),
-  FOREIGN KEY(dog_id) REFERENCES dog(dog_id),
-  FOREIGN KEY(adopter_id) REFERENCES adopter(adopter_id),
-  PRIMARY KEY(dog_id, adopter_id)
+   dog_id      CHAR(3),
+   adopter_id  CHAR(3),
+   return_date DATE,
+   reason      VARCHAR(30),
+   FOREIGN KEY(dog_id) REFERENCES dog(dog_id),
+   FOREIGN KEY(adopter_id) REFERENCES adopter(adopter_id),
+   PRIMARY KEY(dog_id, adopter_id)
 );
 
 CREATE TABLE IF NOT EXISTS assignment
 (
-  vol_id         CHAR(3),
-  responsibility VARCHAR(20),
-  FOREIGN KEY(vol_id) REFERENCES volunteer(vol_id),
-  FOREIGN KEY(responsibility) REFERENCES responsibility(title),
-  PRIMARY KEY(vol_id, responsibility)
+   vol_id         CHAR(3),
+   responsibility VARCHAR(20),
+   FOREIGN KEY(vol_id) REFERENCES volunteer(vol_id),
+   FOREIGN KEY(responsibility) REFERENCES responsibility(title),
+   PRIMARY KEY(vol_id, responsibility)
 );
 
 --The following lines populate the shelter schema with the data from the shelter scenario
@@ -269,20 +269,20 @@ INSERT INTO return VALUES('107', 'A03', '25-SEP-03', 'issues with other dog');
 INSERT INTO return VALUES('103', 'A09', '02-OCT-03', 'chased cat');
 
 
-INSERT INTO assignment VALUES('V01',  'feeding');
-INSERT INTO assignment VALUES('V01',  'walking');
-INSERT INTO assignment VALUES('V02',  'feeding');
-INSERT INTO assignment VALUES('V02',  'walking');
-INSERT INTO assignment VALUES('V03',  'grooming');
-INSERT INTO assignment VALUES('V03',  'training');
-INSERT INTO assignment VALUES('V04',  'fund-raising');
-INSERT INTO assignment VALUES('V05',  'publicity');
-INSERT INTO assignment VALUES('V06',  'feeding');
-INSERT INTO assignment VALUES('V06',  'walking');
-INSERT INTO assignment VALUES('V07',  'feeding');
-INSERT INTO assignment VALUES('V07',  'walking');
-INSERT INTO assignment VALUES('V08',  'grooming');
-INSERT INTO assignment VALUES('V08',  'training');
-INSERT INTO assignment VALUES('V09',  'maintenance');
-INSERT INTO assignment VALUES('V10',  'feeding');
-INSERT INTO assignment VALUES('V10',  'walking');
+INSERT INTO assignment VALUES('V01', 'feeding');
+INSERT INTO assignment VALUES('V01', 'walking');
+INSERT INTO assignment VALUES('V02', 'feeding');
+INSERT INTO assignment VALUES('V02', 'walking');
+INSERT INTO assignment VALUES('V03', 'grooming');
+INSERT INTO assignment VALUES('V03', 'training');
+INSERT INTO assignment VALUES('V04', 'fund-raising');
+INSERT INTO assignment VALUES('V05', 'publicity');
+INSERT INTO assignment VALUES('V06', 'feeding');
+INSERT INTO assignment VALUES('V06', 'walking');
+INSERT INTO assignment VALUES('V07', 'feeding');
+INSERT INTO assignment VALUES('V07', 'walking');
+INSERT INTO assignment VALUES('V08', 'grooming');
+INSERT INTO assignment VALUES('V08', 'training');
+INSERT INTO assignment VALUES('V09', 'maintenance');
+INSERT INTO assignment VALUES('V10', 'feeding');
+INSERT INTO assignment VALUES('V10', 'walking');

@@ -10,19 +10,19 @@
 CREATE OR REPLACE FUNCTION classdb.setCS205SearchPath(userName NAME) RETURNS VOID AS
 $$
 DECLARE
-    userExists BOOLEAN;
+   userExists BOOLEAN;
 BEGIN
-    EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
-    IF
-        userExists
-    THEN
-        EXECUTE format('ALTER USER %I SET search_path TO "$user", public, _shelter, _pvfc', userName);
-    ELSE
-        RAISE NOTICE 'User "%" does not exist', userName;
-    END IF;
+   EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
+   IF
+      userExists
+   THEN
+      EXECUTE format('ALTER USER %I SET search_path TO "$user", public, _shelter, _pvfc', userName);
+   ELSE
+      RAISE NOTICE 'User "%" does not exist', userName;
+   END IF;
 END
-$$  LANGUAGE plpgsql
-    SECURITY DEFINER;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.setCS205SearchPath(userName NAME) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.setCS205SearchPath(userName NAME) TO DBManager;

@@ -14,13 +14,13 @@ START TRANSACTION;
 DO
 $$
 DECLARE
-	isSuper BOOLEAN;
+   isSuper BOOLEAN;
 BEGIN
-	EXECUTE 'SELECT rolsuper FROM pg_catalog.pg_roles WHERE rolname = current_user' INTO isSuper;
-	IF isSuper THEN --do nothing
-	ELSE
-		RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
-	END IF;
+   EXECUTE 'SELECT rolsuper FROM pg_catalog.pg_roles WHERE rolname = current_user' INTO isSuper;
+   IF isSuper THEN --do nothing
+   ELSE
+      RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
+   END IF;
 END
 $$;
 
@@ -34,24 +34,24 @@ $$;
 CREATE OR REPLACE FUNCTION classdb.changeUserPassword(userName NAME, password TEXT) RETURNS VOID AS
 $$
 DECLARE
-    userExists BOOLEAN;
+   userExists BOOLEAN;
 BEGIN
-    EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
-    IF userExists THEN
-        IF
-            LENGTH(password) > 5 AND
-            SUBSTRING(password from '[0-9]') IS NOT NULL
-        THEN
-            EXECUTE format('ALTER ROLE %I ENCRYPTED PASSWORD %L', userName, password);
-        ELSE
-            RAISE NOTICE 'Password does not meet requirements. Must be 6 or more characters and contain at least 1 number';
-        END IF;
-    ELSE
-        RAISE NOTICE 'User: "%" does not exist', userName;
-    END IF;
+   EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
+   IF userExists THEN
+      IF
+         LENGTH(password) > 5 AND
+         SUBSTRING(password from '[0-9]') IS NOT NULL
+      THEN
+         EXECUTE format('ALTER ROLE %I ENCRYPTED PASSWORD %L', userName, password);
+      ELSE
+         RAISE NOTICE 'Password does not meet requirements. Must be 6 or more characters and contain at least 1 number';
+      END IF;
+   ELSE
+      RAISE NOTICE 'User: "%" does not exist', userName;
+   END IF;
 END;
-$$  LANGUAGE plpgsql
-    SECURITY DEFINER;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.changeUserPassword(userName NAME, password TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.changeUserPassword(userName NAME, password TEXT) TO DBManager;
@@ -65,27 +65,27 @@ GRANT EXECUTE ON FUNCTION classdb.changeUserPassword(userName NAME, password TEX
 CREATE OR REPLACE FUNCTION classdb.resetUserPassword(userName NAME) RETURNS VOID AS
 $$
 DECLARE
-    studentID TEXT;
+   studentID TEXT;
 BEGIN
-    IF
-        pg_catalog.pg_has_role(userName, 'student', 'member')
-    THEN
-        EXECUTE format('SELECT ID FROM classdb.Student WHERE userName = %L', userName) INTO studentID;
-        IF studentID IS NULL THEN
-            PERFORM classdb.changeUserPassword(userName, userName);
-        ELSE
-            PERFORM classdb.changeUserPassword(userName, studentID);
-        END IF;
-    ELSIF
-        pg_catalog.pg_has_role(userName, 'instructor', 'member')
-    THEN
-        PERFORM classdb.changeUserPassword(userName, userName);
-    ELSE
-        RAISE NOTICE 'User "%" not found among registered users', userName;
-    END IF;
+   IF
+      pg_catalog.pg_has_role(userName, 'student', 'member')
+   THEN
+      EXECUTE format('SELECT ID FROM classdb.Student WHERE userName = %L', userName) INTO studentID;
+      IF studentID IS NULL THEN
+         PERFORM classdb.changeUserPassword(userName, userName);
+      ELSE
+         PERFORM classdb.changeUserPassword(userName, studentID);
+      END IF;
+   ELSIF
+      pg_catalog.pg_has_role(userName, 'instructor', 'member')
+   THEN
+      PERFORM classdb.changeUserPassword(userName, userName);
+   ELSE
+      RAISE NOTICE 'User "%" not found among registered users', userName;
+   END IF;
 END;
-$$  LANGUAGE plpgsql
-    SECURITY DEFINER;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.resetUserPassword(userName NAME) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.resetUserPassword(userName NAME) TO DBManager;
@@ -96,10 +96,10 @@ GRANT EXECUTE ON FUNCTION classdb.resetUserPassword(userName NAME) TO DBManager;
 CREATE OR REPLACE FUNCTION public.changeMyPassword(newPass TEXT) RETURNS VOID AS
 $$
 BEGIN
-    PERFORM classdb.changeUserPassword(session_user, newPass);
-    RAISE INFO 'Password successfully changed';
+   PERFORM classdb.changeUserPassword(session_user, newPass);
+   RAISE INFO 'Password successfully changed';
 END;
-$$  LANGUAGE plpgsql
-    SECURITY DEFINER;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
 
 COMMIT;
