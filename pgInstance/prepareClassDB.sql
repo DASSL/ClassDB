@@ -212,13 +212,12 @@ REVOKE ALL ON FUNCTION classdb.dropInstructor(userName NAME) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName NAME) TO DBManager;
 
 
---The following tables hold the list of currently registered students and instructors
 CREATE TABLE IF NOT EXISTS classdb.Student
 (
    userName NAME NOT NULL PRIMARY KEY,
    studentName VARCHAR(100),
    schoolID VARCHAR(20),
-   LastActivity TIMESTAMPTZ --holds timestamp of the last ddl command issued by the student
+   lastActivity TIMESTAMP --holds timestamp of the last ddl command issued by the student in UTC
 );
 
 CREATE TABLE IF NOT EXISTS classdb.Instructor
@@ -227,31 +226,23 @@ CREATE TABLE IF NOT EXISTS classdb.Instructor
    instructorName VARCHAR(100)
 );
 
-
 --This function updates the LastActivity field for a given student
-CREATE OR REPLACE FUNCTION classdb.UpdateStudentActivity() RETURNS event_trigger AS
+CREATE OR REPLACE FUNCTION classdb.updateStudentActivity() RETURNS event_trigger AS
 $$
 BEGIN
    UPDATE classdb.Student
-   SET LastActivity = (SELECT statement_timestamp())
-   WHERE UserName = session_user::text;
+   SET lastActivity = (SELECT statement_timestamp() AT TIME ZONE 'utc')
+   WHERE userName = session_user;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 
---Event triggers to update user last activity time on DDL events
-DROP EVENT TRIGGER IF EXISTS UpdateStudentActivityDDL;
+--Event trigger to update user last activity time on DDL events
+DROP EVENT TRIGGER IF EXISTS updateStudentActivityTrigger;
 
-CREATE EVENT TRIGGER UpdateStudentActivityDDL
-ON ddl_command_end
-EXECUTE PROCEDURE classdb.UpdateStudentActivity();
-
-
-DROP EVENT TRIGGER IF EXISTS UpdateStudentActivityDrop;
-
-CREATE EVENT TRIGGER UpdateStudentActivityDrop
-ON sql_drop
-EXECUTE PROCEDURE classdb.UpdateStudentActivity();
+CREATE EVENT TRIGGER updateStudentActivityTrigger
+ON ddl_command_start
+EXECUTE PROCEDURE classdb.updateStudentActivity();
 
 COMMIT;
