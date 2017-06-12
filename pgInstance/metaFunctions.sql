@@ -1,5 +1,5 @@
---Created at the WCSU DASSL
---By Andrew Figueroa, Steven Rollo and Sean Murthy
+--Andrew Figueroa, Steven Rollo, Sean Murthy
+--Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
 --
 --metaFunctions.sql
 --
