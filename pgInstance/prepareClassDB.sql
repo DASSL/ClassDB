@@ -38,7 +38,7 @@ $$;
 DO
 $$
 DECLARE
-   currentDB TEXT;
+   currentDB VARCHAR(128);
 BEGIN
    currentDB := current_database();
    --Postgres grants CONNECT to public by default
@@ -60,7 +60,7 @@ CREATE SCHEMA IF NOT EXISTS classdb;
 
 --The following procedure creates a user, given a username and password. It also creates a
 -- schema for the new user and gives them appropriate permissions for that schema.
-CREATE OR REPLACE FUNCTION classdb.createUser(userName NAME, initialPassword TEXT) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128)) RETURNS VOID AS
 $$
 DECLARE
    valueExists BOOLEAN;
@@ -83,15 +83,15 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION classdb.createUser(userName NAME, initialPassword TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.createUser(userName NAME, initialPassword TEXT) TO DBManager;
+REVOKE ALL ON FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128)) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128)) TO DBManager;
 
 
 --Creates a role for a student and assigns them to the Student role, given a username, name,
 -- and optional schoolID and password. This proceedure also gives Instructors read access
 -- (USAGE) to the new student's schema.
-CREATE OR REPLACE FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
-   schoolID VARCHAR(20) DEFAULT NULL, initialPassword TEXT DEFAULT NULL) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
+   schoolID VARCHAR(20) DEFAULT NULL, initialPassword VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
 $$
 BEGIN
    IF initialPassword IS NOT NULL THEN
@@ -99,7 +99,7 @@ BEGIN
    ELSIF schoolID IS NOT NULL THEN
       PERFORM classdb.createUser(userName, schoolID);
    ELSE
-      PERFORM classdb.createUser(userName, userName::TEXT);
+      PERFORM classdb.createUser(userName, userName::VARCHAR(128));
    END IF;
    EXECUTE format('GRANT Student TO %I', userName);
    EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', userName);
@@ -108,24 +108,24 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
-   schoolID VARCHAR(20), initialPassword TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
-   schoolID VARCHAR(20), initialPassword TEXT) TO DBManager;
-GRANT EXECUTE ON FUNCTION classdb.createStudent(userName NAME, studentName VARCHAR(100),
-   schoolID VARCHAR(20), initialPassword TEXT) TO Instructor;
+REVOKE ALL ON FUNCTION classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
+   schoolID VARCHAR(20), initialPassword VARCHAR(128)) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
+   schoolID VARCHAR(20), initialPassword VARCHAR(128)) TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
+   schoolID VARCHAR(20), initialPassword VARCHAR(128)) TO Instructor;
 
 
 --Creates a role for an instructor given a username, name, and optional password.
 -- The procedure also gives appropriate permission to the instructor.
-CREATE OR REPLACE FUNCTION classdb.createInstructor(userName NAME, instructorName VARCHAR(100),
-   initialPassword TEXT DEFAULT NULL) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
+   initialPassword VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
 $$
 BEGIN
    IF initialPassword IS NOT NULL THEN
       PERFORM classdb.createUser(userName, initialPassword);
    ELSE
-      PERFORM classdb.createUser(userName, userName::TEXT);
+      PERFORM classdb.createUser(userName, userName::VARCHAR(128));
    END IF;
    EXECUTE format('GRANT Instructor TO %I', userName);
    EXECUTE format('INSERT INTO classdb.Instructor VALUES(%L, %L)', userName, instructorName);
@@ -133,17 +133,17 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION classdb.createInstructor(userName NAME, instructorName VARCHAR(100),
-   initialPassword TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.createInstructor(userName NAME, instructorName VARCHAR(100),
-   initialPassword TEXT) TO DBManager;
+REVOKE ALL ON FUNCTION classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
+   initialPassword VARCHAR(128)) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
+   initialPassword VARCHAR(128)) TO DBManager;
 
 
 --The folowing procedure revokes the Student role from a student, along with their entry in the
 -- classdb.Student table. If the Student role was the only role that the student was a member
 -- of, the student's schema, and the objects contained within, are removed along with the the
 -- role representing the student.
-CREATE OR REPLACE FUNCTION classdb.dropStudent(userName NAME) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION classdb.dropStudent(userName VARCHAR(50)) RETURNS VOID AS
 $$
 DECLARE
    userExists BOOLEAN;
@@ -171,16 +171,16 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION classdb.dropStudent(userName NAME) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO DBManager;
-GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName NAME) TO Instructor;
+REVOKE ALL ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) TO Instructor;
 
 
 --The folowing procedure revokes the Instructor role from an Instructor, along with their entry
 -- in the classdb.Instructor table. If the Instructor role was the only role that the
 -- instructor was a member of, the instructor's schema, and the objects contained within, are
 -- removed along with the the role representing the instructor.
-CREATE OR REPLACE FUNCTION classdb.dropInstructor(userName NAME) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION classdb.dropInstructor(userName VARCHAR(50)) RETURNS VOID AS
 $$
 DECLARE
    userExists BOOLEAN;
@@ -208,14 +208,14 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION classdb.dropInstructor(userName NAME) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName NAME) TO DBManager;
+REVOKE ALL ON FUNCTION classdb.dropInstructor(userName VARCHAR(50)) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName VARCHAR(50)) TO DBManager;
 
 
 --The following tables hold the list of currently registered students and instructors
 CREATE TABLE IF NOT EXISTS classdb.Student
 (
-   userName NAME NOT NULL PRIMARY KEY,
+   userName VARCHAR(50) NOT NULL PRIMARY KEY,
    studentName VARCHAR(100),
    schoolID VARCHAR(20),
    LastActivity TIMESTAMPTZ --holds timestamp of the last ddl command issued by the student
@@ -223,7 +223,7 @@ CREATE TABLE IF NOT EXISTS classdb.Student
 
 CREATE TABLE IF NOT EXISTS classdb.Instructor
 (
-   userName NAME NOT NULL PRIMARY KEY,
+   userName VARCHAR(50) NOT NULL PRIMARY KEY,
    instructorName VARCHAR(100)
 );
 
