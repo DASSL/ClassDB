@@ -3,7 +3,7 @@
 --
 --prepareClassDB.sql
 --
---ClassDB - Created: 2017-05-29; Modified 2017-06-09
+--ClassDB - Created: 2017-05-29; Modified 2017-06-12
 
 
 --This script should be run as a user with superuser privileges, due to the functions being
@@ -14,7 +14,7 @@
 --This script first prevents student roles from modiying the public schema, and then creates a
 -- classdb schema. Following that, a stored procedure for creating any type of user is defined.
 -- Finally, procedures for creating and dropping students and instructors are defined. This script
--- also creates Student and Instructor tables in the classdb schema, and an event trigger that 
+-- also creates Student and Instructor tables in the classdb schema, and an event trigger that
 -- records the timestamp of the last ddl statement issued by each student.
 
 START TRANSACTION;
@@ -31,7 +31,6 @@ BEGIN
    END IF;
 END
 $$;
-
 
 
 --Allows appropriate users to connect to the database
@@ -235,7 +234,7 @@ GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName VARCHAR(50)) TO DBMana
 
 
 --The folowing procedure revokes the DBManager role from a DBManager. If the DBManager role was
--- the only role that they were a member of, the manager's schema, and the objects contained 
+-- the only role that they were a member of, the manager's schema, and the objects contained
 -- within, are removed along with the the role representing the DBManager.
 CREATE OR REPLACE FUNCTION classdb.dropDBManager(userName VARCHAR(50)) RETURNS VOID AS
 $$
@@ -266,6 +265,38 @@ $$ LANGUAGE plpgsql
 
 REVOKE ALL ON FUNCTION classdb.dropDBManager(userName VARCHAR(50)) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.dropDBManager(userName VARCHAR(50)) TO DBManager;
+
+
+--The following procedure drops a user regardless of their role memberships. This will also
+-- drop the user's schema and the objects contained within, if the schema exists. Currently,
+-- it also drops the value from the Student table if the user was a member of the Student role,
+-- and from the Instructor table if they were an instructor.
+CREATE OR REPLACE FUNCTION classdb.dropUser(userName VARCHAR(50)) AS
+$$
+DECLARE
+   userExists BOOLEAN;
+BEGIN
+   EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
+   IF userExists THEN
+      IF pg_catalog.pg_has_role(userName, 'student', 'member') THEN
+         EXECUTE format('DELETE FROM classdb.Student WHERE userName = %L', userName);
+      END IF;
+
+      IF pg_catalog.pg_has_role(userName, 'instructor', 'member') THEN
+         EXECUTE format('DELETE FROM classdb.Instructor WHERE userName = %L', userName);
+      END IF;
+
+      EXECUTE format('DROP SCHEMA %I CASCADE', userName);
+      EXECUTE format('DROP ROLE %I', userName);
+   ELSE
+      RAISE NOTICE 'User "%" is not a registered user', userName;
+   END IF;
+END;
+$$ LANGUAGE
+   SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION classdb.dropUser(userName VARCHAR(50)) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(50)) TO DBManager;
 
 
 --The following tables hold the list of currently registered students and instructors
