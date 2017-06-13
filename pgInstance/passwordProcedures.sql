@@ -31,7 +31,7 @@ $$;
 -- - Must be 6 or more characters
 -- - Must contain at least one numerical digit (0-9)
 
-CREATE OR REPLACE FUNCTION classdb.changeUserPassword(userName NAME, password TEXT) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128)) RETURNS VOID AS
 $$
 DECLARE
    userExists BOOLEAN;
@@ -53,8 +53,8 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION classdb.changeUserPassword(userName NAME, password TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.changeUserPassword(userName NAME, password TEXT) TO DBManager;
+REVOKE ALL ON FUNCTION classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128)) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128)) TO DBManager;
 
 
 --The following procedure resets a users password to the default password given a username.
@@ -62,10 +62,10 @@ GRANT EXECUTE ON FUNCTION classdb.changeUserPassword(userName NAME, password TEX
 -- at the time of role creation. It is either the ID or username for a student and the username
 -- for an instructor.
 
-CREATE OR REPLACE FUNCTION classdb.resetUserPassword(userName NAME) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) RETURNS VOID AS
 $$
 DECLARE
-   studentID TEXT;
+   studentID VARCHAR(128);
 BEGIN
    IF
       pg_catalog.pg_has_role(userName, 'student', 'member')
@@ -87,13 +87,13 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION classdb.resetUserPassword(userName NAME) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.resetUserPassword(userName NAME) TO DBManager;
+REVOKE ALL ON FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) TO DBManager;
 
 
 --The folowing procedure allows a user to change their password to a specified one
 
-CREATE OR REPLACE FUNCTION public.changeMyPassword(newPass TEXT) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION public.changeMyPassword(newPass VARCHAR(128)) RETURNS VOID AS
 $$
 BEGIN
    PERFORM classdb.changeUserPassword(session_user, newPass);
