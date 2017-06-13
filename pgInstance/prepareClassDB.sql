@@ -271,7 +271,7 @@ GRANT EXECUTE ON FUNCTION classdb.dropDBManager(userName VARCHAR(50)) TO DBManag
 -- drop the user's schema and the objects contained within, if the schema exists. Currently,
 -- it also drops the value from the Student table if the user was a member of the Student role,
 -- and from the Instructor table if they were an instructor.
-CREATE OR REPLACE FUNCTION classdb.dropUser(userName VARCHAR(50)) AS
+CREATE OR REPLACE FUNCTION classdb.dropUser(userName VARCHAR(50)) RETURNS VOID AS
 $$
 DECLARE
    userExists BOOLEAN;
