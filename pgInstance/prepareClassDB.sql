@@ -139,6 +139,28 @@ GRANT EXECUTE ON FUNCTION classdb.createInstructor(userName VARCHAR(50), instruc
    initialPassword VARCHAR(128)) TO DBManager;
 
 
+--Creates a role for a DBManager given a username, name, and optional password.
+-- The procedure also gives appropriate permission to the DBManager.
+CREATE OR REPLACE FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
+   initialPassword VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
+$$
+BEGIN
+   IF initialPassword IS NOT NULL THEN
+      PERFORM classdb.createUser(userName, initialPassword);
+   ELSE
+      PERFORM classdb.createUser(userName, userName::VARCHAR(128));
+   END IF;
+   EXECUTE format('GRANT DBManager TO %I', userName);
+END;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
+   initialPassword VARCHAR(128)) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
+   initialPassword VARCHAR(128)) TO DBManager;
+
+
 --The folowing procedure revokes the Student role from a student, along with their entry in the
 -- classdb.Student table. If the Student role was the only role that the student was a member
 -- of, the student's schema, and the objects contained within, are removed along with the the
@@ -210,6 +232,40 @@ $$ LANGUAGE plpgsql
 
 REVOKE ALL ON FUNCTION classdb.dropInstructor(userName VARCHAR(50)) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName VARCHAR(50)) TO DBManager;
+
+
+--The folowing procedure revokes the DBManager role from a DBManager. If the DBManager role was
+-- the only role that they were a member of, the manager's schema, and the objects contained 
+-- within, are removed along with the the role representing the DBManager.
+CREATE OR REPLACE FUNCTION classdb.dropDBManager(userName VARCHAR(50)) RETURNS VOID AS
+$$
+DECLARE
+   userExists BOOLEAN;
+   hasOtherRoles BOOLEAN;
+BEGIN
+   EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
+   IF
+      userExists AND
+      pg_catalog.pg_has_role(userName, 'DBManager', 'member')
+   THEN
+      EXECUTE format('REVOKE DBManager FROM %I', userName);
+      EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role(%L, oid, ''member'')'
+         || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
+      IF hasOtherRoles THEN
+         RAISE NOTICE 'User "%" remains a member of one or more additional roles', userName;
+      ELSE
+         EXECUTE format('DROP SCHEMA %I CASCADE', userName);
+         EXECUTE format('DROP ROLE %I', userName);
+      END IF;
+   ELSE
+      RAISE NOTICE 'User "%" is not a registered DBManager', userName;
+   END IF;
+END;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION classdb.dropDBManager(userName VARCHAR(50)) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.dropDBManager(userName VARCHAR(50)) TO DBManager;
 
 
 --The following tables hold the list of currently registered students and instructors
