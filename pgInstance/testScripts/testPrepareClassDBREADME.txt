@@ -3,15 +3,17 @@ Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
 
 testPrepareClassDBREADME.txt
 
-ClassDB - Created: 2017-06-05; Modified 2017-06-06
+ClassDB - Created: 2017-06-05; Modified 2017-06-13
 
 ---
 Tests are run in the following order:
 createUserTest()
 createStudentTest()
 createInstructorTest()
+createDBManagerTest()
 dropStudentTest()
 dropInstructorTest()
+dropDBManagerTest()
 
 ---
 PENDING Tests:
@@ -54,6 +56,19 @@ Password: testpass3
 UserName: testStuInst1
 Password: testpass5
 
+
+DBManagers:
+
+UserName: testDBManager0
+Password: testDBManager0
+
+UserName: testDBManager1
+Password: testpass6
+
+UserName: testInstManage0
+Password: testpass7
+
+
 Run the following two queries:
 
 SELECT * FROM classdb.Student;
@@ -81,4 +96,5 @@ SELECT * FROM classdb.Instructor;
  testInstructor0 | Dave Paul
  testInstructor1 | Dianna Wilson
  testStuInst1    | Rosalie Flowers
-(4 rows)
+ testInstManage0 | Shawn Nash
+(5 rows)

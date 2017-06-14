@@ -3,7 +3,8 @@
 --
 --testPrepareClassDBCleanup.sql
 --
---ClassDB - Created: 2017-06-05; Modified 2017-06-06
+--ClassDB - Created: 2017-06-05; Modified 2017-06-13
+
 
 DROP SCHEMA "testStudent0";
 DROP ROLE "testStudent0";
@@ -39,8 +40,22 @@ DROP ROLE "testStuInst1";
 DELETE FROM classdb.Student WHERE userName = 'testStuInst1';
 DELETE FROM classdb.Instructor WHERE userName = 'testStuInst1';
 
+DROP SCHEMA "testDBManager0";
+DROP ROLE "testDBManager0";
+
+DROP SCHEMA "testDBManager1";
+DROP ROLE "testDBManager1";
+
+DROP SCHEMA "testInstManage0";
+DROP ROLE "testInstManage0";
+DELETE FROM classdb.Instructor WHERE userName = 'testInstManage0';
+
+
 
 DROP FUNCTION classdb.prepareClassDBTest();
 DROP FUNCTION classdb.createUserTest();
 DROP FUNCTION classdb.createInstructorTest();
+DROP FUNCTION classdb.createDBManagerTest();
 DROP FUNCTION classdb.dropStudentTest();
+DROP FUNCTION classdb.dropInstructorTest();
+DROP FUNCTION classdb.dropDBManagerTest();

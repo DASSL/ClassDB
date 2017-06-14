@@ -3,7 +3,7 @@
 --
 --testPrepareClassDB.sql
 --
---ClassDB - Created: 2017-06-05; Modified 2017-06-06
+--ClassDB - Created: 2017-06-05; Modified 2017-06-13
 
 --The following test script should be run as a superuser
 
@@ -79,7 +79,7 @@ DECLARE
 BEGIN
    --UserName fallback: Password should be set to userName
    PERFORM classdb.createInstructor('testInstructor0', 'Dave Paul');
-   --initialPassword used: Password should be set to 'testpass3'
+   --initialPassword used: Password should be set to 'testpass4'
    PERFORM classdb.createInstructor('testInstructor1', 'Dianna Wilson', 'testpass4');
    --Multi-role: Should not result in an exception or error (NOTICE is expected), password
    -- should not change
@@ -96,6 +96,37 @@ BEGIN
 
    IF  pg_has_role('testInstructor0', 'instructor', 'member') AND
       pg_has_role('testInstructor1', 'instructor', 'member') THEN
+      RETURN 'PENDING - see testPrepareClassDBREADME.txt';
+   ELSE
+      RETURN 'FAIL: Code 2';
+   END IF;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION classdb.createDBManagerTest() RETURNS TEXT AS
+$$
+DECLARE
+   rowCount INTEGER;
+BEGIN
+   --UserName fallback: Password should be set to userName
+   PERFORM classdb.createDBmanager('testDBManager0', 'Colin Cooper');
+   --initialPassword used: Password should be set to 'testpass6'
+   PERFORM classdb.createDBManager('testDBManager1', 'Dianna Wilson', 'testpass6');
+   --Multi-role: Should not result in an exception or error (NOTICE is expected), password
+   -- should not change
+   PERFORM classdb.createDBManager('testInstManage0', 'Shawn Nash', 'testpass7');
+   PERFORM classdb.createInstructor('testInstManage0', 'Shawn Nash');
+
+   --Test existance of all schemas
+   EXECUTE 'SELECT * FROM information_schema.schemata WHERE schema_name IN (''testDBManager0'',
+      ''testDBManager1'', ''testInstManage0'')';
+   GET DIAGNOSTICS rowCount = ROW_COUNT;
+   IF rowCount != 3 THEN
+      RETURN 'FAIL: Code 1';
+   END IF;
+
+   IF  pg_has_role('testDBManager0', 'dbmanager', 'member') AND
+      pg_has_role('testDBManager1', 'dbmanager', 'member') THEN
       RETURN 'PENDING - see testPrepareClassDBREADME.txt';
    ELSE
       RETURN 'FAIL: Code 2';
@@ -182,14 +213,56 @@ END
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION classdb.dropDBManagerTest() RETURNS TEXT AS
+$$
+DECLARE
+   valueExists BOOLEAN;
+BEGIN
+   --"Normal" case, Regular DBManager: Role and schema should be dropped
+   PERFORM classdb.createDBManager('testDBManager2', 'Tom Bryan', 'testpass');
+   PERFORM classdb.dropDBManager('testDBManager2');
+   
+   EXECUTE 'SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = ''testDBManager2''' INTO valueExists;
+   IF valueExists THEN
+      RETURN 'FAIL: Code 1';
+   END IF;
+   EXECUTE 'SELECT 1 FROM information_schema.schemata WHERE schema_name = ''testDBMangager2''' INTO valueExists;
+   IF valueExists THEN
+      RETURN 'FAIL: Code 2';
+   END IF;
+
+   --Multi-role case, user is a member of both Student and Instructor roles: Schema and Role
+   -- should still exist
+   PERFORM classdb.createDBManager('testInstManage2', 'Alice West');
+   PERFORM classdb.createInstructor('testInstManage2', 'Alice West');
+   PERFORM classdb.dropDBManager('testInstManage2');
+
+   EXECUTE 'SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = ''testInstManage2''' INTO valueExists;
+   IF valueExists THEN
+      EXECUTE 'SELECT 1 FROM information_schema.schemata WHERE schema_name = ''testInstManage2''' INTO valueExists;
+      IF valueExists THEN
+         PERFORM classdb.dropInstructor('testInstManage2');
+      ELSE
+         RETURN 'FAIL: Code 4';
+      END IF;
+   ELSE
+      RETURN 'FAIL: Code 3';
+   END IF;
+   RETURN 'PASS';
+END
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION classdb.prepareClassDBTest() RETURNS VOID AS
 $$
 BEGIN
    RAISE INFO '%   createUserTest()', classdb.createUserTest();
    RAISE INFO '%   createStudentTest()', classdb.createStudentTest();
    RAISE INFO '%   createInstructorTest()', classdb.createInstructorTest();
+   RAISE INFO '%   createDBManagerTest()', classdb.createDBManagerTest();
    RAISE INFO '%   dropStudentTest()', classdb.dropStudentTest();
    RAISE INFO '%   dropInstructorTest()', classdb.dropInstructorTest();
+   RAISE INFO '%   dropDBManagerTest()', classdb.dropDBManagerTest();
 END
 $$  LANGUAGE plpgsql;
 
