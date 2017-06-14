@@ -245,9 +245,9 @@ BEGIN
    EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
    IF
       userExists AND
-      pg_catalog.pg_has_role(userName, 'DBManager', 'member')
+      pg_catalog.pg_has_role(userName, 'dbmanager', 'member')
    THEN
-      EXECUTE format('REVOKE DBManager FROM %I', userName);
+      EXECUTE format('REVOKE dbmanager FROM %I', userName);
       EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role(%L, oid, ''member'')'
          || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
       IF hasOtherRoles THEN
