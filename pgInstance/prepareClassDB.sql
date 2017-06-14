@@ -292,7 +292,7 @@ BEGIN
       RAISE NOTICE 'User "%" is not a registered user', userName;
    END IF;
 END;
-$$ LANGUAGE
+$$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.dropUser(userName VARCHAR(50)) FROM PUBLIC;
