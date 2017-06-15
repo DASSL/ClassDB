@@ -102,34 +102,42 @@ $$
 DECLARE
    objId TEXT;
 BEGIN
+	--Check if the calling event is sql_drop or ddl_command_end
 	IF TG_EVENT = 'ddl_command_end' THEN
       SELECT object_identity 
-      FROM pg_event_trigger_ddl_commands()
+      FROM pg_event_trigger_ddl_commands() --Each of these functions can only be called for the appropriate event type
+      WHERE object_identity IS NOT NULL
+      ORDER BY object_identity LIMIT 1 
       INTO objId;
-   END IF;
-   IF TG_EVENT = 'sql_drop' THEN --Check if the calling event is sql_drop or ddl_command_end
+   ELSIF TG_EVENT = 'sql_drop' THEN
       SELECT object_identity
-      FROM pg_event_trigger_dropped_objects() --Each of these functions can only be called for the appropriate event type
+      FROM pg_event_trigger_dropped_objects() 
+      WHERE object_identity IS NOT NULL
+      ORDER BY object_identity LIMIT 1
       INTO objId;
    END IF;
-   
-   UPDATE classdb.Student
-   SET lastDDLActivity = (SELECT current_timestamp AT TIME ZONE 'utc'),
-   DDLCount = DDLCount + 1,
-   lastDDLOperation = TG_TAG,
-   lastDDLObject = objId
-   WHERE userName = session_user; --Update info for the appropriate user
+   --Note: DROP statements cause this trigger to be executed twice,
+   --so we don't update if objId IS NULL, because that is the
+   --ddl_command_end event after sql_drop
+   IF objId IS NOT NULL THEN 
+      UPDATE classdb.Student
+      SET lastDDLActivity = (SELECT current_timestamp AT TIME ZONE 'utc'),
+      DDLCount = DDLCount + 1,
+      lastDDLOperation = TG_TAG,
+      lastDDLObject = objId
+      WHERE userName = session_user; --Update info for the appropriate user
+   END IF;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
-
+   
 --Event triggers to update user last activity time on DDL events
-CREATE EVENT TRIGGER updateStudentActivityTriggerDDL
-ON ddl_command_end
-EXECUTE PROCEDURE classdb.updateStudentActivity();
-
 CREATE EVENT TRIGGER updateStudentActivityTriggerDrop
 ON sql_drop
+EXECUTE PROCEDURE classdb.updateStudentActivity();
+
+CREATE EVENT TRIGGER updateStudentActivityTriggerDDL
+ON ddl_command_end
 EXECUTE PROCEDURE classdb.updateStudentActivity();
 
 COMMIT;
