@@ -50,8 +50,8 @@ BEGIN
    PERFORM classdb.createStudent('testStuInst0', 'Edwin Morrison', '102', 'notPass');
 
    --Test existance of all schemas
-   EXECUTE 'SELECT * FROM information_schema.schemata WHERE schema_name IN (''testStudent0'',
-      ''testStudent1'', ''testStudent2'', ''testStudent3'', ''testStuInst0'')';
+   PERFORM * FROM information_schema.schemata WHERE schema_name IN ('testStudent0',
+      'testStudent1', 'testStudent2', 'testStudent3', 'testStuInst0');
    GET DIAGNOSTICS rowCount = ROW_COUNT;
    IF rowCount != 5 THEN
       RETURN 'FAIL: Code 1';
@@ -87,8 +87,8 @@ BEGIN
    PERFORM classdb.createInstructor('testStuInst1', 'Rosalie Flowers');
 
    --Test existance of all schemas
-   EXECUTE 'SELECT * FROM information_schema.schemata WHERE schema_name IN (''testInstructor0'',
-      ''testInstructor1'', ''testStuInst1'')';
+   PERFORM * FROM information_schema.schemata WHERE schema_name IN ('testInstructor0',
+      'testInstructor1', 'testStuInst1');
    GET DIAGNOSTICS rowCount = ROW_COUNT;
    IF rowCount != 3 THEN
       RETURN 'FAIL: Code 1';
@@ -118,8 +118,8 @@ BEGIN
    PERFORM classdb.createInstructor('testInstManage0', 'Shawn Nash');
 
    --Test existance of all schemas
-   EXECUTE 'SELECT * FROM information_schema.schemata WHERE schema_name IN (''testDBManager0'',
-      ''testDBManager1'', ''testInstManage0'')';
+   PERFORM * FROM information_schema.schemata WHERE schema_name IN ('testDBManager0',
+      'testDBManager1', 'testInstManage0');
    GET DIAGNOSTICS rowCount = ROW_COUNT;
    IF rowCount != 3 THEN
       RETURN 'FAIL: Code 1';
@@ -143,11 +143,11 @@ BEGIN
    --"Normal" case, Regular student: Role and schema should be dropped
    PERFORM classdb.createStudent('testStudent4', 'Ramon Harrington', '102', 'testpass');
    PERFORM classdb.dropStudent('testStudent4');
-   EXECUTE 'SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = ''testStudent4''' INTO valueExists;
+   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testStudent4' INTO valueExists;
    IF valueExists THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   EXECUTE 'SELECT 1 FROM information_schema.schemata WHERE schema_name = ''testStudent4''' INTO valueExists;
+   SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testStudent4' INTO valueExists;
    IF valueExists THEN
       RETURN 'FAIL: Code 2';
    END IF;
@@ -158,9 +158,9 @@ BEGIN
    PERFORM classdb.createInstructor('testStuInst2', 'Roland Baker');
    PERFORM classdb.dropStudent('testStuInst2');
 
-   EXECUTE 'SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = ''testStuInst2''' INTO valueExists;
+   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testStuInst2' INTO valueExists;
    IF valueExists THEN
-      EXECUTE 'SELECT 1 FROM information_schema.schemata WHERE schema_name = ''testStuInst2''' INTO valueExists;
+      SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testStuInst2' INTO valueExists;
       IF valueExists THEN
          PERFORM classdb.dropInstructor('testStuInst2');
       ELSE
@@ -182,11 +182,11 @@ BEGIN
    --"Normal" case, Regular Instructor: Role and schema should be dropped
    PERFORM classdb.createInstructor('testInstructor2', 'Wayne Bates', 'testpass');
    PERFORM classdb.dropInstructor('testInstructor2');
-   EXECUTE 'SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = ''testInstructor2''' INTO valueExists;
+   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testInstructor2' INTO valueExists;
    IF valueExists THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   EXECUTE 'SELECT 1 FROM information_schema.schemata WHERE schema_name = ''testInstructor2''' INTO valueExists;
+   SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testInstructor2' INTO valueExists;
    IF valueExists THEN
       RETURN 'FAIL: Code 2';
    END IF;
@@ -197,9 +197,9 @@ BEGIN
    PERFORM classdb.createStudent('testStuInst3', 'Julius Paton');
    PERFORM classdb.dropInstructor('testStuInst3');
 
-   EXECUTE 'SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = ''testStuInst3''' INTO valueExists;
+   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testStuInst3' INTO valueExists;
    IF valueExists THEN
-      EXECUTE 'SELECT 1 FROM information_schema.schemata WHERE schema_name = ''testStuInst3''' INTO valueExists;
+      SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testStuInst3' INTO valueExists;
       IF valueExists THEN
          PERFORM classdb.dropStudent('testStuInst3');
       ELSE
@@ -221,12 +221,12 @@ BEGIN
    --"Normal" case, Regular DBManager: Role and schema should be dropped
    PERFORM classdb.createDBManager('testDBManager2', 'Tom Bryan', 'testpass');
    PERFORM classdb.dropDBManager('testDBManager2');
-   
-   EXECUTE 'SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = ''testDBManager2''' INTO valueExists;
+
+   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testDBManager2' INTO valueExists;
    IF valueExists THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   EXECUTE 'SELECT 1 FROM information_schema.schemata WHERE schema_name = ''testDBMangager2''' INTO valueExists;
+   SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testDBMangager2' INTO valueExists;
    IF valueExists THEN
       RETURN 'FAIL: Code 2';
    END IF;
@@ -237,9 +237,9 @@ BEGIN
    PERFORM classdb.createInstructor('testInstManage2', 'Alice West');
    PERFORM classdb.dropDBManager('testInstManage2');
 
-   EXECUTE 'SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = ''testInstManage2''' INTO valueExists;
+   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testInstManage2' INTO valueExists;
    IF valueExists THEN
-      EXECUTE 'SELECT 1 FROM information_schema.schemata WHERE schema_name = ''testInstManage2''' INTO valueExists;
+      SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testInstManage2' INTO valueExists;
       IF valueExists THEN
          PERFORM classdb.dropInstructor('testInstManage2');
       ELSE
