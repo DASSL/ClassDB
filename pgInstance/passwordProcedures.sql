@@ -3,7 +3,7 @@
 --
 --passwordProcedures.sql
 --
---ClassDB - Created: 2017-05-30; Modified 2017-06-08
+--ClassDB - Created: 2017-05-30; Modified 2017-06-14
 
 --This script should be run as a superuser, or a user with the createrole privilege, due to the
 -- functions being declared SECURITY DEFINER.
@@ -35,7 +35,7 @@ $$
 DECLARE
    userExists BOOLEAN;
 BEGIN
-   EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
+   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1 INTO userExists;
    IF userExists THEN
       IF
          LENGTH(password) > 5 AND
@@ -67,9 +67,9 @@ DECLARE
    studentID VARCHAR(128);
 BEGIN
    IF
-      pg_catalog.pg_has_role(userName, 'student', 'member')
+      pg_catalog.pg_has_role($1, 'student', 'member')
    THEN
-      EXECUTE format('SELECT ID FROM classdb.Student WHERE userName = %L', userName) INTO studentID;
+      SELECT ID FROM classdb.Student WHERE userName = $1 INTO studentID;
       IF studentID IS NULL THEN
          PERFORM classdb.changeUserPassword(userName, userName);
       ELSE
