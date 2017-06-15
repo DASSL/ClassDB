@@ -3,7 +3,7 @@
 --
 --cs205Script.sql
 --
---Schemas for CS205; Created: 2017-06-06; Modified 2017-06-06
+--Schemas for CS205; Created: 2017-06-06; Modified 2017-06-14
 
 --The following procedure sets a user's search_path to a new specified search_path. An
 -- notice is raised if the user does not exist.
@@ -12,7 +12,7 @@ $$
 DECLARE
    userExists BOOLEAN;
 BEGIN
-   EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
+   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1 INTO userExists;
    IF
       userExists
    THEN
