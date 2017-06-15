@@ -3,7 +3,7 @@
 --
 --prepareClassDB.sql
 --
---ClassDB - Created: 2017-05-29; Modified 2017-06-12
+--ClassDB - Created: 2017-05-29; Modified 2017-06-14
 
 
 --This script should be run as a user with superuser privileges, due to the functions being
@@ -25,7 +25,7 @@ $$
 DECLARE
    isSuper BOOLEAN;
 BEGIN
-   EXECUTE 'SELECT COALESCE(rolsuper, FALSE) FROM pg_catalog.pg_roles WHERE rolname = current_user' INTO isSuper;
+   SELECT COALESCE(rolsuper, FALSE) FROM pg_catalog.pg_roles WHERE rolname = current_user INTO isSuper;
    IF NOT isSuper THEN
       RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
    END IF;
@@ -64,19 +64,19 @@ $$
 DECLARE
    valueExists BOOLEAN;
 BEGIN
-   EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO valueExists;
+   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1 INTO valueExists;
    IF valueExists THEN
-      RAISE NOTICE 'User "%" already exists, password not modified', userName;
+      RAISE NOTICE 'User "%" already exists, password not modified', $1;
    ELSE
-      EXECUTE format('CREATE USER %I ENCRYPTED PASSWORD %L', userName, initialPassword);
+      EXECUTE format('CREATE USER %I ENCRYPTED PASSWORD %L', $1, $2);
    END IF;
 
-   EXECUTE format('SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname = %L', userName) INTO valueExists;
+   SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname = $1 INTO valueExists;
    IF valueExists THEN
-      RAISE NOTICE 'Schema "%" already exists', userName;
+      RAISE NOTICE 'Schema "%" already exists', $1;
    ELSE
-      EXECUTE format('CREATE SCHEMA %I', userName);
-      EXECUTE format('GRANT ALL PRIVILEGES ON SCHEMA %I TO %I', userName, userName);
+      EXECUTE format('CREATE SCHEMA %I', $1);
+      EXECUTE format('GRANT ALL PRIVILEGES ON SCHEMA %I TO %I', $1, $1);
    END IF;
 END;
 $$ LANGUAGE plpgsql
@@ -100,9 +100,9 @@ BEGIN
    ELSE
       PERFORM classdb.createUser(userName, userName::VARCHAR(128));
    END IF;
-   EXECUTE format('GRANT Student TO %I', userName);
-   EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', userName);
-   EXECUTE format('INSERT INTO classdb.Student VALUES(%L, %L, %L)', userName, studentName, schoolID);
+   EXECUTE format('GRANT Student TO %I', $1);
+   EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', $1);
+   INSERT INTO classdb.Student VALUES($1, $2, $3);
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
@@ -126,8 +126,8 @@ BEGIN
    ELSE
       PERFORM classdb.createUser(userName, userName::VARCHAR(128));
    END IF;
-   EXECUTE format('GRANT Instructor TO %I', userName);
-   EXECUTE format('INSERT INTO classdb.Instructor VALUES(%L, %L)', userName, instructorName);
+   EXECUTE format('GRANT Instructor TO %I', $1);
+   INSERT INTO classdb.Instructor VALUES($1, $2);
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
@@ -149,7 +149,7 @@ BEGIN
    ELSE
       PERFORM classdb.createUser(userName, userName::VARCHAR(128));
    END IF;
-   EXECUTE format('GRANT DBManager TO %I', userName);
+   EXECUTE format('GRANT DBManager TO %I', $1);
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
@@ -170,23 +170,23 @@ DECLARE
    userExists BOOLEAN;
    hasOtherRoles BOOLEAN;
 BEGIN
-   EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
+   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1 INTO userExists;
    IF
       userExists AND
-      pg_catalog.pg_has_role(userName, 'student', 'member')
+      pg_catalog.pg_has_role($1, 'student', 'member')
    THEN
-      EXECUTE format('REVOKE Student FROM %I', userName);
-      EXECUTE format('DELETE FROM classdb.Student S WHERE S.userName = %L', userName);
-      EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role(%L, oid, ''member'')'
-         || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
+      EXECUTE format('REVOKE Student FROM %I', $1);
+      DELETE FROM classdb.Student S WHERE S.userName = $1;
+      SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role($1, oid, 'member')
+         AND rolname != $1 INTO hasOtherRoles;
       IF hasOtherRoles THEN
-         RAISE NOTICE 'User "%" is a member of one or more additional roles', userName;
+         RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
-         EXECUTE format('DROP SCHEMA %I CASCADE', userName);
-         EXECUTE format('DROP ROLE %I', userName);
+         EXECUTE format('DROP SCHEMA %I CASCADE', $1);
+         EXECUTE format('DROP ROLE %I', $1);
       END IF;
    ELSE
-      RAISE NOTICE 'User "%" is not a registered student', userName;
+      RAISE NOTICE 'User "%" is not a registered student', $1;
    END IF;
 END;
 $$ LANGUAGE plpgsql
@@ -207,23 +207,23 @@ DECLARE
    userExists BOOLEAN;
    hasOtherRoles BOOLEAN;
 BEGIN
-   EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
+   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1 INTO userExists;
    IF
       userExists AND
-      pg_catalog.pg_has_role(userName, 'instructor', 'member')
+      pg_catalog.pg_has_role($1, 'instructor', 'member')
    THEN
-      EXECUTE format('REVOKE Instructor FROM %I', userName);
-      EXECUTE format('DELETE FROM classdb.Instructor S WHERE S.userName = %L', userName);
-      EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role(%L, oid, ''member'')'
-         || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
+      EXECUTE format('REVOKE Instructor FROM %I', $1);
+      DELETE FROM classdb.Instructor S WHERE S.userName = $1;
+      SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role($1, oid, 'member')
+          AND rolname != $1 INTO hasOtherRoles;
       IF hasOtherRoles THEN
-         RAISE NOTICE 'User "%" remains a member of one or more additional roles', userName;
+         RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
-         EXECUTE format('DROP SCHEMA %I CASCADE', userName);
-         EXECUTE format('DROP ROLE %I', userName);
+         EXECUTE format('DROP SCHEMA %I CASCADE', $1);
+         EXECUTE format('DROP ROLE %I', $1);
       END IF;
    ELSE
-      RAISE NOTICE 'User "%" is not a registered instructor', userName;
+      RAISE NOTICE 'User "%" is not a registered instructor', $1;
    END IF;
 END;
 $$ LANGUAGE plpgsql
@@ -242,22 +242,22 @@ DECLARE
    userExists BOOLEAN;
    hasOtherRoles BOOLEAN;
 BEGIN
-   EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
+   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1 INTO userExists;
    IF
       userExists AND
-      pg_catalog.pg_has_role(userName, 'dbmanager', 'member')
+      pg_catalog.pg_has_role($1, 'dbmanager', 'member')
    THEN
       EXECUTE format('REVOKE dbmanager FROM %I', userName);
-      EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role(%L, oid, ''member'')'
-         || 'AND rolname != %L', userName, userName) INTO hasOtherRoles;
+      SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role($1, oid, 'member')
+          AND rolname != $1 INTO hasOtherRoles;
       IF hasOtherRoles THEN
-         RAISE NOTICE 'User "%" remains a member of one or more additional roles', userName;
+         RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
-         EXECUTE format('DROP SCHEMA %I CASCADE', userName);
-         EXECUTE format('DROP ROLE %I', userName);
+         EXECUTE format('DROP SCHEMA %I CASCADE', $1);
+         EXECUTE format('DROP ROLE %I', $1);
       END IF;
    ELSE
-      RAISE NOTICE 'User "%" is not a registered DBManager', userName;
+      RAISE NOTICE 'User "%" is not a registered DBManager', $1;
    END IF;
 END;
 $$ LANGUAGE plpgsql
@@ -276,20 +276,20 @@ $$
 DECLARE
    userExists BOOLEAN;
 BEGIN
-   EXECUTE format('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = %L', userName) INTO userExists;
+   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1 INTO userExists;
    IF userExists THEN
-      IF pg_catalog.pg_has_role(userName, 'student', 'member') THEN
-         EXECUTE format('DELETE FROM classdb.Student WHERE userName = %L', userName);
+      IF pg_catalog.pg_has_role($1, 'student', 'member') THEN
+        DELETE FROM classdb.Student WHERE userName = $1;
       END IF;
 
-      IF pg_catalog.pg_has_role(userName, 'instructor', 'member') THEN
-         EXECUTE format('DELETE FROM classdb.Instructor WHERE userName = %L', userName);
+      IF pg_catalog.pg_has_role($1, 'instructor', 'member') THEN
+         DELETE FROM classdb.Instructor WHERE userName = $1;
       END IF;
 
-      EXECUTE format('DROP SCHEMA %I CASCADE', userName);
-      EXECUTE format('DROP ROLE %I', userName);
+      EXECUTE format('DROP SCHEMA %I CASCADE', $1);
+      EXECUTE format('DROP ROLE %I', $1);
    ELSE
-      RAISE NOTICE 'User "%" is not a registered user', userName;
+      RAISE NOTICE 'User "%" is not a registered user', $1;
    END IF;
 END;
 $$ LANGUAGE plpgsql
