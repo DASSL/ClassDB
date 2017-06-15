@@ -102,6 +102,7 @@ BEGIN
    END IF;
    EXECUTE format('GRANT Student TO %I', $1);
    EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', $1);
+   EXECUTE format('ALTER ROLE %I CONNECTION LIMIT 5', $1);
    INSERT INTO classdb.Student VALUES($1, $2, $3);
 END;
 $$ LANGUAGE plpgsql
