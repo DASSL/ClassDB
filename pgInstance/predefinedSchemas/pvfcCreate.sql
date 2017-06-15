@@ -3,7 +3,7 @@
 --
 --pvfcCreate.sql
 --
---Schemas for CS205; Created: 2017-05-31; Modified 2017-06-01
+--Schemas for CS205; Created: 2017-05-31; Modified 2017-06-14
 
 --The following script should be run as the role desired to be the owner of the pvfc schema.
 
@@ -12,14 +12,4 @@
 -- Hoffer, V. Ramesh, and Heikki Topi.
 
 
-CREATE SCHEMA pvfc;
-GRANT USAGE ON SCHEMA pvfc TO instructor;
-GRANT USAGE ON SCHEMA pvfc TO student;
-GRANT USAGE ON SCHEMA pvfc TO admin;
-ALTER DEFAULT PRIVILEGES IN SCHEMA pvfc GRANT SELECT ON TABLES TO instructor;
-ALTER DEFAULT PRIVILEGES IN SCHEMA pvfc GRANT SELECT ON TABLES TO student;
-ALTER DEFAULT PRIVILEGES IN SCHEMA pvfc GRANT SELECT ON TABLES TO admin;
-
-
-
---TODO: Create and populate objects for this schema, once it has been ported to pgSQL.
+--TODO: Create and populate objects for this scenario, once it has been ported to Postgres.
