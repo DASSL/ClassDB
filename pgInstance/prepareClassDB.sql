@@ -55,6 +55,8 @@ REVOKE CREATE ON SCHEMA public FROM Student;
 
 --Creates a schema for holding administrative information
 CREATE SCHEMA IF NOT EXISTS classdb;
+GRANT ALL ON SCHEMA classdb TO DBManager;
+GRANT USAGE ON SCHEMA classdb TO Instructor;
 
 
 --The following procedure creates a user, given a username and password. It also creates a
