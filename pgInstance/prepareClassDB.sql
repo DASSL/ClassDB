@@ -3,7 +3,7 @@
 --
 --prepareClassDB.sql
 --
---ClassDB - Created: 2017-05-29; Modified 2017-06-14
+--ClassDB - Created: 2017-05-29; Modified 2017-06-15
 
 
 --This script should be run as a user with superuser privileges, due to the functions being
@@ -61,18 +61,14 @@ CREATE SCHEMA IF NOT EXISTS classdb;
 -- schema for the new user and gives them appropriate permissions for that schema.
 CREATE OR REPLACE FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128)) RETURNS VOID AS
 $$
-DECLARE
-   valueExists BOOLEAN;
 BEGIN
-   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1 INTO valueExists;
-   IF valueExists THEN
+   IF EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1) THEN
       RAISE NOTICE 'User "%" already exists, password not modified', $1;
    ELSE
       EXECUTE format('CREATE USER %I ENCRYPTED PASSWORD %L', $1, $2);
    END IF;
 
-   SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname = $1 INTO valueExists;
-   IF valueExists THEN
+   IF EXISTS(SELECT * FROM pg_catalog.pg_namespace WHERE nspname = $1) THEN
       RAISE NOTICE 'Schema "%" already exists', $1;
    ELSE
       EXECUTE format('CREATE SCHEMA %I', $1);
@@ -168,20 +164,16 @@ GRANT EXECUTE ON FUNCTION classdb.createDBManager(userName VARCHAR(50), managerN
 -- role representing the student.
 CREATE OR REPLACE FUNCTION classdb.dropStudent(userName VARCHAR(50)) RETURNS VOID AS
 $$
-DECLARE
-   userExists BOOLEAN;
-   hasOtherRoles BOOLEAN;
 BEGIN
-   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1 INTO userExists;
    IF
-      userExists AND
+      EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) AND
       pg_catalog.pg_has_role($1, 'student', 'member')
    THEN
       EXECUTE format('REVOKE Student FROM %I', $1);
       DELETE FROM classdb.Student S WHERE S.userName = $1;
-      SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role($1, oid, 'member')
-         AND rolname != $1 INTO hasOtherRoles;
-      IF hasOtherRoles THEN
+
+      IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role($1, oid, 'member')
+       AND rolname != $1) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
          EXECUTE format('DROP SCHEMA %I CASCADE', $1);
@@ -205,20 +197,16 @@ GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) TO Instructo
 -- removed along with the the role representing the instructor.
 CREATE OR REPLACE FUNCTION classdb.dropInstructor(userName VARCHAR(50)) RETURNS VOID AS
 $$
-DECLARE
-   userExists BOOLEAN;
-   hasOtherRoles BOOLEAN;
 BEGIN
-   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1 INTO userExists;
    IF
-      userExists AND
+      EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) AND
       pg_catalog.pg_has_role($1, 'instructor', 'member')
    THEN
       EXECUTE format('REVOKE Instructor FROM %I', $1);
       DELETE FROM classdb.Instructor S WHERE S.userName = $1;
-      SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role($1, oid, 'member')
-          AND rolname != $1 INTO hasOtherRoles;
-      IF hasOtherRoles THEN
+       INTO hasOtherRoles;
+      IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role($1, oid, 'member')
+       AND rolname != $1) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
          EXECUTE format('DROP SCHEMA %I CASCADE', $1);
@@ -240,19 +228,14 @@ GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName VARCHAR(50)) TO DBMana
 -- within, are removed along with the the role representing the DBManager.
 CREATE OR REPLACE FUNCTION classdb.dropDBManager(userName VARCHAR(50)) RETURNS VOID AS
 $$
-DECLARE
-   userExists BOOLEAN;
-   hasOtherRoles BOOLEAN;
 BEGIN
-   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1 INTO userExists;
    IF
-      userExists AND
+      EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) AND
       pg_catalog.pg_has_role($1, 'dbmanager', 'member')
    THEN
       EXECUTE format('REVOKE dbmanager FROM %I', userName);
-      SELECT 1 FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role($1, oid, 'member')
-          AND rolname != $1 INTO hasOtherRoles;
-      IF hasOtherRoles THEN
+      IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role($1, oid, 'member')
+          AND rolname != $1) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
          EXECUTE format('DROP SCHEMA %I CASCADE', $1);
@@ -275,11 +258,8 @@ GRANT EXECUTE ON FUNCTION classdb.dropDBManager(userName VARCHAR(50)) TO DBManag
 -- and from the Instructor table if they were an instructor.
 CREATE OR REPLACE FUNCTION classdb.dropUser(userName VARCHAR(50)) RETURNS VOID AS
 $$
-DECLARE
-   userExists BOOLEAN;
 BEGIN
-   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1 INTO userExists;
-   IF userExists THEN
+   IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) THEN
       IF pg_catalog.pg_has_role($1, 'student', 'member') THEN
         DELETE FROM classdb.Student WHERE userName = $1;
       END IF;
