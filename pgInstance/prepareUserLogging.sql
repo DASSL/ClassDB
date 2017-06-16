@@ -8,10 +8,9 @@
 --Need to be superuser for ALTER SYSTEM, however the ALTER SYSTEMS can't be placed in the same transaction
 ALTER SYSTEM SET log_connections TO 'on';
 ALTER SYSTEM SET log_destination TO 'csvlog'; --This outputs the log in a csv format, which allows COPY...FROM to read it
-ALTER SYSTEM SET log_filename TO 'postgresql-%d.log';
+ALTER SYSTEM SET log_filename TO 'postgresql-%m.%d.log';
 --Set the log file name.  Using the date/time vars can help with log rotation.  Right now, the file name
---is postgresql-<daynum>, ie. postgresql-10.  The log rotates every day, so at most 31 log files are kept at a time
---The log import reads the file called postgresql-<daynum-1>, ie. yesterday's log
+--is postgresql-<month>.<day>, ie. postgresql-06.10.  The log rotates daily.
 
 SELECT pg_reload_conf();
 
@@ -37,67 +36,87 @@ DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
 DROP TABLE IF EXISTS classdb.postgresLog;
 CREATE TABLE classdb.postgresLog
 (
-   log_time timestamp(3) with time zone,
-   user_name text,
-   database_name text,
-   process_id integer,
-   connection_from text,
-   session_id text,
-   session_line_num bigint,
-   command_tag text,
-   session_start_time timestamp with time zone,
-   virtual_transaction_id text,
-   transaction_id bigint,
-   error_severity text,
-   sql_state_code text,
-   message text,
-   detail text,
-   hint text,
-   internal_query text,
-   internal_query_pos integer,
-   context text,
-   query text,
-   query_pos integer,
-   location text,
-   application_name text,
+   log_time TIMESTAMP(3) WITH TIME ZONE,
+   user_name TEXT,
+   database_name TEXT,
+   process_id INTEGER,
+   connection_from TEXT,
+   session_id TEXT,
+   session_line_num BIGINT,
+   command_tag TEXT,
+   session_start_time TIMESTAMP WITH TIME ZONE,
+   virtual_transaction_id TEXT,
+   transaction_id BIGINT,
+   error_severity TEXT,
+   sql_state_code TEXT,
+   message TEXT,
+   detail TEXT,
+   hint TEXT,
+   internal_query TEXT,
+   internal_query_pos INTEGER,
+   context TEXT,
+   query TEXT,
+   query_pos INTEGER,
+   location TEXT,
+   application_name TEXT,
    PRIMARY KEY (session_id, session_line_num)   
 );
 
---Function to import a given day's log to a table
-CREATE OR REPLACE FUNCTION classdb.importLog(INT) 
+--Function to import a given day's log to a table, 
+--The latest connection in the student table supplied the assumed last import date
+--Logs since this date are imported.  If this value is null, logs are parsed, starting with the
+--supplied date
+CREATE OR REPLACE FUNCTION classdb.importLog(DATE) 
 RETURNS VOID AS
 $$
 DECLARE
    logPath TEXT;
-BEGIN 
-	--Get the log path, but assumes a log file name of postgresql-%d.csv
-   logPath := (SELECT setting FROM pg_settings WHERE "name" = 'log_directory') || '/postgresql-' || $1 || '.csv';
-   EXECUTE format('COPY classdb.postgresLog FROM ''%s'' WITH csv', logPath);
+   lastConDate DATE;
+BEGIN  
+	 lastConDate := COALESCE(date((SELECT MAX(lastConnection) FROM classdb.student)), $1); --The double parens around the subquery seem to be required
+	 WHILE lastConDate <= current_date LOOP
+	  --Get the log path, but assumes a log file name of postgresql-%d.csv
+      logPath := (SELECT setting FROM pg_settings WHERE "name" = 'log_directory') || '/postgresql-' || to_char(lastConDate, 'MM.DD') || '.csv';
+      EXECUTE format('COPY classdb.postgresLog FROM ''%s'' WITH csv', logPath);
+      lastConDate := date((SELECT MAX(log_time) FROM classdb.postgresLog)) + 1;
+   END LOOP;
    --Update the student table based on the temp log table
-   UPDATE classdb.student 
-   SET lastConnection = (pg.log_time AT TIME ZONE 'utc'),
-   connectionCount = connectionCount + 1
-   FROM classdb.postgresLog pg
-   WHERE userName = pg.user_name; --The connection should only be updated if it is newer
+   UPDATE classdb.student
+   --Get the total # of connections made in the imported log
+   --Ignore connections from an earlier date than the lastConnections
+   --These should already be counted
+   SET connectionCount = connectionCount + (
+      SELECT COUNT(user_name) 
+      FROM classdb.postgresLog pg 
+      WHERE pg.user_name = userName
+      AND pg.log_time > COALESCE(lastConnection, to_timestamp(0))
+      AND message LIKE 'connection%' --Filter out extraneous log lines
+   ),
+   --Find the latest connection date in the logs
+   lastConnection = ( 
+      SELECT MAX(log_time AT TIME ZONE 'utc') 
+      FROM classdb.postgresLog pg 
+      WHERE pg.user_name = userName
+      AND message LIKE 'connection%'
+   );
    --Clear the log table
    TRUNCATE classdb.postgresLog;
 END;
 $$ LANGUAGE plpgsql;
 
---Function to import yesterday's log
-CREATE OR REPLACE FUNCTION classdb.importLog() 
+--Override that supplies the current date in place of null
+CREATE OR REPLACE FUNCTION classdb.importLog()
 RETURNS VOID AS
 $$
-DECLARE
-   logPath TEXT;
 BEGIN
-   PERFORM classdb.importLog((SELECT EXTRACT(DAY FROM current_date - 1)));
+   PERFORM classdb.importLog(current_date);
 END;
 $$ LANGUAGE plpgsql;
 
 --SET up DDL command logging
 --This function updates the LastActivity field for a given student
-CREATE OR REPLACE FUNCTION classdb.updateStudentActivity() RETURNS event_trigger AS
+CREATE OR REPLACE FUNCTION classdb.updateStudentActivity() 
+RETURNS event_trigger AS
 $$
 DECLARE
    objId TEXT;
@@ -121,7 +140,7 @@ BEGIN
    --ddl_command_end event after sql_drop
    IF objId IS NOT NULL THEN 
       UPDATE classdb.Student
-      SET lastDDLActivity = (SELECT current_timestamp AT TIME ZONE 'utc'),
+      SET lastDDLActivity = (SELECT statement_timestamp() AT TIME ZONE 'utc'),
       DDLCount = DDLCount + 1,
       lastDDLOperation = TG_TAG,
       lastDDLObject = objId
