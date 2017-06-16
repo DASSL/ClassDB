@@ -104,7 +104,7 @@ BEGIN
    EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', $1);
    EXECUTE format('ALTER ROLE %I CONNECTION LIMIT 5', $1);
    EXECUTE format('ALTER ROLE %I SET statement_timeout = 15000', $1);
-   INSERT INTO classdb.Student VALUES($1, $2, $3);
+   INSERT INTO classdb.Student VALUES($1, $2, $3) ON CONFLICT DO NOTHING;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
@@ -129,7 +129,7 @@ BEGIN
       PERFORM classdb.createUser(userName, userName::VARCHAR(128));
    END IF;
    EXECUTE format('GRANT Instructor TO %I', $1);
-   INSERT INTO classdb.Instructor VALUES($1, $2);
+   INSERT INTO classdb.Instructor VALUES($1, $2) ON CONFLICT DO NOTHING;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
