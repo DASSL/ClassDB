@@ -32,8 +32,7 @@ BEGIN
 END
 $$;
 
-
---Allows appropriate users to connect to the database
+--Grants appropriate privileges to the current database
 DO
 $$
 DECLARE
@@ -45,6 +44,8 @@ BEGIN
    EXECUTE format('GRANT CONNECT ON DATABASE %I TO DBManager', currentDB);
    EXECUTE format('GRANT CONNECT ON DATABASE %I TO Instructor', currentDB);
    EXECUTE format('GRANT CONNECT ON DATABASE %I TO Student', currentDB);
+   --Allows DBManagers to create schemas on the current database
+   EXECUTE format('GRANT CREATE ON DATABASE %I TO DBMAnager', currentDB);
 END
 $$;
 
@@ -53,7 +54,7 @@ $$;
 REVOKE CREATE ON SCHEMA public FROM Student;
 
 
---Creates a schema for holding administrative information
+--Creates a schema for holding administrative information and assigns privileges
 CREATE SCHEMA IF NOT EXISTS classdb;
 GRANT ALL ON SCHEMA classdb TO DBManager;
 GRANT USAGE ON SCHEMA classdb TO Instructor;
@@ -80,8 +81,10 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128)) TO DBManager;
+REVOKE ALL ON FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128))
+   FROM PUBLIC;
+ALTER FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128))
+   OWNER TO DBManager;
 
 
 --Creates a role for a student and assigns them to the Student role, given a username, name,
@@ -110,9 +113,9 @@ $$ LANGUAGE plpgsql
 REVOKE ALL ON FUNCTION classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
    schoolID VARCHAR(20), initialPassword VARCHAR(128)) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
-   schoolID VARCHAR(20), initialPassword VARCHAR(128)) TO DBManager;
-GRANT EXECUTE ON FUNCTION classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
    schoolID VARCHAR(20), initialPassword VARCHAR(128)) TO Instructor;
+ALTER FUNCTION classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
+   schoolID VARCHAR(20), initialPassword VARCHAR(128)) OWNER TO DBManager;
 
 
 --Creates a role for an instructor given a username, name, and optional password.
@@ -134,8 +137,8 @@ $$ LANGUAGE plpgsql
 
 REVOKE ALL ON FUNCTION classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
    initialPassword VARCHAR(128)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
-   initialPassword VARCHAR(128)) TO DBManager;
+ALTER FUNCTION classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
+   initialPassword VARCHAR(128)) OWNER TO DBManager;
 
 
 --Creates a role for a DBManager given a username, name, and optional password.
@@ -156,8 +159,8 @@ $$ LANGUAGE plpgsql
 
 REVOKE ALL ON FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
    initialPassword VARCHAR(128)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
-   initialPassword VARCHAR(128)) TO DBManager;
+ALTER FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
+   initialPassword VARCHAR(128)) OWNER TO DBManager;
 
 
 --The folowing procedure revokes the Student role from a student, along with their entry in the
@@ -189,8 +192,8 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) TO Instructor;
+ALTER FUNCTION classdb.dropStudent(userName VARCHAR(50)) OWNER TO DBManager;
 
 
 --The folowing procedure revokes the Instructor role from an Instructor, along with their entry
@@ -206,7 +209,6 @@ BEGIN
    THEN
       EXECUTE format('REVOKE Instructor FROM %I', $1);
       DELETE FROM classdb.Instructor S WHERE S.userName = $1;
-       INTO hasOtherRoles;
       IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE pg_catalog.pg_has_role($1, oid, 'member')
        AND rolname != $1) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
@@ -222,7 +224,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.dropInstructor(userName VARCHAR(50)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName VARCHAR(50)) TO DBManager;
+ALTER FUNCTION classdb.dropInstructor(userName VARCHAR(50)) OWNER TO DBManager;
 
 
 --The folowing procedure revokes the DBManager role from a DBManager. If the DBManager role was
@@ -251,7 +253,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.dropDBManager(userName VARCHAR(50)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.dropDBManager(userName VARCHAR(50)) TO DBManager;
+ALTER FUNCTION classdb.dropDBManager(userName VARCHAR(50)) OWNER TO DBManager;
 
 
 --The following procedure drops a user regardless of their role memberships. This will also
@@ -280,7 +282,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.dropUser(userName VARCHAR(50)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(50)) TO DBManager;
+ALTER FUNCTION classdb.dropUser(userName VARCHAR(50)) OWNER TO DBManager;
 
 
 CREATE TABLE IF NOT EXISTS classdb.Student
@@ -291,11 +293,18 @@ CREATE TABLE IF NOT EXISTS classdb.Student
    lastActivity TIMESTAMP --holds timestamp of the last ddl command issued by the student in UTC
 );
 
+GRANT ALL ON classdb.Student TO DBManager;
+GRANT SELECT ON classdb.Student TO Instructor;
+
+
 CREATE TABLE IF NOT EXISTS classdb.Instructor
 (
    userName VARCHAR(50) NOT NULL PRIMARY KEY,
    instructorName VARCHAR(100)
 );
+
+GRANT ALL ON classdb.Instructor TO DBManager;
+
 
 --This function updates the LastActivity field for a given student
 CREATE OR REPLACE FUNCTION classdb.updateStudentActivity() RETURNS event_trigger AS
