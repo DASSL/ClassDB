@@ -3,12 +3,11 @@
 --
 --prepareClassDB.sql
 --
---ClassDB - Created: 2017-05-29; Modified 2017-06-15
+--ClassDB - Created: 2017-05-29; Modified 2017-06-16
 
 
---This script should be run as a user with superuser privileges, due to the functions being
--- declared SECURITY DEFINER, along with the need to properly set object ownership and define
--- event triggers.
+--This script should be run as a user with superuser privileges, due to the need to create an
+-- event trigger.
 
 
 --This script first prevents student roles from modiying the public schema, and then creates a
