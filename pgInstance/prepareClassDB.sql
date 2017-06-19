@@ -1,9 +1,9 @@
 --Andrew Figueroa, Steven Rollo, Sean Murthy
+--
 --Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
+--(C) 2017 DASSL
 --
---prepareClassDB.sql
---
---ClassDB - Created: 2017-05-29; Modified 2017-06-16
+--prepareClassDB.sql - ClassDB
 
 
 --This script should be run as a user with superuser privileges, due to the need to create an
