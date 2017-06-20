@@ -89,16 +89,4 @@ $$ LANGUAGE plpgsql
 REVOKE ALL ON FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) TO DBManager;
 
-
---The folowing procedure allows a user to change their password to a specified one
-
-CREATE OR REPLACE FUNCTION public.changeMyPassword(newPass VARCHAR(128)) RETURNS VOID AS
-$$
-BEGIN
-   PERFORM classdb.changeUserPassword(session_user, newPass);
-   RAISE INFO 'Password successfully changed';
-END;
-$$ LANGUAGE plpgsql
-   SECURITY DEFINER;
-
 COMMIT;
