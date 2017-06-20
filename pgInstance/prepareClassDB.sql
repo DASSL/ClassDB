@@ -44,7 +44,7 @@ BEGIN
    EXECUTE format('GRANT CONNECT ON DATABASE %I TO Instructor', currentDB);
    EXECUTE format('GRANT CONNECT ON DATABASE %I TO Student', currentDB);
    --Allows DBManagers to create schemas on the current database
-   EXECUTE format('GRANT CREATE ON DATABASE %I TO DBMAnager', currentDB);
+   EXECUTE format('GRANT CREATE ON DATABASE %I TO DBManager', currentDB);
 END
 $$;
 
@@ -56,7 +56,7 @@ REVOKE CREATE ON SCHEMA public FROM Student;
 --Creates a schema for holding administrative information and assigns privileges
 CREATE SCHEMA IF NOT EXISTS classdb;
 GRANT ALL ON SCHEMA classdb TO DBManager;
-GRANT USAGE ON SCHEMA classdb TO Instructor;
+GRANT ALL ON SCHEMA classdb TO Instructor;
 
 
 --The following procedure creates a user, given a username and password. It also creates a
@@ -84,6 +84,8 @@ REVOKE ALL ON FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword 
    FROM PUBLIC;
 ALTER FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128))
    OWNER TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128))
+   TO Instructor;
 
 
 --Creates a role for a student and assigns them to the Student role, given a username, name,
@@ -138,6 +140,9 @@ REVOKE ALL ON FUNCTION classdb.createInstructor(userName VARCHAR(50), instructor
    initialPassword VARCHAR(128)) FROM PUBLIC;
 ALTER FUNCTION classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
    initialPassword VARCHAR(128)) OWNER TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
+   initialPassword VARCHAR(128)) TO Instructor;
+
 
 
 --Creates a role for a DBManager given a username, name, and optional password.
@@ -160,6 +165,8 @@ REVOKE ALL ON FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName
    initialPassword VARCHAR(128)) FROM PUBLIC;
 ALTER FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
    initialPassword VARCHAR(128)) OWNER TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
+   initialPassword VARCHAR(128)) TO Instructor;
 
 
 --The folowing procedure revokes the Student role from a student, along with their entry in the
@@ -191,8 +198,8 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) TO Instructor;
 ALTER FUNCTION classdb.dropStudent(userName VARCHAR(50)) OWNER TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) TO Instructor;
 
 
 --The folowing procedure revokes the Instructor role from an Instructor, along with their entry
@@ -224,6 +231,7 @@ $$ LANGUAGE plpgsql
 
 REVOKE ALL ON FUNCTION classdb.dropInstructor(userName VARCHAR(50)) FROM PUBLIC;
 ALTER FUNCTION classdb.dropInstructor(userName VARCHAR(50)) OWNER TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName VARCHAR(50)) TO Instructor;
 
 
 --The folowing procedure revokes the DBManager role from a DBManager. If the DBManager role was
@@ -253,6 +261,7 @@ $$ LANGUAGE plpgsql
 
 REVOKE ALL ON FUNCTION classdb.dropDBManager(userName VARCHAR(50)) FROM PUBLIC;
 ALTER FUNCTION classdb.dropDBManager(userName VARCHAR(50)) OWNER TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.dropDBManager(userName VARCHAR(50)) TO Instructor;
 
 
 --The following procedure drops a user regardless of their role memberships. This will also
@@ -282,6 +291,7 @@ $$ LANGUAGE plpgsql
 
 REVOKE ALL ON FUNCTION classdb.dropUser(userName VARCHAR(50)) FROM PUBLIC;
 ALTER FUNCTION classdb.dropUser(userName VARCHAR(50)) OWNER TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(50)) TO Instructor;
 
 
 CREATE TABLE IF NOT EXISTS classdb.Student
@@ -293,7 +303,7 @@ CREATE TABLE IF NOT EXISTS classdb.Student
 );
 
 GRANT ALL ON classdb.Student TO DBManager;
-GRANT SELECT ON classdb.Student TO Instructor;
+GRANT ALL ON classdb.Student TO Instructor;
 
 
 CREATE TABLE IF NOT EXISTS classdb.Instructor
@@ -303,6 +313,7 @@ CREATE TABLE IF NOT EXISTS classdb.Instructor
 );
 
 GRANT ALL ON classdb.Instructor TO DBManager;
+GRANT ALL ON classdb.Student TO Instructor;
 
 
 --This function updates the LastActivity field for a given student
