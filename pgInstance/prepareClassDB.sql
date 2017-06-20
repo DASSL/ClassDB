@@ -5,7 +5,6 @@
 --
 --prepareClassDB.sql - ClassDB
 
-
 --This script should be run as a user with superuser privileges, due to the need to create an
 -- event trigger.
 
@@ -361,13 +360,17 @@ REVOKE ALL ON FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) FROM PUBL
 ALTER FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) OWNER TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) TO Instructor;
 
-
 CREATE TABLE IF NOT EXISTS classdb.Student
 (
    userName VARCHAR(50) NOT NULL PRIMARY KEY,
    studentName VARCHAR(100),
    schoolID VARCHAR(20),
-   lastActivity TIMESTAMP --holds timestamp of the last ddl command issued by the student in UTC
+   lastDDLActivity TIMESTAMP, --Timestamp of last DDL Query
+   lastDDLOperation TEXT,
+   lastDDLObject TEXT,
+   DDLCount INT DEFAULT 0,
+   lastConnection TIMESTAMP, --Timestamp of last connection
+   connectionCount INT DEFAULT 0
 );
 
 GRANT ALL ON classdb.Student TO DBManager;
@@ -382,25 +385,5 @@ CREATE TABLE IF NOT EXISTS classdb.Instructor
 
 GRANT ALL ON classdb.Instructor TO DBManager;
 GRANT ALL ON classdb.Student TO Instructor;
-
-
---This function updates the LastActivity field for a given student
-CREATE OR REPLACE FUNCTION classdb.updateStudentActivity() RETURNS event_trigger AS
-$$
-BEGIN
-   UPDATE classdb.Student
-   SET lastActivity = (SELECT statement_timestamp() AT TIME ZONE 'utc')
-   WHERE userName = session_user;
-END;
-$$ LANGUAGE plpgsql
-   SECURITY DEFINER;
-
-
---Event trigger to update user last activity time on DDL events
-DROP EVENT TRIGGER IF EXISTS updateStudentActivityTrigger;
-
-CREATE EVENT TRIGGER updateStudentActivityTrigger
-ON ddl_command_start
-EXECUTE PROCEDURE classdb.updateStudentActivity();
 
 COMMIT;
