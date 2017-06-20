@@ -1,7 +1,7 @@
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --
 --Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
---(C) 2017 DASSL
+--(C) 2017 DASSL CC 4.0 BY-SA-NC https://creativecommons.org/licenses/by-nc-sa/4.0/
 --
 --prepareClassDB.sql - ClassDB
 
