@@ -142,7 +142,6 @@ GRANT EXECUTE ON FUNCTION classdb.createInstructor(userName VARCHAR(50), instruc
    initialPassword VARCHAR(128)) TO Instructor;
 
 
-
 --Creates a role for a DBManager given a username, name, and optional password.
 -- The procedure also gives appropriate permission to the DBManager.
 CREATE OR REPLACE FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
@@ -198,6 +197,23 @@ $$ LANGUAGE plpgsql
 REVOKE ALL ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) FROM PUBLIC;
 ALTER FUNCTION classdb.dropStudent(userName VARCHAR(50)) OWNER TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) TO Instructor;
+
+
+--The folowing procedure drops all students registered in the classdb.Student table created below.
+-- Only Students registered in that table will be dropped. If a user is a member of one or more
+-- additional roles, they will not be dropped, but will no longer be a member of the Student role,
+-- or be registered in the classdb.Student table.
+CREATE OR REPLACE FUNCTION dropAllStudents() RETURNS VOID AS
+$$
+BEGIN
+   SELECT classdb.dropStudent(S.userName) FROM classdb.Student S;
+END;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
+   
+REVOKE ALL ON FUNCTION dropAllStudents() FROM PUBLIC;
+ALTER FUNCTION dropAllStudents() OWNER TO DBManager;
+GRANT EXECUTE ON FUNCTION dropAllStudents() TO Instructor;
 
 
 --The folowing procedure revokes the Instructor role from an Instructor, along with their entry
