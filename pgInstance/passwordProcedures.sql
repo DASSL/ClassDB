@@ -53,7 +53,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128)) TO DBManager;
+ALTER FUNCTION classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128)) OWNER TO DBManager;
 
 
 --The following procedure resets a users password to the default password given a username.
@@ -87,6 +87,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) TO DBManager;
+ALTER FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) OWNER TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) TO Instructor;
 
 COMMIT;
