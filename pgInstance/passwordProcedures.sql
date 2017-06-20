@@ -27,7 +27,7 @@ $$;
 -- username and password. NOTICEs are raised if the user does not exist or if the password
 -- does not meet the requirements.
 --Current password requirements:
--- - Must be 6 or more characters
+-- - Must be 4 or more characters
 -- - Must contain at least one numerical digit (0-9)
 
 CREATE OR REPLACE FUNCTION classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128)) RETURNS VOID AS
@@ -38,7 +38,7 @@ BEGIN
    SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1 INTO userExists;
    IF userExists THEN
       IF
-         LENGTH(password) > 5 AND
+         LENGTH(password) > 3 AND
          SUBSTRING(password from '[0-9]') IS NOT NULL
       THEN
          EXECUTE format('ALTER ROLE %I ENCRYPTED PASSWORD %L', userName, password);
