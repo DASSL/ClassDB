@@ -97,8 +97,6 @@ $$
 BEGIN
    IF initialPassword IS NOT NULL THEN
       PERFORM classdb.createUser(userName, initialPassword);
-   ELSIF schoolID IS NOT NULL THEN
-      PERFORM classdb.createUser(userName, schoolID);
    ELSE
       PERFORM classdb.createUser(userName, userName::VARCHAR(128));
    END IF;
