@@ -78,14 +78,14 @@ SELECT * FROM classdb.Instructor;
 The results should appear as so:
 
 SELECT * FROM classdb.Student;
-   username   |   studentname    | schoolid
---------------+------------------+---------
- testStudent0 | Yvette Alexander |
- testStudent1 | Edwin Morrison   | 101
- testStudent2 | Ramon Harrington | 102
- testStudent3 | Cathy Young      |
- testStuInst0 | Edwin Morrison   | 102
- testStuInst1 | Rosalie Flowers  | 106
+   username   |   studentname    | schoolid | lastactivity
+--------------+------------------+----------+--------------
+ testStudent0 | Yvette Alexander |          |
+ testStudent1 | Edwin Morrison   | 101      |
+ testStudent2 | Ramon Harrington | 102      |
+ testStudent3 | Cathy Young      |          |
+ testStuInst0 | Edwin Morrison   | 102      |
+ testStuInst1 | Rosalie Flowers  | 106      |
 (6 rows)
 
 
