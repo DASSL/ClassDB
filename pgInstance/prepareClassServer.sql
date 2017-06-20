@@ -3,7 +3,7 @@
 --
 --prepareClassServer.sql
 --
---ClassDB - Created: 2017-06-09; Modified 2017-06-14
+--ClassDB - Created: 2017-06-09; Modified 2017-06-20
 
 --This script should be run as a user with createrole privileges
 
@@ -11,14 +11,14 @@
 
 START TRANSACTION;
 
---Tests for superuser privilege on current_user
+--Tests for createrole privilege on current_user
 DO
 $$
 DECLARE
-   isSuper BOOLEAN;
+   canCreateRole BOOLEAN;
 BEGIN
-   SELECT COALESCE(rolsuper, FALSE) FROM pg_catalog.pg_roles WHERE rolname = current_user INTO isSuper;
-   IF NOT isSuper THEN
+   SELECT rolcreaterole FROM pg_catalog.pg_roles WHERE rolname = current_user INTO canCreateRole;
+   IF NOT canCreateRole THEN
       RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
    END IF;
 END
