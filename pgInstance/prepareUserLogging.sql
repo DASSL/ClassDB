@@ -78,7 +78,7 @@ BEGIN
 	  --Get the log path, but assumes a log file name of postgresql-%d.csv
       logPath := (SELECT setting FROM pg_settings WHERE "name" = 'log_directory') || '/postgresql-' || to_char(lastConDate, 'MM.DD') || '.csv';
       EXECUTE format('COPY classdb.postgresLog FROM ''%s'' WITH csv', logPath);
-      lastConDate := date((SELECT MAX(log_time) FROM classdb.postgresLog)) + 1;
+      lastConDate := lastConDate + 1;
    END LOOP;
    --Update the student table based on the temp log table
    UPDATE classdb.student
@@ -93,14 +93,16 @@ BEGIN
       AND message LIKE 'connection%' --Filter out extraneous log lines
    ),
    --Find the latest connection date in the logs
-   lastConnection = ( 
-      SELECT MAX(log_time AT TIME ZONE 'utc') 
-      FROM classdb.postgresLog pg 
-      WHERE pg.user_name = userName
-      AND message LIKE 'connection%'
-   );
+   lastConnection = COALESCE(
+      ( 
+         SELECT MAX(log_time AT TIME ZONE 'utc') 
+         FROM classdb.postgresLog pg 
+         WHERE pg.user_name = userName
+         AND pg.log_time > COALESCE(lastConnection, to_timestamp(0))
+         AND message LIKE 'connection%'
+      ), lastConnection);
    --Clear the log table
-   TRUNCATE classdb.postgresLog;
+   --TRUNCATE classdb.postgresLog;
 END;
 $$ LANGUAGE plpgsql;
 
