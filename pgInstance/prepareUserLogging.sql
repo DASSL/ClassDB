@@ -102,7 +102,7 @@ BEGIN
          AND message LIKE 'connection%'
       ), lastConnection);
    --Clear the log table
-   --TRUNCATE classdb.postgresLog;
+   TRUNCATE classdb.postgresLog;
 END;
 $$ LANGUAGE plpgsql;
 
