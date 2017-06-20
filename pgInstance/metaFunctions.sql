@@ -1,9 +1,9 @@
 --Andrew Figueroa, Steven Rollo, Sean Murthy
+--
 --Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
+--(C) 2017 DASSL CC 4.0 BY-SA-NC https://creativecommons.org/licenses/by-nc-sa/4.0/
 --
---metaFunctions.sql
---
---Functions for simple access to table metadata; Created: 2017-06-07; Modified 2017-06-07
+--metaFunctions.sql - ClassDB
 
 --Drop old functions and return types if they exist
 DROP FUNCTION IF EXISTS public.listTables();
@@ -39,7 +39,7 @@ AS $$
    FROM INFORMATION_SCHEMA.TABLES
    WHERE table_schema = current_user;
 $$
-LANGUAGE SQL;
+LANGUAGE sql;
 
 --Returns a list of tables and views in the specified schema
 CREATE OR REPLACE FUNCTION public.listTables(TEXT)
@@ -49,7 +49,7 @@ AS $$
    FROM INFORMATION_SCHEMA.TABLES
    WHERE table_schema = $1;
 $$
-LANGUAGE SQL;
+LANGUAGE sql;
 
 --Returns a list of columns in the specified table or view
 --Will only work on tables in the user's search_path
@@ -61,7 +61,7 @@ AS $$
    WHERE table_name = $1
    AND table_schema =  current_user;
 $$
-LANGUAGE SQL;
+LANGUAGE sql;
 
 --Returns a list of columns in the specified table or view in the specified schema
 CREATE OR REPLACE FUNCTION public.describe(TEXT, TEXT)
@@ -72,4 +72,4 @@ AS $$
    WHERE table_name = $2
    AND table_schema = $1;
 $$
-LANGUAGE SQL;
+LANGUAGE sql;

@@ -386,4 +386,54 @@ CREATE TABLE IF NOT EXISTS classdb.Instructor
 GRANT ALL ON classdb.Instructor TO DBManager;
 GRANT ALL ON classdb.Student TO Instructor;
 
+DROP FUNCTION IF EXISTS classdb.listConnections(VARCHAR(50)); --Need to drop the function prior to the return type
+DROP TYPE IF EXISTS classdb.listConnectionsReturn; --No IF EXISTS or OR REPLACE possible with CREATE TYPE
+CREATE TYPE classdb.listConnectionsReturn AS
+(
+   userName VARCHAR(50),
+   pid INT,
+   applicationName TEXT,
+   clientAddress INET,
+   connectionStartTime TIMESTAMPTZ, --This is provided by backend_start in pg_stat_activity
+   lastQueryStartTime TIMESTAMPTZ --This is provided by query_start in pg_stat_activity
+);
+
+CREATE FUNCTION classdb.listConnections(VARCHAR(50))
+RETURNS SETOF classdb.listConnectionsReturn AS $$
+	SELECT usename::VARCHAR(50), pid, application_name, client_addr, backend_start, query_start
+	FROM pg_stat_activity
+	WHERE usename = $1;
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+--Currently, we are keeping listConnections() owned by the creating user
+--This allows instructors and dbmanagers unrestricted access to pg_stat_activity
+--Otherwise, they cannot see info like ip address and timestamps of other users
+REVOKE ALL ON FUNCTION classdb.listConnections(VARCHAR(50)) FROM PUBLIC;
+--ALTER FUNCTION classdb.listConnections(VARCHAR(50)) OWNER TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.listConnections(VARCHAR(50)) TO Instructor;
+GRANT EXECUTE ON FUNCTION classdb.listConnections(VARCHAR(50)) TO dbManager;
+
+CREATE OR REPLACE FUNCTION classdb.killUserConnections(VARCHAR(50))
+RETURNS SETOF BOOLEAN AS $$
+   SELECT pg_terminate_backend(pid)
+   FROM pg_stat_activity
+   WHERE usename = $1;
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+--We can change the owner of this to dbmanager because it is a member of pg_signal_backend
+REVOKE ALL ON FUNCTION classdb.killUserConnections(VARCHAR(50)) FROM PUBLIC;
+ALTER FUNCTION classdb.killUserConnections(VARCHAR(50)) OWNER TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.killUserConnections(VARCHAR(50)) TO Instructor;
+
+CREATE OR REPLACE FUNCTION classdb.killConnection(INT4)
+RETURNS BOOLEAN AS $$
+   SELECT pg_terminate_backend($1);
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION classdb.killConnection(INT4) FROM PUBLIC;
+ALTER FUNCTION classdb.killConnection(INT4) OWNER TO DBManager;
+GRANT EXECUTE ON FUNCTION classdb.killConnection(INT4) TO Instructor;
+
+   
 COMMIT;
