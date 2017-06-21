@@ -7,7 +7,8 @@
 
 --This script should be run as a user with createrole privileges
 
---This script creates roles for students, instructors, and database managers (administrators).
+--This script creates a role for the internal operations of ClassDB, followed by roles for 
+-- instructors, DBManagers, and students.
 
 START TRANSACTION;
 
@@ -28,19 +29,22 @@ $$;
 DO
 $$
 BEGIN
-   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'student') THEN
-      CREATE ROLE Student;
+   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'classdb') THEN
+      CREATE ROLE ClassDB;
    END IF;
-
+   ALTER ROLE ClassDB createrole;
+   
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'instructor') THEN
       CREATE ROLE Instructor;
    END IF;
-
+   
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'dbmanager') THEN
       CREATE ROLE DBManager;
    END IF;
-   
-   ALTER ROLE DBManager createrole;
+
+   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'student') THEN
+      CREATE ROLE Student;
+   END IF;
 END
 $$;
 

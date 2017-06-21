@@ -40,11 +40,11 @@ BEGIN
    currentDB := current_database();
    --Postgres grants CONNECT to public by default
    EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM PUBLIC', currentDB);
-   EXECUTE format('GRANT CONNECT ON DATABASE %I TO DBManager', currentDB);
    EXECUTE format('GRANT CONNECT ON DATABASE %I TO Instructor', currentDB);
+   EXECUTE format('GRANT CONNECT ON DATABASE %I TO DBManager', currentDB);
    EXECUTE format('GRANT CONNECT ON DATABASE %I TO Student', currentDB);
-   --Allows DBManagers to create schemas on the current database
-   EXECUTE format('GRANT CREATE ON DATABASE %I TO DBManager', currentDB);
+   --Allows ClassDB to create schemas on the current database
+   EXECUTE format('GRANT CREATE ON DATABASE %I TO ClassDB', currentDB);
 END
 $$;
 
@@ -55,8 +55,10 @@ REVOKE CREATE ON SCHEMA public FROM Student;
 
 --Creates a schema for holding administrative information and assigns privileges
 CREATE SCHEMA IF NOT EXISTS classdb;
-GRANT ALL ON SCHEMA classdb TO DBManager;
+GRANT ALL ON SCHEMA classdb to ClassDB;
 GRANT ALL ON SCHEMA classdb TO Instructor;
+GRANT ALL ON SCHEMA classdb TO DBManager;
+
 
 
 --The following procedure creates a user, given a username and password. It also creates a
@@ -82,10 +84,12 @@ $$ LANGUAGE plpgsql
 
 REVOKE ALL ON FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128))
    FROM PUBLIC;
-ALTER FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128))
-   OWNER TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128))
    TO Instructor;
+GRANT EXECUTE ON FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128))
+   TO DBManager;
+ALTER FUNCTION classdb.createUser(userName VARCHAR(50), initialPassword VARCHAR(128))
+   OWNER TO ClassDB;
 
 
 --Creates a role for a student and assigns them to the Student role, given a username, name,
@@ -113,8 +117,11 @@ REVOKE ALL ON FUNCTION classdb.createStudent(userName VARCHAR(50), studentName V
    schoolID VARCHAR(20), initialPassword VARCHAR(128)) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
    schoolID VARCHAR(20), initialPassword VARCHAR(128)) TO Instructor;
+GRANT EXECUTE ON FUNCTION classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
+   schoolID VARCHAR(20), initialPassword VARCHAR(128)) TO DBManager;
 ALTER FUNCTION classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
-   schoolID VARCHAR(20), initialPassword VARCHAR(128)) OWNER TO DBManager;
+   schoolID VARCHAR(20), initialPassword VARCHAR(128)) OWNER TO ClassDB;
+
 
 
 --Creates a role for an instructor given a username, name, and optional password.
@@ -136,10 +143,12 @@ $$ LANGUAGE plpgsql
 
 REVOKE ALL ON FUNCTION classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
    initialPassword VARCHAR(128)) FROM PUBLIC;
-ALTER FUNCTION classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
-   initialPassword VARCHAR(128)) OWNER TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
    initialPassword VARCHAR(128)) TO Instructor;
+GRANT EXECUTE ON FUNCTION classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
+   initialPassword VARCHAR(128)) TO DBManager;
+ALTER FUNCTION classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
+   initialPassword VARCHAR(128)) OWNER TO ClassDB;
 
 
 --Creates a role for a DBManager given a username, name, and optional password.
@@ -160,10 +169,12 @@ $$ LANGUAGE plpgsql
 
 REVOKE ALL ON FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
    initialPassword VARCHAR(128)) FROM PUBLIC;
-ALTER FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
-   initialPassword VARCHAR(128)) OWNER TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
    initialPassword VARCHAR(128)) TO Instructor;
+GRANT EXECUTE ON FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
+   initialPassword VARCHAR(128)) TO DBManager;
+ALTER FUNCTION classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
+   initialPassword VARCHAR(128)) OWNER TO ClassDB;
 
 
 --The folowing procedure revokes the Student role from a student, along with their entry in the
@@ -195,8 +206,9 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) FROM PUBLIC;
-ALTER FUNCTION classdb.dropStudent(userName VARCHAR(50)) OWNER TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) TO Instructor;
+GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) TO DBManager;
+ALTER FUNCTION classdb.dropStudent(userName VARCHAR(50)) OWNER TO ClassDB;
 
 
 --The folowing procedure drops all students registered in the classdb.Student table created below.
@@ -212,8 +224,9 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
    
 REVOKE ALL ON FUNCTION dropAllStudents() FROM PUBLIC;
-ALTER FUNCTION dropAllStudents() OWNER TO DBManager;
 GRANT EXECUTE ON FUNCTION dropAllStudents() TO Instructor;
+GRANT EXECUTE ON FUNCTION dropAllStudents() TO DBManager;
+ALTER FUNCTION dropAllStudents() OWNER TO ClassDB;
 
 
 --The folowing procedure revokes the Instructor role from an Instructor, along with their entry
@@ -244,8 +257,9 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.dropInstructor(userName VARCHAR(50)) FROM PUBLIC;
-ALTER FUNCTION classdb.dropInstructor(userName VARCHAR(50)) OWNER TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName VARCHAR(50)) TO Instructor;
+GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName VARCHAR(50)) TO DBManager;
+ALTER FUNCTION classdb.dropInstructor(userName VARCHAR(50)) OWNER TO ClassDB;
 
 
 --The folowing procedure revokes the DBManager role from a DBManager. If the DBManager role was
@@ -274,8 +288,9 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.dropDBManager(userName VARCHAR(50)) FROM PUBLIC;
-ALTER FUNCTION classdb.dropDBManager(userName VARCHAR(50)) OWNER TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.dropDBManager(userName VARCHAR(50)) TO Instructor;
+GRANT EXECUTE ON FUNCTION classdb.dropDBManager(userName VARCHAR(50)) TO DBManager;
+ALTER FUNCTION classdb.dropDBManager(userName VARCHAR(50)) OWNER TO ClassDB;
 
 
 --The following procedure drops a user regardless of their role memberships. This will also
@@ -304,8 +319,9 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.dropUser(userName VARCHAR(50)) FROM PUBLIC;
-ALTER FUNCTION classdb.dropUser(userName VARCHAR(50)) OWNER TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(50)) TO Instructor;
+GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(50)) TO DBManager;
+ALTER FUNCTION classdb.dropUser(userName VARCHAR(50)) OWNER TO ClassDB;
 
 --The following procedure allows changing the password for a given username, given both the
 -- username and password. NOTICEs are raised if the user does not exist or if the password
@@ -337,7 +353,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128)) FROM PUBLIC;
-ALTER FUNCTION classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128)) OWNER TO DBManager;
+ALTER FUNCTION classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128)) OWNER TO ClassDB;
 
 
 --The following procedure resets a users password to the default password given a username.
@@ -371,8 +387,9 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) FROM PUBLIC;
-ALTER FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) OWNER TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) TO Instructor;
+GRANT EXECUTE ON FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) TO DBManager;
+ALTER FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) OWNER TO ClassDB;
 
 CREATE TABLE IF NOT EXISTS classdb.Student
 (
@@ -387,8 +404,11 @@ CREATE TABLE IF NOT EXISTS classdb.Student
    connectionCount INT DEFAULT 0
 );
 
-GRANT ALL ON classdb.Student TO DBManager;
-GRANT ALL ON classdb.Student TO Instructor;
+GRANT SELECT ON classdb.Student TO DBManager;
+GRANT UPDATE (studentName, schoolID) ON classdb.Student TO DBManager;
+GRANT SELECT ON classdb.Student TO Instructor;
+GRANT UPDATE (studentName, schoolID) ON classdb.Student TO Instructor;
+ALTER TABLE classdb.Student OWNER TO ClassDB;
 
 
 CREATE TABLE IF NOT EXISTS classdb.Instructor
@@ -397,7 +417,10 @@ CREATE TABLE IF NOT EXISTS classdb.Instructor
    instructorName VARCHAR(100)
 );
 
-GRANT ALL ON classdb.Instructor TO DBManager;
-GRANT ALL ON classdb.Student TO Instructor;
+GRANT SELECT ON classdb.Instructor TO DBManager;
+GRANT UPDATE (instructorName) ON classdb.Instructor TO DBManager;
+GRANT SELECT ON classdb.Student TO Instructor;
+GRANT UPDATE (instructorName) ON classdb.Instructor TO Instructor;
+ALTER TABLE classdb.Instructor OWNER TO ClassDB;
 
 COMMIT;

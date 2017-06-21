@@ -5,7 +5,7 @@
 --
 --ClassDB - Created: 2017-06-05; Modified 2017-06-13
 
---The following test script should be run as a superuser
+--The following test script should be run as a superuser, otherwise tests will fail
 
 CREATE OR REPlACE FUNCTION classdb.createUserTest() RETURNS TEXT AS
 $$
@@ -21,11 +21,8 @@ BEGIN
 
    -- If the above lines created the roles correctly, the following 4 lines should not result
    --  in an exception.
-   DROP SCHEMA "testUser0";
-   DROP ROLE "testUser0";
-   DROP SCHEMA lowercaseuser;
-   DROP ROLE lowercaseuser;
-
+   PERFORM classdb.dropUser('testUser0');
+   PERFORM classdb.dropUser('lowercaseuser');
    RETURN 'PASS';
 END
 $$ LANGUAGE plpgsql;
