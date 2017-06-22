@@ -1,9 +1,12 @@
+--testPrepareClassDB.sql - ClassDB
+
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
---
---testPrepareClassDB.sql
---
---ClassDB - Created: 2017-06-05; Modified 2017-06-13
+--Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+
+--(C) 2017- DASSL. ALL RIGHTS RESERVED.
+--Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+--PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 --The following test script should be run as a superuser, otherwise tests will fail
 

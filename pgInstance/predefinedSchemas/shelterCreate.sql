@@ -1,8 +1,12 @@
+--shelterCreate.sql - Schemas for CS205
+
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---
---shelterCreate.sql
---
---Schemas for CS205; Created: 2017-05-31; Modified 2017-06-07
+--Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+
+--(C) 2017- DASSL. ALL RIGHTS RESERVED.
+--Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+--PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 --This shelter schema was originally created by Dr. Gancho Ganchev and Julie Gordon as a part
 -- of a workbook to introduce SQL*Plus. This schema was originally implemented for Oracle as
