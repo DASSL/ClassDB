@@ -102,7 +102,7 @@ BEGIN
    IF initialPassword IS NOT NULL THEN
       PERFORM classdb.createUser(userName, initialPassword);
    ELSE
-      PERFORM classdb.createUser(userName, userName::VARCHAR(128));
+      PERFORM classdb.createUser(userName, userName);
    END IF;
    EXECUTE format('GRANT Student TO %I', $1);
    EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', $1);
@@ -133,7 +133,7 @@ BEGIN
    IF initialPassword IS NOT NULL THEN
       PERFORM classdb.createUser(userName, initialPassword);
    ELSE
-      PERFORM classdb.createUser(userName, userName::VARCHAR(128));
+      PERFORM classdb.createUser(userName, userName);
    END IF;
    EXECUTE format('GRANT Instructor TO %I', $1);
    INSERT INTO classdb.Instructor VALUES($1, $2) ON CONFLICT DO NOTHING;
@@ -160,7 +160,7 @@ BEGIN
    IF initialPassword IS NOT NULL THEN
       PERFORM classdb.createUser(userName, initialPassword);
    ELSE
-      PERFORM classdb.createUser(userName, userName::VARCHAR(128));
+      PERFORM classdb.createUser(userName, userName);
    END IF;
    EXECUTE format('GRANT DBManager TO %I', $1);
 END;
