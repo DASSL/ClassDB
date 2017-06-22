@@ -18,11 +18,8 @@ START TRANSACTION;
 --Check for superuser
 DO
 $$
-DECLARE
-   isSuper BOOLEAN;
 BEGIN
-   EXECUTE 'SELECT COALESCE(rolsuper, FALSE) FROM pg_catalog.pg_roles WHERE rolname = current_user' INTO isSuper;
-   IF NOT isSuper THEN
+   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user AND rolsuper = t) THEN
       RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
    END IF;
 END
