@@ -7,6 +7,19 @@
 
 --The following test script should be run as a superuser, otherwise tests will fail
 
+START TRANSACTION
+
+--Tests for superuser privilege on current_user
+DO
+$$
+BEGIN
+   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user 
+    AND rolsuper = TRUE) THEN
+      RAISE EXCEPTION 'Insufficient privileges: script must be run as a superuser';
+   END IF;
+END
+$$;
+
 CREATE OR REPlACE FUNCTION classdb.createUserTest() RETURNS TEXT AS
 $$
 BEGIN
@@ -264,3 +277,5 @@ END
 $$  LANGUAGE plpgsql;
 
 SELECT classdb.prepareClassDBTest();
+
+COMMIT;
