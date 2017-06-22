@@ -5,8 +5,8 @@
 --
 --prepareClassDB.sql - ClassDB
 
---This script should be run as a user with superuser privileges, due to the need to create an
--- event trigger.
+
+--This script should be run as a user with createrole privileges
 
 --This script first prevents student roles from modiying the public schema, and then creates a
 -- classdb schema. Following that, a stored procedure for creating any type of user is defined,
@@ -21,12 +21,10 @@ START TRANSACTION;
 --Tests for createrole privilege on current_user
 DO
 $$
-DECLARE
-   canCreateRole BOOLEAN;
 BEGIN
-   SELECT rolcreaterole FROM pg_catalog.pg_roles WHERE rolname = current_user INTO canCreateRole;
-   IF NOT canCreateRole THEN
-      RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
+   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user 
+    AND rolcreaterole = TRUE) THEN
+      RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with createrole privileges';
    END IF;
 END
 $$;

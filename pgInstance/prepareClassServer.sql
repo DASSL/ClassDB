@@ -19,12 +19,10 @@ START TRANSACTION;
 --Tests for createrole privilege on current_user
 DO
 $$
-DECLARE
-   canCreateRole BOOLEAN;
 BEGIN
-   SELECT rolcreaterole FROM pg_catalog.pg_roles WHERE rolname = current_user INTO canCreateRole;
-   IF NOT canCreateRole THEN
-      RAISE EXCEPTION 'Insufficient privileges: the script must be run by a user with "createrole" privileges';
+   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user 
+    AND rolcreaterole = TRUE) THEN
+      RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with createrole privileges';
    END IF;
 END
 $$;
