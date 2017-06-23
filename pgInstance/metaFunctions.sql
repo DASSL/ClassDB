@@ -1,9 +1,12 @@
+--metaFunctions.sql - ClassDB
+
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
---
---metaFunctions.sql
---
---Functions for simple access to table metadata; Created: 2017-06-07; Modified 2017-06-07
+--Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+
+--(C) 2017- DASSL. ALL RIGHTS RESERVED.
+--Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+--PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 --Drop old functions and return types if they exist
 DROP FUNCTION IF EXISTS public.listTables();

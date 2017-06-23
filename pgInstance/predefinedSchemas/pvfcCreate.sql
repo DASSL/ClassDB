@@ -1,9 +1,12 @@
+--pvfcCreate.sql - Schemas for CS205
+
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
---
---pvfcCreate.sql
---
---Schemas for CS205; Created: 2017-05-31; Modified 2017-06-14
+--Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+
+--(C) 2017- DASSL. ALL RIGHTS RESERVED.
+--Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+--PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 --The following script should be run as the role desired to be the owner of the pvfc schema.
 

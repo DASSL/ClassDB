@@ -1,9 +1,12 @@
+--prepareUserLogging.sql - ClassDB
+
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
---
---prepareUserLogging.sql
---
---ClassDB - Created: 2017-06-14; Modified 2017-06-14
+--Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+
+--(C) 2017- DASSL. ALL RIGHTS RESERVED.
+--Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+--PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 --Need to be superuser for ALTER SYSTEM, however the ALTER SYSTEMS can't be placed in the same transaction
 ALTER SYSTEM SET log_connections TO 'on';

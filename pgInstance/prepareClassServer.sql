@@ -1,25 +1,28 @@
+--prepareClassServer.sql - ClassDB
+
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
---
---prepareClassServer.sql
---
---ClassDB - Created: 2017-06-09; Modified 2017-06-14
+--Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+
+--(C) 2017- DASSL. ALL RIGHTS RESERVED.
+--Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+--PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+
 
 --This script should be run as a user with createrole privileges
 
---This script creates roles for students, instructors, and database managers (administrators).
+--This script creates a role for the internal operations of ClassDB, followed by roles for 
+-- instructors, DBManagers, and students.
 
 START TRANSACTION;
 
---Tests for superuser privilege on current_user
+--Tests for createrole privilege on current_user
 DO
 $$
-DECLARE
-   isSuper BOOLEAN;
 BEGIN
-   SELECT COALESCE(rolsuper, FALSE) FROM pg_catalog.pg_roles WHERE rolname = current_user INTO isSuper;
-   IF NOT isSuper THEN
-      RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
+   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user 
+    AND rolcreaterole = TRUE) THEN
+      RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with createrole privileges';
    END IF;
 END
 $$;
@@ -28,17 +31,21 @@ $$;
 DO
 $$
 BEGIN
-   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'student') THEN
-      CREATE ROLE Student;
+   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'classdb') THEN
+      CREATE ROLE ClassDB;
    END IF;
-
+   ALTER ROLE ClassDB createrole;
+   
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'instructor') THEN
       CREATE ROLE Instructor;
    END IF;
-
+   
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'dbmanager') THEN
       CREATE ROLE DBManager;
-      ALTER ROLE DBManager createrole;
+   END IF;
+
+   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'student') THEN
+      CREATE ROLE Student;
    END IF;
 END
 $$;
