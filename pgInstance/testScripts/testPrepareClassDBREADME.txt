@@ -1,9 +1,12 @@
 Andrew Figueroa, Steven Rollo, Sean Murthy
-Data Science & Systems Lab at Western Connecticut State University (dassl@WCSU)
+Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
-testPrepareClassDBREADME.txt
+(C) 2017- DASSL. ALL RIGHTS RESERVED.
+Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
-ClassDB - Created: 2017-06-05; Modified 2017-06-13
+PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+
+---------------------------------------------------------------------------------------------------
 
 ---
 Tests are run in the following order:
