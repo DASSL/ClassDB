@@ -11,12 +11,12 @@
 
 --This script should be run as a user with createrole privileges
 
---This script first prevents student roles from modiying the public schema, and then creates a
--- classdb schema. Following that, a stored procedure for creating any type of user is defined,
+--This script first grants connect privileges to the current_database to the appropriate roles,
+-- and then prevents student roles from modiying the public schema. Next, a classdb schema is 
+-- created. Following that, a stored procedure for creating any type of user is defined,
 -- along with procedures for creating and dropping students and instructors. Finally,
 -- procedures for resetting a users password are created. This script also creates Student and
--- Instructor tables in the classdb schema, and an event trigger that records the timestamp of
--- the last ddl statement issued by each student.
+-- Instructor tables in the classdb schema, and assign privileges to those tables.
 
 
 START TRANSACTION;
