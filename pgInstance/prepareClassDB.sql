@@ -408,9 +408,10 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 --Currently, we are keeping listUserConnections() owned by the creating user
 --This allows instructors and dbmanagers unrestricted access to pg_stat_activity
+--if the creating user is a superuser
 --Otherwise, they cannot see info like ip address and timestamps of other users
+--In all cases, listUserConnections will be able to list PIDs from all users
 REVOKE ALL ON FUNCTION classdb.listUserConnections(VARCHAR(50)) FROM PUBLIC;
---ALTER FUNCTION classdb.listUserConnections(VARCHAR(50)) OWNER TO DBManager;
 GRANT EXECUTE ON FUNCTION classdb.listUserConnections(VARCHAR(50)) TO Instructor;
 GRANT EXECUTE ON FUNCTION classdb.listUserConnections(VARCHAR(50)) TO dbManager;
 
@@ -424,7 +425,7 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 --We can change the owner of this to dbmanager because it is a member of pg_signal_backend
 REVOKE ALL ON FUNCTION classdb.killUserConnections(VARCHAR(50)) FROM PUBLIC;
-ALTER FUNCTION classdb.killUserConnections(VARCHAR(50)) OWNER TO DBManager;
+ALTER FUNCTION classdb.killUserConnections(VARCHAR(50)) OWNER TO ClassDB;
 GRANT EXECUTE ON FUNCTION classdb.killUserConnections(VARCHAR(50)) TO Instructor;
 
 --Kills a specific connection given a pid INT4
@@ -435,7 +436,7 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION classdb.killConnection(INT4) FROM PUBLIC;
-ALTER FUNCTION classdb.killConnection(INT4) OWNER TO DBManager;
+ALTER FUNCTION classdb.killConnection(INT4) OWNER TO ClassDB;
 GRANT EXECUTE ON FUNCTION classdb.killConnection(INT4) TO Instructor;
 
 COMMIT;
