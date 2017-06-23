@@ -1,7 +1,6 @@
 --metaFunctions.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
-
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
@@ -12,9 +11,9 @@
 
 --Drop old functions and return types if they exist
 DROP FUNCTION IF EXISTS public.listTables();
-DROP FUNCTION IF EXISTS public.listTables(TEXT);
-DROP FUNCTION IF EXISTS public.describe(TEXT);
-DROP FUNCTION IF EXISTS public.describe(TEXT, TEXT);
+DROP FUNCTION IF EXISTS public.listTables(VARCHAR(63));
+DROP FUNCTION IF EXISTS public.describe(VARCHAR(63));
+DROP FUNCTION IF EXISTS public.describe(VARCHAR(63), VARCHAR(63));
 
 DROP TYPE IF EXISTS public.listTablesReturn;
 DROP TYPE IF EXISTS public.describeRetrun;
@@ -47,7 +46,7 @@ $$
 LANGUAGE sql;
 
 --Returns a list of tables and views in the specified schema
-CREATE OR REPLACE FUNCTION public.listTables(TEXT)
+CREATE OR REPLACE FUNCTION public.listTables(schemaName VARCHAR(63))
 RETURNS SETOF public.listTablesReturn
 AS $$
    SELECT table_name, table_type
@@ -58,7 +57,7 @@ LANGUAGE sql;
 
 --Returns a list of columns in the specified table or view
 --Will only work on tables in the user's search_path
-CREATE OR REPLACE FUNCTION public.describe(TEXT)
+CREATE OR REPLACE FUNCTION public.describe(tableName VARCHAR(63))
 RETURNS SETOF public.describeRetrun
 AS $$
    SELECT table_name, column_name, data_type, character_maximum_length 
@@ -69,7 +68,7 @@ $$
 LANGUAGE sql;
 
 --Returns a list of columns in the specified table or view in the specified schema
-CREATE OR REPLACE FUNCTION public.describe(TEXT, TEXT)
+CREATE OR REPLACE FUNCTION public.describe(schemaName VARCHAR(63), tableName VARCHAR(63))
 RETURNS SETOF public.describeRetrun
 AS $$
    SELECT table_name, column_name, data_type, character_maximum_length 

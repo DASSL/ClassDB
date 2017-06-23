@@ -398,8 +398,8 @@ CREATE TABLE IF NOT EXISTS classdb.Student
    studentName VARCHAR(100),
    schoolID VARCHAR(20),
    lastDDLActivity TIMESTAMP, --Timestamp of last DDL Query
-   lastDDLOperation TEXT,
-   lastDDLObject TEXT,
+   lastDDLOperation VARCHAR(63),
+   lastDDLObject VARCHAR(256),
    DDLCount INT DEFAULT 0,
    lastConnection TIMESTAMP, --Timestamp of last connection
    connectionCount INT DEFAULT 0
@@ -431,7 +431,7 @@ CREATE TYPE classdb.listUserConnectionsReturn AS
 (
    userName VARCHAR(50), --VARCHAR(50) used as NAME replacement
    pid INT,
-   applicationName TEXT,
+   applicationName VARCHAR(63),
    clientAddress INET, --Will hold client ip address
    connectionStartTime TIMESTAMPTZ, --This is provided by backend_start in pg_stat_activity
    lastQueryStartTime TIMESTAMPTZ --This is provided by query_start in pg_stat_activity
@@ -467,14 +467,14 @@ ALTER FUNCTION classdb.killUserConnections(VARCHAR(50)) OWNER TO ClassDB;
 GRANT EXECUTE ON FUNCTION classdb.killUserConnections(VARCHAR(50)) TO Instructor;
 
 --Kills a specific connection given a pid INT4
-CREATE OR REPLACE FUNCTION classdb.killConnection(INT4) --pg_terminate_backend takes pid as INT4
+CREATE OR REPLACE FUNCTION classdb.killConnection(INT) --pg_terminate_backend takes pid as INT4
 RETURNS BOOLEAN AS $$
    SELECT pg_terminate_backend($1);
 $$ LANGUAGE sql
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION classdb.killConnection(INT4) FROM PUBLIC;
-ALTER FUNCTION classdb.killConnection(INT4) OWNER TO ClassDB;
-GRANT EXECUTE ON FUNCTION classdb.killConnection(INT4) TO Instructor;
+REVOKE ALL ON FUNCTION classdb.killConnection(INT) FROM PUBLIC;
+ALTER FUNCTION classdb.killConnection(INT) OWNER TO ClassDB;
+GRANT EXECUTE ON FUNCTION classdb.killConnection(INT) TO Instructor;
 
 COMMIT;
