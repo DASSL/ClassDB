@@ -1,12 +1,14 @@
 --prepareUserLogging.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
+
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+
 
 --Need to be superuser for ALTER SYSTEM, however the ALTER SYSTEMS can't be placed in the same transaction
 ALTER SYSTEM SET log_connections TO 'on';
@@ -21,11 +23,8 @@ START TRANSACTION;
 --Check for superuser
 DO
 $$
-DECLARE
-   isSuper BOOLEAN;
 BEGIN
-   EXECUTE 'SELECT COALESCE(rolsuper, FALSE) FROM pg_catalog.pg_roles WHERE rolname = current_user' INTO isSuper;
-   IF NOT isSuper THEN
+   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user AND rolsuper = 't') THEN
       RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
    END IF;
 END

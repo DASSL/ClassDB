@@ -1,12 +1,14 @@
 --metaFunctions.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
+
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+
 
 --Drop old functions and return types if they exist
 DROP FUNCTION IF EXISTS public.listTables();
@@ -42,7 +44,7 @@ AS $$
    FROM INFORMATION_SCHEMA.TABLES
    WHERE table_schema = current_user;
 $$
-LANGUAGE SQL;
+LANGUAGE sql;
 
 --Returns a list of tables and views in the specified schema
 CREATE OR REPLACE FUNCTION public.listTables(TEXT)
@@ -52,7 +54,7 @@ AS $$
    FROM INFORMATION_SCHEMA.TABLES
    WHERE table_schema = $1;
 $$
-LANGUAGE SQL;
+LANGUAGE sql;
 
 --Returns a list of columns in the specified table or view
 --Will only work on tables in the user's search_path
@@ -64,7 +66,7 @@ AS $$
    WHERE table_name = $1
    AND table_schema =  current_user;
 $$
-LANGUAGE SQL;
+LANGUAGE sql;
 
 --Returns a list of columns in the specified table or view in the specified schema
 CREATE OR REPLACE FUNCTION public.describe(TEXT, TEXT)
@@ -75,4 +77,4 @@ AS $$
    WHERE table_name = $2
    AND table_schema = $1;
 $$
-LANGUAGE SQL;
+LANGUAGE sql;
