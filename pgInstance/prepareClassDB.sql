@@ -54,6 +54,10 @@ $$;
 REVOKE CREATE ON SCHEMA public FROM Student;
 
 
+--Grants the ClassDB role to the current_user in order to be able to set ClassDB as an owner
+GRANT ClassDB TO current_user;
+
+
 --Creates a schema for holding administrative information and assigns privileges
 CREATE SCHEMA IF NOT EXISTS classdb;
 GRANT ALL ON SCHEMA classdb to ClassDB;
