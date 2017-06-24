@@ -9,7 +9,8 @@
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 
---This script should be run as a user with createrole privileges
+--This script should be run as either a superuser or as the owner of the current database, 
+-- provided that the user has createrole privileges.
 
 --This script first grants connect privileges to the current_database to the appropriate roles,
 -- and then prevents student roles from modiying the public schema. Next, a classdb schema is 
