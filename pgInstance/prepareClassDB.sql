@@ -335,7 +335,7 @@ BEGIN
       THEN
          EXECUTE format('ALTER ROLE %I ENCRYPTED PASSWORD %L', userName, password);
       ELSE
-         RAISE NOTICE 'Password does not meet requirements. Must be 6 or more characters and contain at least 1 number';
+         RAISE NOTICE 'Password fails requirements: must be 6 or more characters and contain at least 1 number';
       END IF;
    ELSE
       RAISE NOTICE 'User: "%" does not exist', userName;
