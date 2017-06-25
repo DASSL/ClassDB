@@ -1,0 +1,6 @@
+CC 4.0 BY-NC-SA
+https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+Copyright (c) 2017- DASSL. ALL RIGHTS RESERVED.
+
+ALL ARTIFACTS PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
