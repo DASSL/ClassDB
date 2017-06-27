@@ -99,7 +99,7 @@ BEGIN
       RAISE NOTICE 'User "%" already exists, password not modified', $1;
    ELSE
       EXECUTE
-         format('CREATE USER %I ENCRYPTED PASSWORD %L', %1, COALESCE($2, $1));
+         format('CREATE USER %I ENCRYPTED PASSWORD %L', $1, COALESCE($2, $1));
    END IF;
 
    IF EXISTS(SELECT * FROM pg_catalog.pg_namespace WHERE nspname = $1) THEN
