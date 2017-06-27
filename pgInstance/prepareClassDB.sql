@@ -289,7 +289,7 @@ CREATE OR REPLACE FUNCTION classdb.dropStudent(userName VARCHAR(50)) RETURNS VOI
 $$
 BEGIN
    IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) AND
-      pg_catalog.pg_has_role($1, "Student", 'member')
+      pg_catalog.pg_has_role($1, 'Student', 'member')
    THEN
       EXECUTE format('REVOKE "Student" FROM %I', $1);
       DELETE FROM classdb.Student S WHERE S.userName = $1;
@@ -342,7 +342,7 @@ $$
 BEGIN
    IF
       EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) AND
-      pg_catalog.pg_has_role($1, "Instructor", 'member')
+      pg_catalog.pg_has_role($1, 'Instructor', 'member')
    THEN
       EXECUTE format('REVOKE "Instructor" FROM %I', $1);
       DELETE FROM classdb.Instructor S WHERE S.userName = $1;
@@ -376,7 +376,7 @@ $$
 BEGIN
    IF
       EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) AND
-      pg_catalog.pg_has_role($1, "DBManager", 'member')
+      pg_catalog.pg_has_role($1, 'DBManager', 'member')
    THEN
       EXECUTE format('REVOKE dbmanager FROM %I', userName);
       IF EXISTS(SELECT * FROM pg_catalog.pg_roles
@@ -409,11 +409,11 @@ CREATE OR REPLACE FUNCTION classdb.dropUser(userName VARCHAR(50)) RETURNS VOID A
 $$
 BEGIN
    IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) THEN
-      IF pg_catalog.pg_has_role($1, "Student", 'member') THEN
+      IF pg_catalog.pg_has_role($1, 'Student', 'member') THEN
         DELETE FROM classdb.Student WHERE userName = $1;
       END IF;
 
-      IF pg_catalog.pg_has_role($1, "Instructor", 'member') THEN
+      IF pg_catalog.pg_has_role($1, 'Instructor', 'member') THEN
          DELETE FROM classdb.Instructor WHERE userName = $1;
       END IF;
 
@@ -484,7 +484,7 @@ DECLARE
    studentID VARCHAR(128);
 BEGIN
    IF
-      pg_catalog.pg_has_role($1, "Student", 'member')
+      pg_catalog.pg_has_role($1, 'Student', 'member')
    THEN
       SELECT ID FROM classdb.Student WHERE userName = $1 INTO studentID;
       IF studentID IS NULL THEN
@@ -493,7 +493,7 @@ BEGIN
          PERFORM classdb.changeUserPassword(userName, studentID);
       END IF;
    ELSIF
-      pg_catalog.pg_has_role(userName, "Instructor", 'member')
+      pg_catalog.pg_has_role(userName, 'Instructor', 'member')
    THEN
       PERFORM classdb.changeUserPassword(userName, userName);
    ELSE
