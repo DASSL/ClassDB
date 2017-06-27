@@ -47,7 +47,7 @@ DO
 $$
 BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
-                  WHERE rolname IN ('classdb', 'instructor', 'dbmanager', 'student')
+                  WHERE rolname IN ('ClassDB', 'Instructor', 'DBManager', 'Student')
                  ) THEN
       RAISE EXCEPTION
          'Missing group roles: one or more expected group roles are undefined';
@@ -87,6 +87,9 @@ REVOKE CREATE ON SCHEMA public FROM "Student";
 CREATE SCHEMA IF NOT EXISTS classdb;
 GRANT ALL PRIVILEGES ON SCHEMA classdb TO "ClassDB", "Instructor", "DBManager";
 
+--Grant ClassDB to the current user (the one runnning the script)
+-- This allows altering of objected even after they are owned by ClassDB
+GRANT "ClassDB" TO current_user;
 
 
 --Define a function to create a user with the name and password supplied
