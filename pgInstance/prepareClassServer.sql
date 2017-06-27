@@ -9,8 +9,6 @@
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
---This script has been recently updated to always quote role names, but has not been tested.
--- There is a significant probablility of it not working correctly.
 
 --This script should be run as a user with createrole privileges
 
@@ -52,8 +50,6 @@ $$
 BEGIN
    PERFORM pg_temp.createGroupRole('ClassDB');
 
-   --does not work in my environment
-   --says 'role classdb does not exist' though the role is in pg_catalog.pg_roles
    ALTER ROLE "ClassDB" CREATEROLE CREATEDB;
 
    PERFORM pg_temp.createGroupRole('Student');

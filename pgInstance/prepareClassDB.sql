@@ -9,8 +9,6 @@
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
---This script has been recently updated to always quote role names, but has not been tested.
--- There is a significant probablility of it not working correctly.
 
 --This script should be run as a user with createrole privileges
 
