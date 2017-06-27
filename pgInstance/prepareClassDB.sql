@@ -9,6 +9,8 @@
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
+--This script has been recently updated to always quote role names, but has not been tested.
+-- There is a significant probablility of it not working correctly.
 
 --This script should be run as a user with createrole privileges
 
@@ -69,21 +71,21 @@ BEGIN
    --Let only app-specific roles connect to the DB
    -- no need for ClassDB to connect to the DB
    EXECUTE
-      format('GRANT CONNECT ON DATABASE %I TO Student, Instructor, DBManager', currentDB);
+      format('GRANT CONNECT ON DATABASE %I TO "Student", "Instructor", "DBManager"', currentDB);
 
    --Allow ClassDB to create schemas on the current database
    -- all schema-creation operations are done only by this role in this app
-   EXECUTE format('GRANT CREATE ON DATABASE %I TO ClassDB', currentDB);
+   EXECUTE format('GRANT CREATE ON DATABASE %I TO "ClassDB"', currentDB);
 END
 $$;
 
 --Prevent students from modifying the public schema
 -- public schema contains objects and functions students can read
-REVOKE CREATE ON SCHEMA public FROM Student;
+REVOKE CREATE ON SCHEMA public FROM "Student";
 
 --Create a schema to hold app's admin info and assign privileges on that schema
 CREATE SCHEMA IF NOT EXISTS classdb;
-GRANT ALL PRIVILEGES ON SCHEMA classdb TO ClassDB, Instructor, DBManager;
+GRANT ALL PRIVILEGES ON SCHEMA classdb TO "ClassDB", "Instructor", "DBManager";
 
 
 
@@ -116,7 +118,7 @@ $$ LANGUAGE plpgsql
 --Make ClassDB the function owner so it runs with that role's privileges
 ALTER FUNCTION
    classdb.createUser(userName VARCHAR(50), initialPwd VARCHAR(128))
-   OWNER TO ClassDB;
+   OWNER TO "ClassDB";
 
 --Prevent everyone from executing the function
 REVOKE ALL ON FUNCTION
@@ -126,7 +128,7 @@ REVOKE ALL ON FUNCTION
 --Allow only instructors and db managers to execute the function
 GRANT EXECUTE ON FUNCTION
    classdb.createUser(userName VARCHAR(50), initialPwd VARCHAR(128))
-   TO Instructor, DBManager;
+   TO "Instructor", "DBManager";
 
 
 --Define a table to track student users: each student gets their own login role
@@ -145,7 +147,7 @@ CREATE TABLE IF NOT EXISTS classdb.Student
 
 
 --Change table's owner so ClassDB can perform any operation on it
-ALTER TABLE classdb.Student OWNER TO ClassDB;
+ALTER TABLE classdb.Student OWNER TO "ClassDB";
 
 --Prevent everyone from doing anything with the table
 REVOKE ALL PRIVILEGES ON classdb.Student FROM PUBLIC;
@@ -153,8 +155,8 @@ REVOKE ALL PRIVILEGES ON classdb.Student FROM PUBLIC;
 --Permit instructors and DB managers to read rows and to update only some columns
 -- username cannot be edited by anyone because its value must match a login role
 -- inserts and deletes are performed only in functions which run as ClassDB
-GRANT SELECT ON classdb.Student TO Instructor, DBManager;
-GRANT UPDATE (studentName, schoolID) ON classdb.Student TO Instructor, DBManager;
+GRANT SELECT ON classdb.Student TO "Instructor", "DBManager";
+GRANT UPDATE (studentName, schoolID) ON classdb.Student TO "Instructor", "DBManager";
 
 
 --Define a function to register a student user and associate w/ group role Student
@@ -169,8 +171,8 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
    PERFORM classdb.createUser(studentUserName, initialPwd);
-   EXECUTE format('GRANT Student TO %I', $1);
-   EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', $1);
+   EXECUTE format('GRANT "Student" TO %I', $1);
+   EXECUTE format('GRANT USAGE ON SCHEMA %I TO "Instructor"', $1);
    EXECUTE format('ALTER ROLE %I CONNECTION LIMIT 5', $1);
    EXECUTE format('ALTER ROLE %I SET statement_timeout = 2000', $1);
 
@@ -185,7 +187,7 @@ $$ LANGUAGE plpgsql
 ALTER FUNCTION
    classdb.createStudent(studentUserName VARCHAR(50), studentName VARCHAR(100),
                          schoolID VARCHAR(20), initialPwd VARCHAR(128))
-   OWNER TO ClassDB;
+   OWNER TO "ClassDB";
 
 --Prevent everyone from executing the function
 REVOKE ALL ON FUNCTION
@@ -197,7 +199,7 @@ REVOKE ALL ON FUNCTION
 GRANT EXECUTE ON FUNCTION
    classdb.createStudent(studentUserName VARCHAR(50), studentName VARCHAR(100),
                          schoolID VARCHAR(20), initialPwd VARCHAR(128))
-   TO Instructor, DBManager;
+   TO "Instructor", "DBManager";
 
 
 --Define a table to track instructors who use DB: each instr. gets a login role
@@ -208,12 +210,12 @@ CREATE TABLE IF NOT EXISTS classdb.Instructor
 );
 
 --change table ownership to ClassDB
-ALTER TABLE classdb.Instructor OWNER TO ClassDB;
+ALTER TABLE classdb.Instructor OWNER TO "ClassDB";
 
 --limit operations on rows and columns
 REVOKE ALL PRIVILEGES ON classdb.Student FROM PUBLIC;
-GRANT SELECT ON classdb.Student TO Instructor, DBManager;
-GRANT UPDATE (instructorName) ON classdb.Instructor TO Instructor, DBManager;
+GRANT SELECT ON classdb.Student TO "Instructor", "DBManager";
+GRANT UPDATE (instructorName) ON classdb.Instructor TO "Instructor", "DBManager";
 
 
 --Define a function to register an instructor user and associate w/ Instructor role
@@ -225,7 +227,7 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
    PERFORM classdb.createUser(instructorUserName, initialPwd);
-   EXECUTE format('GRANT Instructor TO %I', $1);
+   EXECUTE format('GRANT "Instructor" TO %I', $1);
    INSERT INTO classdb.Instructor VALUES($1, $2)
           ON CONFLICT (username) DO UPDATE SET instructorName = $2;
 
@@ -237,7 +239,7 @@ $$ LANGUAGE plpgsql
 ALTER FUNCTION
    classdb.createInstructor(instructorUserName VARCHAR(50), instructorName VARCHAR(100),
                             initialPwd VARCHAR(128))
-   OWNER TO ClassDB;
+   OWNER TO "ClassDB";
 
 REVOKE ALL ON FUNCTION
    classdb.createInstructor(instructorUserName VARCHAR(50), instructorName VARCHAR(100),
@@ -247,7 +249,7 @@ REVOKE ALL ON FUNCTION
 GRANT EXECUTE ON FUNCTION
    classdb.createInstructor(instructorUserName VARCHAR(50), instructorName VARCHAR(100),
                             initialPwd VARCHAR(128))
-   TO Instructor, DBManager;
+   TO "Instructor", "DBManager";
 
 
 --Define a function to register a user in DBManager role
@@ -258,7 +260,7 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
    PERFORM classdb.createUser(managerUserName, initialPwd);
-   EXECUTE format('GRANT DBManager TO %I', $1);
+   EXECUTE format('GRANT "DBManager" TO %I', $1);
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
@@ -266,7 +268,7 @@ $$ LANGUAGE plpgsql
 --Change function ownership and set execution permissions
 ALTER FUNCTION
    classdb.createDBManager(managerUserName VARCHAR(50), managerName VARCHAR(100),
-                           initialPwd VARCHAR(128)) OWNER TO ClassDB;
+                           initialPwd VARCHAR(128)) OWNER TO "ClassDB";
 
 REVOKE ALL ON FUNCTION
    classdb.createDBManager(managerUserName VARCHAR(50), managerName VARCHAR(100),
@@ -274,7 +276,7 @@ REVOKE ALL ON FUNCTION
 
 GRANT EXECUTE ON FUNCTION
    classdb.createDBManager(managerUserName VARCHAR(50), managerName VARCHAR(100),
-                           initialPwd VARCHAR(128)) TO Instructor, DBManager;
+                           initialPwd VARCHAR(128)) TO "Instructor", "DBManager";
 
 
 --Define a function to revoke Student role from a user
@@ -284,9 +286,9 @@ CREATE OR REPLACE FUNCTION classdb.dropStudent(userName VARCHAR(50)) RETURNS VOI
 $$
 BEGIN
    IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) AND
-      pg_catalog.pg_has_role($1, 'student', 'member')
+      pg_catalog.pg_has_role($1, "Student", 'member')
    THEN
-      EXECUTE format('REVOKE Student FROM %I', $1);
+      EXECUTE format('REVOKE "Student" FROM %I', $1);
       DELETE FROM classdb.Student S WHERE S.userName = $1;
 
       IF EXISTS(SELECT * FROM pg_catalog.pg_roles 
@@ -305,11 +307,11 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 --Change function ownership and set execution permissions
-ALTER FUNCTION classdb.dropStudent(userName VARCHAR(50)) OWNER TO ClassDB;
+ALTER FUNCTION classdb.dropStudent(userName VARCHAR(50)) OWNER TO "ClassDB";
 REVOKE ALL ON FUNCTION classdb.dropStudent(userName VARCHAR(50)) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION
    classdb.dropStudent(userName VARCHAR(50))
-   TO Instructor, DBManager;
+   TO "Instructor", "DBManager";
 
 
 --Define a function to drop all students presently registered
@@ -323,9 +325,9 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 --Change function ownership and set execution permissions
-ALTER FUNCTION dropAllStudents() OWNER TO ClassDB;
+ALTER FUNCTION dropAllStudents() OWNER TO "ClassDB";
 REVOKE ALL ON FUNCTION dropAllStudents() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION dropAllStudents() TO Instructor, DBManager;
+GRANT EXECUTE ON FUNCTION dropAllStudents() TO "Instructor", "DBManager";
 
 
 --The folowing procedure revokes the Instructor role from an Instructor, along with their entry
@@ -337,9 +339,9 @@ $$
 BEGIN
    IF
       EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) AND
-      pg_catalog.pg_has_role($1, 'instructor', 'member')
+      pg_catalog.pg_has_role($1, "Instructor", 'member')
    THEN
-      EXECUTE format('REVOKE Instructor FROM %I', $1);
+      EXECUTE format('REVOKE "Instructor" FROM %I', $1);
       DELETE FROM classdb.Instructor S WHERE S.userName = $1;
       IF EXISTS(SELECT * FROM pg_catalog.pg_roles
                 WHERE pg_catalog.pg_has_role($1, oid, 'member') AND rolname != $1
@@ -357,10 +359,10 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 --Change function ownership and set execution permissions
-ALTER FUNCTION classdb.dropInstructor(userName VARCHAR(50)) OWNER TO ClassDB;
+ALTER FUNCTION classdb.dropInstructor(userName VARCHAR(50)) OWNER TO "ClassDB";
 REVOKE ALL ON FUNCTION classdb.dropInstructor(userName VARCHAR(50)) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION
-   classdb.dropInstructor(userName VARCHAR(50)) TO Instructor, DBManager;
+   classdb.dropInstructor(userName VARCHAR(50)) TO "Instructor", "DBManager";
 
 
 --The folowing procedure revokes the DBManager role from a DBManager. If the DBManager role was
@@ -371,7 +373,7 @@ $$
 BEGIN
    IF
       EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) AND
-      pg_catalog.pg_has_role($1, 'dbmanager', 'member')
+      pg_catalog.pg_has_role($1, "DBManager", 'member')
    THEN
       EXECUTE format('REVOKE dbmanager FROM %I', userName);
       IF EXISTS(SELECT * FROM pg_catalog.pg_roles
@@ -383,17 +385,17 @@ BEGIN
          EXECUTE format('DROP ROLE %I', $1);
       END IF;
    ELSE
-      RAISE NOTICE 'User "%" is not a registered DBManager', $1;
+      RAISE NOTICE 'User "%" is not a registered "DBManager"', $1;
    END IF;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 --Change function ownership and set execution permissions
-ALTER FUNCTION classdb.dropDBManager(userName VARCHAR(50)) OWNER TO ClassDB;
+ALTER FUNCTION classdb.dropDBManager(userName VARCHAR(50)) OWNER TO "ClassDB";
 REVOKE ALL ON FUNCTION classdb.dropDBManager(userName VARCHAR(50)) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION
-   classdb.dropDBManager(userName VARCHAR(50)) TO Instructor, DBManager;
+   classdb.dropDBManager(userName VARCHAR(50)) TO "Instructor", "DBManager";
 
 
 --The following procedure drops a user regardless of their role memberships. This will also
@@ -404,11 +406,11 @@ CREATE OR REPLACE FUNCTION classdb.dropUser(userName VARCHAR(50)) RETURNS VOID A
 $$
 BEGIN
    IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) THEN
-      IF pg_catalog.pg_has_role($1, 'student', 'member') THEN
+      IF pg_catalog.pg_has_role($1, "Student", 'member') THEN
         DELETE FROM classdb.Student WHERE userName = $1;
       END IF;
 
-      IF pg_catalog.pg_has_role($1, 'instructor', 'member') THEN
+      IF pg_catalog.pg_has_role($1, "Instructor", 'member') THEN
          DELETE FROM classdb.Instructor WHERE userName = $1;
       END IF;
 
@@ -422,9 +424,9 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 --Change function ownership and set execution permissions
-ALTER FUNCTION classdb.dropUser(userName VARCHAR(50)) OWNER TO ClassDB;
+ALTER FUNCTION classdb.dropUser(userName VARCHAR(50)) OWNER TO "ClassDB";
 REVOKE ALL ON FUNCTION classdb.dropUser(userName VARCHAR(50)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(50)) TO Instructor, DBManager;
+GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(50)) TO "Instructor", "DBManager";
 
 
 --The following procedure allows changing the password for a given username, given both the
@@ -460,13 +462,13 @@ $$ LANGUAGE plpgsql
 --Change function ownership and set execution permissions
 ALTER FUNCTION
    classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128))
-   OWNER TO ClassDB;
+   OWNER TO "ClassDB";
 REVOKE ALL ON FUNCTION
    classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128))
    FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION
    classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128))
-   TO Instructor, DBManager;
+   TO "Instructor", "DBManager";
 
 
 --Define a function to reset a user's password to a default value
@@ -479,7 +481,7 @@ DECLARE
    studentID VARCHAR(128);
 BEGIN
    IF
-      pg_catalog.pg_has_role($1, 'student', 'member')
+      pg_catalog.pg_has_role($1, "Student", 'member')
    THEN
       SELECT ID FROM classdb.Student WHERE userName = $1 INTO studentID;
       IF studentID IS NULL THEN
@@ -488,7 +490,7 @@ BEGIN
          PERFORM classdb.changeUserPassword(userName, studentID);
       END IF;
    ELSIF
-      pg_catalog.pg_has_role(userName, 'instructor', 'member')
+      pg_catalog.pg_has_role(userName, "Instructor", 'member')
    THEN
       PERFORM classdb.changeUserPassword(userName, userName);
    ELSE
@@ -501,13 +503,13 @@ $$ LANGUAGE plpgsql
 --Change function ownership and set execution permissions
 ALTER FUNCTION
    classdb.resetUserPassword(userName VARCHAR(50))
-   OWNER TO ClassDB;
+   OWNER TO "ClassDB";
 REVOKE ALL ON FUNCTION
    classdb.resetUserPassword(userName VARCHAR(50))
    FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION
    classdb.resetUserPassword(userName VARCHAR(50))
-   TO Instructor, DBManager;
+   TO "Instructor", "DBManager";
 
 
 
