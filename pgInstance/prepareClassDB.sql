@@ -163,12 +163,12 @@ GRANT UPDATE (studentName, schoolID) ON classdb.Student TO Instructor, DBManager
 -- limit number of concurrent connections and set time-out period for each query
 -- record the user name in the Student table
 CREATE OR REPLACE FUNCTION
-   classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
+   classdb.createStudent(studentUserName VARCHAR(50), studentName VARCHAR(100),
                          schoolID VARCHAR(20) DEFAULT NULL,
 						 initialPwd VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
 $$
 BEGIN
-   PERFORM classdb.createUser(userName, initialPwd);
+   PERFORM classdb.createUser(studentUserName, initialPwd);
    EXECUTE format('GRANT Student TO %I', $1);
    EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', $1);
    EXECUTE format('ALTER ROLE %I CONNECTION LIMIT 5', $1);
@@ -183,19 +183,19 @@ $$ LANGUAGE plpgsql
 
 --Make ClassDB the function owner so the function runs w/ that role's privileges
 ALTER FUNCTION
-   classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
+   classdb.createStudent(studentUserName VARCHAR(50), studentName VARCHAR(100),
                          schoolID VARCHAR(20), initialPwd VARCHAR(128))
    OWNER TO ClassDB;
 
 --Prevent everyone from executing the function
 REVOKE ALL ON FUNCTION
-   classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
+   classdb.createStudent(studentUserName VARCHAR(50), studentName VARCHAR(100),
                          schoolID VARCHAR(20), initialPwd VARCHAR(128))
    FROM PUBLIC;
 
 --allow only instructors and db managers to execute the function
 GRANT EXECUTE ON FUNCTION
-   classdb.createStudent(userName VARCHAR(50), studentName VARCHAR(100),
+   classdb.createStudent(studentUserName VARCHAR(50), studentName VARCHAR(100),
                          schoolID VARCHAR(20), initialPwd VARCHAR(128))
    TO Instructor, DBManager;
 
@@ -220,11 +220,11 @@ GRANT UPDATE (instructorName) ON classdb.Instructor TO Instructor, DBManager;
 -- initial password is optional
 -- record the user name in the Instructor table
 CREATE OR REPLACE FUNCTION
-   classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
+   classdb.createInstructor(instructorUserName VARCHAR(50), instructorName VARCHAR(100),
                             initialPwd VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
 $$
 BEGIN
-   PERFORM classdb.createUser(userName, initialPwd);
+   PERFORM classdb.createUser(instructorUserName, initialPwd);
    EXECUTE format('GRANT Instructor TO %I', $1);
    INSERT INTO classdb.Instructor VALUES($1, $2)
           ON CONFLICT (username) DO UPDATE SET instructorName = $2;
@@ -235,17 +235,17 @@ $$ LANGUAGE plpgsql
 
 --Change function ownership and set execution permissions
 ALTER FUNCTION
-   classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
+   classdb.createInstructor(instructorUserName VARCHAR(50), instructorName VARCHAR(100),
                             initialPwd VARCHAR(128))
    OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION
-   classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
+   classdb.createInstructor(instructorUserName VARCHAR(50), instructorName VARCHAR(100),
                             initialPwd VARCHAR(128))
    FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION
-   classdb.createInstructor(userName VARCHAR(50), instructorName VARCHAR(100),
+   classdb.createInstructor(instructorUserName VARCHAR(50), instructorName VARCHAR(100),
                             initialPwd VARCHAR(128))
    TO Instructor, DBManager;
 
@@ -253,11 +253,11 @@ GRANT EXECUTE ON FUNCTION
 --Define a function to register a user in DBManager role
 --initial password is optional
 CREATE OR REPLACE FUNCTION
-   classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
+   classdb.createDBManager(managerUserName VARCHAR(50), managerName VARCHAR(100),
                            initialPwd VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
 $$
 BEGIN
-   PERFORM classdb.createUser(userName, initialPwd);
+   PERFORM classdb.createUser(managerUserName, initialPwd);
    EXECUTE format('GRANT DBManager TO %I', $1);
 END;
 $$ LANGUAGE plpgsql
@@ -265,15 +265,15 @@ $$ LANGUAGE plpgsql
 
 --Change function ownership and set execution permissions
 ALTER FUNCTION
-   classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
+   classdb.createDBManager(managerUserName VARCHAR(50), managerName VARCHAR(100),
                            initialPwd VARCHAR(128)) OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION
-   classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
+   classdb.createDBManager(managerUserName VARCHAR(50), managerName VARCHAR(100),
                            initialPwd VARCHAR(128)) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION
-   classdb.createDBManager(userName VARCHAR(50), managerName VARCHAR(100),
+   classdb.createDBManager(managerUserName VARCHAR(50), managerName VARCHAR(100),
                            initialPwd VARCHAR(128)) TO Instructor, DBManager;
 
 
