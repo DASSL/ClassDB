@@ -198,7 +198,7 @@ REVOKE ALL ON FUNCTION
                          schoolID VARCHAR(20), initialPwd VARCHAR(128))
    FROM PUBLIC;
 
---allow only instructors and db managers to execute the function
+--Allow only instructors and db managers to execute the function
 GRANT EXECUTE ON FUNCTION
    classdb.createStudent(studentUserName VARCHAR(50), studentName VARCHAR(100),
                          schoolID VARCHAR(20), initialPwd VARCHAR(128))
@@ -212,10 +212,10 @@ CREATE TABLE IF NOT EXISTS classdb.Instructor
    instructorName VARCHAR(100) NOT NULL --instructor's given name
 );
 
---change table ownership to ClassDB
+--Change table ownership to ClassDB
 ALTER TABLE classdb.Instructor OWNER TO "ClassDB";
 
---limit operations on rows and columns
+--Limit operations on rows and columns
 REVOKE ALL PRIVILEGES ON classdb.Student FROM PUBLIC;
 GRANT SELECT ON classdb.Student TO "Instructor", "DBManager";
 GRANT UPDATE (instructorName) ON classdb.Instructor TO "Instructor", "DBManager";
