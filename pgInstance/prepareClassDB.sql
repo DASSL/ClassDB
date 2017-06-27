@@ -283,17 +283,15 @@ GRANT EXECUTE ON FUNCTION
 CREATE OR REPLACE FUNCTION classdb.dropStudent(userName VARCHAR(50)) RETURNS VOID AS
 $$
 BEGIN
-   IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1)
-            AND
-            pg_catalog.pg_has_role($1, 'student', 'member')
+   IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) AND
+      pg_catalog.pg_has_role($1, 'student', 'member')
    THEN
       EXECUTE format('REVOKE Student FROM %I', $1);
       DELETE FROM classdb.Student S WHERE S.userName = $1;
 
-      IF EXISTS(SELECT * FROM pg_catalog.pg_roles
-                WHERE pg_catalog.pg_has_role($1, oid, 'member')  rolname != $1
-               )
-      THEN
+      IF EXISTS(SELECT * FROM pg_catalog.pg_roles 
+	            WHERE pg_catalog.pg_has_role($1, oid, 'member') AND rolname != $1 
+			   ) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
          EXECUTE format('DROP SCHEMA %I CASCADE', $1);
@@ -344,8 +342,8 @@ BEGIN
       EXECUTE format('REVOKE Instructor FROM %I', $1);
       DELETE FROM classdb.Instructor S WHERE S.userName = $1;
       IF EXISTS(SELECT * FROM pg_catalog.pg_roles
-                WHERE pg_catalog.pg_has_role($1, oid, 'member')  rolname != $1
-               ) THEN
+                WHERE pg_catalog.pg_has_role($1, oid, 'member') AND rolname != $1
+				) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
          EXECUTE format('DROP SCHEMA %I CASCADE', $1);
@@ -377,7 +375,7 @@ BEGIN
    THEN
       EXECUTE format('REVOKE dbmanager FROM %I', userName);
       IF EXISTS(SELECT * FROM pg_catalog.pg_roles
-                WHERE pg_catalog.pg_has_role($1, oid, 'member')  rolname != $1
+                WHERE pg_catalog.pg_has_role($1, oid, 'member') AND rolname != $1
                ) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
