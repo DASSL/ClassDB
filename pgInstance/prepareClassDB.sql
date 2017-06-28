@@ -436,7 +436,6 @@ GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(50)) TO Instructor, 
 --Current password requirements:
 -- - Must be 4 or more characters
 -- - Must contain at least one numerical digit (0-9)
-
 CREATE OR REPLACE FUNCTION
    classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128)) RETURNS VOID AS
 $$
@@ -475,7 +474,6 @@ GRANT EXECUTE ON FUNCTION
 --Define a function to reset a user's password to a default value
 -- default password is not the same as the initialPwd used at role creation
 -- default password is always the username
-
 CREATE OR REPLACE FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) RETURNS VOID AS
 $$
 DECLARE
@@ -511,6 +509,88 @@ REVOKE ALL ON FUNCTION
 GRANT EXECUTE ON FUNCTION
    classdb.resetUserPassword(userName VARCHAR(50))
    TO Instructor, DBManager;
+
+
+DROP FUNCTION IF EXISTS classdb.listUserConnections(VARCHAR(50)); --Need to drop the function prior to the return type
+DROP TYPE IF EXISTS classdb.listUserConnectionsReturn; --No IF EXISTS or OR REPLACE possible with CREATE TYPE
+
+--Return type for listUserConnections
+CREATE TYPE classdb.listUserConnectionsReturn AS
+(
+   userName VARCHAR(50), --VARCHAR(50) used as NAME replacement
+   pid INT,
+   applicationName VARCHAR(63),
+   clientAddress INET, --Will hold client ip address
+   connectionStartTime TIMESTAMPTZ, --This is provided by backend_start in pg_stat_activity
+   lastQueryStartTime TIMESTAMPTZ --This is provided by query_start in pg_stat_activity
+);
+
+
+--Lists all connections for a specific user.  Gets relevant information from pg_stat_activity
+CREATE FUNCTION classdb.listUserConnections(VARCHAR(50))
+RETURNS SETOF classdb.listUserConnectionsReturn AS $$
+	SELECT usename::VARCHAR(50), pid, application_name, client_addr, backend_start, query_start
+	FROM pg_stat_activity
+	WHERE usename = $1;
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
+--Change function ownership and set execution permissions
+--Currently, we are keeping listUserConnections() owned by the creating user.
+-- This allows instructors and dbmanagers unrestricted access to pg_stat_activity
+-- if the creating user is a superuser.
+--Otherwise, they cannot see info like ip address and timestamps of other users
+--In all cases, listUserConnections will be able to list PIDs from all users
+REVOKE ALL ON FUNCTION 
+   classdb.listUserConnections(VARCHAR(50))
+   FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION
+   classdb.listUserConnections(VARCHAR(50))
+   TO Instructor;
+GRANT EXECUTE ON FUNCTION
+   classdb.listUserConnections(VARCHAR(50))
+   TO DBManager;
+
+
+--Kills all open connections for a specific user
+CREATE OR REPLACE FUNCTION classdb.killUserConnections(VARCHAR(50))
+RETURNS SETOF BOOLEAN AS $$
+   SELECT pg_terminate_backend(pid)
+   FROM pg_stat_activity
+   WHERE usename = $1;
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
+--Change function ownership and set execution permissions
+--We can change the owner of this to dbmanager because it is a member of pg_signal_backend
+ALTER FUNCTION
+   classdb.killUserConnections(VARCHAR(50))
+   OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION
+   classdb.killUserConnections(VARCHAR(50))
+   FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION
+   classdb.killUserConnections(VARCHAR(50))
+   TO Instructor;
+
+
+--Kills a specific connection given a pid INT4
+CREATE OR REPLACE FUNCTION classdb.killConnection(INT) --pg_terminate_backend takes pid as INT4
+RETURNS BOOLEAN AS $$
+   SELECT pg_terminate_backend($1);
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
+--Change function ownership and set execution permissions
+ALTER FUNCTION
+   classdb.killConnection(INT)
+   OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION
+   classdb.killConnection(INT)
+   FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION
+   classdb.killConnection(INT)
+   TO Instructor;
 
 
 COMMIT;
