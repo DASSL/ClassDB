@@ -36,8 +36,8 @@ These roles are explained in detail in the Application Overview.
 ### createClassDB.sql
 - Permissions Required: ```CREATEDB```
 
-```createClassDB.sql``` creates a seperate database of use by ClassDB.  All ClassDB facilities not covered in ```prepareClassServer.sql``` will
-take place in this databse.  This includes all user connections and operations.
+```createClassDB.sql``` creates a seperate database of use by ClassDB.  All operations related to ClassDB will be isolated to this database.  For instance,
+all student schemas will be stored in this database. 
 
 ### prepareClassDB.sql
 - Permissions Required: ```CREATEROLE```
@@ -49,20 +49,20 @@ four ClassDB roles.
 There are two optional components provided with ClassDB.  These components are not required for the core functionality of ClassDB.  Additionally,
 they may require extended permissions to install and use.
 
-### prepareUserLogging.sql
-- Permissions Required: ```superuser```
-
-```prepareUserLogging.sql``` provides a set of facilities to log and monitor user activity against the ClassDB database.  The first facility provided
-is DDL statement logging.  Using event triggers, data about the last DDL statement performed, as well as the total number of DDL statements performed,
-is monitored for each Student user.  This data can be found in the ```classdb.student``` table.  The second facility is connection logging using the
-external Postgres log file.  A procedure is provided to analyze the log file, and store the last connection time and total number of connections
-for each Student user in ```classdb.student```.
-
 ### metaFunctions.sql
 - Permissions Required: None
 
 ```metaFunctions.sql``` provides two helper functions intened to be used by students.  These functions provide an easy way for a student to list all
 tables in a schema, and to get information about all columns in a given table.
+
+### prepareUserLogging.sql
+- Permissions Required: ```superuser```
+
+```prepareUserLogging.sql``` provides a set of facilities to log and monitor user activity against the ClassDB database.  The first facility provided
+is DDL statement logging.  This will store data about the last DDL statement performed and the total number of DDL statements performed
+for each Student user in the ```classdb.student``` table.  The second facility is connection logging using the
+external Postgres log file.  A procedure is provided to analyze the log file, and store the last connection time and total number of connections
+for each Student user in ```classdb.student```.
 
 ## Recommended Minimum Installation
 We recommend that all of the required components, and ```metaFunctions.sql``` are installed at a minimum.  ```metaFunctions.sql``` requires
@@ -119,10 +119,10 @@ WHERE evtname = 'updatestudentactivitytriggerdrop'
 ---
 setup.md - ClassDB Documentation
 
-Steven Rollo, Sean Murthy
+Steven Rollo, Sean Murthy  
 Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
-(C) 2017- DASSL. ALL RIGHTS RESERVED.
+(C) 2017- DASSL. ALL RIGHTS RESERVED.  
 Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
