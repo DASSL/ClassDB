@@ -50,7 +50,9 @@ $$
 BEGIN
    PERFORM pg_temp.createGroupRole('ClassDB');
 
-   ALTER ROLE "ClassDB" CREATEROLE CREATEDB;
+   --does not work in my environment
+   --says 'role classdb does not exist' though the role is in pg_catalog.pg_roles
+   ALTER ROLE ClassDB CREATEROLE CREATEDB;
 
    PERFORM pg_temp.createGroupRole('Student');
    PERFORM pg_temp.createGroupRole('Instructor');
