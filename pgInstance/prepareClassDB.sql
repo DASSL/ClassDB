@@ -85,6 +85,9 @@ REVOKE CREATE ON SCHEMA public FROM Student;
 CREATE SCHEMA IF NOT EXISTS classdb;
 GRANT ALL PRIVILEGES ON SCHEMA classdb TO ClassDB, Instructor, DBManager;
 
+--Grant ClassDB to the current user (the one runnning the script)
+-- This allows altering the privilieges of objects, even after they are owned by ClassDB
+GRANT ClassDB TO current_user;
 
 
 --Define a function to create a user with the name and password supplied
@@ -193,7 +196,7 @@ REVOKE ALL ON FUNCTION
                          schoolID VARCHAR(20), initialPwd VARCHAR(128))
    FROM PUBLIC;
 
---allow only instructors and db managers to execute the function
+--Allow only instructors and db managers to execute the function
 GRANT EXECUTE ON FUNCTION
    classdb.createStudent(studentUserName VARCHAR(50), studentName VARCHAR(100),
                          schoolID VARCHAR(20), initialPwd VARCHAR(128))
@@ -207,10 +210,10 @@ CREATE TABLE IF NOT EXISTS classdb.Instructor
    instructorName VARCHAR(100) NOT NULL --instructor's given name
 );
 
---change table ownership to ClassDB
+--Change table ownership to ClassDB
 ALTER TABLE classdb.Instructor OWNER TO ClassDB;
 
---limit operations on rows and columns
+--Limit operations on rows and columns
 REVOKE ALL PRIVILEGES ON classdb.Student FROM PUBLIC;
 GRANT SELECT ON classdb.Student TO Instructor, DBManager;
 GRANT UPDATE (instructorName) ON classdb.Instructor TO Instructor, DBManager;
@@ -251,7 +254,7 @@ GRANT EXECUTE ON FUNCTION
 
 
 --Define a function to register a user in DBManager role
---initial password is optional
+-- initial password is optional
 CREATE OR REPLACE FUNCTION
    classdb.createDBManager(managerUserName VARCHAR(50), managerName VARCHAR(100),
                            initialPwd VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
@@ -508,7 +511,6 @@ REVOKE ALL ON FUNCTION
 GRANT EXECUTE ON FUNCTION
    classdb.resetUserPassword(userName VARCHAR(50))
    TO Instructor, DBManager;
-
 
 
 COMMIT;

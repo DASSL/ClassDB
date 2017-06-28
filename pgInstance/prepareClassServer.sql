@@ -16,7 +16,7 @@
 
 START TRANSACTION;
 
---Make sure current user has sufficient privilege ("createrole" ) to run the script
+--Make sure current user has sufficient privilege ("createrole") to run the script
 DO
 $$
 BEGIN
