@@ -37,7 +37,7 @@ BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
                   WHERE rolname = $1
                  ) THEN
-      EXECUTE format('CREATE ROLE %I', $1);
+      EXECUTE format('CREATE ROLE %s', $1);
    END IF;
 END;
 $$ LANGUAGE plpgsql
@@ -50,8 +50,6 @@ $$
 BEGIN
    PERFORM pg_temp.createGroupRole('ClassDB');
 
-   --does not work in my environment
-   --says 'role classdb does not exist' though the role is in pg_catalog.pg_roles
    ALTER ROLE ClassDB CREATEROLE CREATEDB;
 
    PERFORM pg_temp.createGroupRole('Student');
