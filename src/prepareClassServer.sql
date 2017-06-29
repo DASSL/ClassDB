@@ -16,6 +16,7 @@
 
 START TRANSACTION;
 
+
 --Make sure current user has sufficient privilege ("createrole") to run the script
 DO
 $$
@@ -28,6 +29,7 @@ BEGIN
    END IF;
 END
 $$;
+
 
 --Define a convenient ephemeral function to create a role with the given name
 -- create the role only if it does not already exist
@@ -59,5 +61,6 @@ BEGIN
    PERFORM pg_temp.createGroupRole('DBManager');
 END
 $$;
+
 
 COMMIT;

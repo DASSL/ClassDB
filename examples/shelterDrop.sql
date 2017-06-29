@@ -4,14 +4,16 @@
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
---Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
+--Licensed to others under CC 4.0 BY-SA-NC
+--https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
+
 --This script must be run under the role that is the owner of the shelter schema.
 
---This script drops the tables and views from the shelter scenario. Not all tables or views may
--- exist, depending on the queries the user has run.
+--This script drops the tables and views from the shelter scenario. Not all tables
+-- or views may exist, depending on the queries the user has run.
 
 DROP VIEW IF EXISTS dog_treatment;
 DROP VIEW IF EXISTS treatment_view;

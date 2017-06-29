@@ -18,7 +18,7 @@ DROP FUNCTION IF EXISTS public.describe(VARCHAR(63), VARCHAR(63));
 --Defaults to current_user, as each student (the intended users of this function)
 --will primarily use a schema named <current_user>
 CREATE OR REPLACE FUNCTION public.listTables(schemaName VARCHAR(63) DEFAULT current_user)
-RETURNS TABLE
+   RETURNS TABLE
 (  --Since these functions access the INFORMATION_SCHEMA, we use the standard
    --info schema types for the return table
    "Name" INFORMATION_SCHEMA.SQL_IDENTIFIER,
@@ -37,7 +37,7 @@ GRANT EXECUTE ON FUNCTION public.listTables(VARCHAR(63)) TO PUBLIC;
 
 --Returns a list of columns in the specified table or view in the specified schema
 --schemaName also defaults to current_user, for the same reasons as above
-CREATE OR REPLACE FUNCTION public.describe(tableName VARCHAR(63), 
+CREATE OR REPLACE FUNCTION public.describe(tableName VARCHAR(63),
    schemaName VARCHAR(63) DEFAULT current_user)
 RETURNS TABLE
 (
@@ -47,8 +47,8 @@ RETURNS TABLE
    "Maximum Length" INFORMATION_SCHEMA.CARDINAL_NUMBER
 ) 
 AS $$
-   SELECT table_name, column_name, data_type, character_maximum_length 
-   FROM INFORMATION_SCHEMA.COLUMNS 
+   SELECT table_name, column_name, data_type, character_maximum_length
+   FROM INFORMATION_SCHEMA.COLUMNS
    WHERE table_name = $1
    AND table_schema = $2;
 $$

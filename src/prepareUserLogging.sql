@@ -31,8 +31,8 @@ ON;
 DO
 $$
 BEGIN
-   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user 
-                                                         AND rolsuper = 't') THEN
+   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user
+                                                    AND rolsuper = 't') THEN
       RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
    END IF;
 END
@@ -44,7 +44,7 @@ DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
 DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
 
 
---This table format suggested by the Postgres documentation for use with the 
+--This table format suggested by the Postgres documentation for use with the
 -- COPY statement
 --https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html
 DROP TABLE IF EXISTS classdb.postgresLog;
@@ -79,7 +79,7 @@ CREATE TABLE classdb.postgresLog
 
 --Function to import a given day's log to a table, 
 --The latest connection in the student table supplied the assumed last import date
---Logs later than this date are imported.  If this value is null, logs are parsed,
+--Logs later than this date are imported. If this value is null, logs are parsed,
 --starting with the supplied date (startDate)
 CREATE OR REPLACE FUNCTION classdb.importLog(startDate DATE) RETURNS VOID AS
 $$
@@ -167,12 +167,12 @@ BEGIN
       INTO objId;
    END IF;
    --Note: DROP statements cause this trigger to be executed twice,
-   --see https://www.postgresql.org/docs/9.6/static/event-trigger-matrix.html
-   --ddl_commend_end is triggered on all DDL statements.  However,
-   --pg_event_trigger_ddl_commands().object_identity is NULL for DROP statements
-   --Since ddl_command_end is sent after sql_drop, we don't update if objId 
-   --IS NULL, because that is the ddl_command_end event after sql_drop,
-   --and we would overwrite student.lastDDLObject with NULL
+   -- see https://www.postgresql.org/docs/9.6/static/event-trigger-matrix.html
+   -- ddl_commend_end is triggered on all DDL statements. However,
+   -- pg_event_trigger_ddl_commands().object_identity is NULL for DROP statements
+   -- Since ddl_command_end is sent after sql_drop, we don't update if objId 
+   -- IS NULL, because that is the ddl_command_end event after sql_drop,
+   -- and we would overwrite student.lastDDLObject with NULL
    IF objId IS NOT NULL THEN 
       UPDATE classdb.Student
       SET lastDDLActivity = (SELECT statement_timestamp() AT TIME ZONE 'utc'),
