@@ -4,7 +4,8 @@
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
---Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
+--Licensed to others under CC 4.0 BY-SA-NC
+--https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
@@ -32,6 +33,7 @@ LANGUAGE sql;
 
 ALTER FUNCTION public.listTables(VARCHAR(63)) OWNER TO ClassDB;
 GRANT EXECUTE ON FUNCTION public.listTables(VARCHAR(63)) TO PUBLIC;
+
 
 --Returns a list of columns in the specified table or view in the specified schema
 --schemaName also defaults to current_user, for the same reasons as above
