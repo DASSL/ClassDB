@@ -29,8 +29,8 @@ BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
                   WHERE rolname = current_user AND rolcreaterole = TRUE
                  ) THEN
-      RAISE EXCEPTION
-         'Insufficient privileges: script must be run as a user with createrole privileges';
+      RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
+                        || ' createrole privileges';
    END IF;
 END
 $$;
@@ -65,14 +65,15 @@ BEGIN
 
    --Let only app-specific roles connect to the DB
    -- no need for ClassDB to connect to the DB
-   EXECUTE
-      format('GRANT CONNECT ON DATABASE %I TO Student, Instructor, DBManager', currentDB);
+   EXECUTE format('GRANT CONNECT ON DATABASE %I TO Student, Instructor,'
+                   ||'DBManager', currentDB);
 
    --Allow ClassDB to create schemas on the current database
    -- all schema-creation operations are done only by this role in this app
    EXECUTE format('GRANT CREATE ON DATABASE %I TO ClassDB', currentDB);
 END
 $$;
+
 
 --Prevent students from modifying the public schema
 -- public schema contains objects and functions students can read
@@ -82,8 +83,8 @@ REVOKE CREATE ON SCHEMA public FROM Student;
 CREATE SCHEMA IF NOT EXISTS classdb;
 GRANT ALL PRIVILEGES ON SCHEMA classdb TO ClassDB, Instructor, DBManager;
 
---Grant ClassDB to the current user (the one runnning the script)
--- This allows altering the privilieges of objects, even after they are owned by ClassDB
+--Grant ClassDB to the current user
+-- This allows altering privilieges of objects, even after being owned by ClassDB
 GRANT ClassDB TO current_user;
 
 
@@ -136,13 +137,12 @@ CREATE TABLE IF NOT EXISTS classdb.Student
    studentName VARCHAR(100) NOT NULL, --student's given name
    schoolID VARCHAR(20), --a school-issued ID
    lastDDLActivity TIMESTAMP, --UTC date and time of the last DDL operation
-   lastDDLOperation VARCHAR(64), --the last DDL operation the student performed
-   lastDDLObject VARCHAR(256), --the name of the object of the DDL operation
-   DDLCount INT DEFAULT 0, --number of DDL operations the student has made so far
+   lastDDLOperation VARCHAR(64), --last DDL operation the student performed
+   lastDDLObject VARCHAR(256), --name of the object of the DDL operation
+   DDLCount INT DEFAULT 0, --number of DDL operations the student has made
    lastConnection TIMESTAMP, --UTC date and time of the last connection
    connectionCount INT DEFAULT 0 --number of connections (ever) so far
 );
-
 
 --Change table's owner so ClassDB can perform any operation on it
 ALTER TABLE classdb.Student OWNER TO ClassDB;
@@ -165,14 +165,14 @@ GRANT UPDATE (studentName, schoolID) ON classdb.Student TO Instructor, DBManager
 CREATE OR REPLACE FUNCTION
    classdb.createStudent(studentUserName VARCHAR(50), studentName VARCHAR(100),
                          schoolID VARCHAR(20) DEFAULT NULL,
-						 initialPwd VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
+                         initialPwd VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
 $$
 BEGIN
    PERFORM classdb.createUser(studentUserName, initialPwd);
    EXECUTE format('GRANT Student TO %I', $1);
    EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', $1);
    EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA %I GRANT SELECT'
-    || ' ON TABLES TO Instructor', $1, $1);
+                   || ' ON TABLES TO Instructor', $1, $1);
    EXECUTE format('ALTER ROLE %I CONNECTION LIMIT 5', $1);
    EXECUTE format('ALTER ROLE %I SET statement_timeout = 2000', $1);
 
@@ -222,7 +222,8 @@ GRANT UPDATE (instructorName) ON classdb.Instructor TO Instructor, DBManager;
 -- initial password is optional
 -- record the user name in the Instructor table
 CREATE OR REPLACE FUNCTION
-   classdb.createInstructor(instructorUserName VARCHAR(50), instructorName VARCHAR(100),
+   classdb.createInstructor(instructorUserName VARCHAR(50),
+                            instructorName VARCHAR(100),
                             initialPwd VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
 $$
 BEGIN
@@ -237,18 +238,18 @@ $$ LANGUAGE plpgsql
 
 --Change function ownership and set execution permissions
 ALTER FUNCTION
-   classdb.createInstructor(instructorUserName VARCHAR(50), instructorName VARCHAR(100),
-                            initialPwd VARCHAR(128))
+   classdb.createInstructor(instructorUserName VARCHAR(50),
+                            instructorName VARCHAR(100), initialPwd VARCHAR(128))
    OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION
-   classdb.createInstructor(instructorUserName VARCHAR(50), instructorName VARCHAR(100),
-                            initialPwd VARCHAR(128))
+   classdb.createInstructor(instructorUserName VARCHAR(50),
+                            instructorName VARCHAR(100), initialPwd VARCHAR(128))
    FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION
-   classdb.createInstructor(instructorUserName VARCHAR(50), instructorName VARCHAR(100),
-                            initialPwd VARCHAR(128))
+   classdb.createInstructor(instructorUserName VARCHAR(50),
+                            instructorName VARCHAR(100), initialPwd VARCHAR(128))
    TO Instructor, DBManager;
 
 
@@ -292,8 +293,8 @@ BEGIN
       DELETE FROM classdb.Student S WHERE S.userName = $1;
 
       IF EXISTS(SELECT * FROM pg_catalog.pg_roles 
-	            WHERE pg_catalog.pg_has_role($1, oid, 'member') AND rolname != $1 
-			   ) THEN
+                WHERE pg_catalog.pg_has_role($1, oid, 'member') AND rolname != $1 
+               ) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
          EXECUTE format('DROP SCHEMA %I CASCADE', $1);
@@ -330,10 +331,11 @@ REVOKE ALL ON FUNCTION dropAllStudents() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION dropAllStudents() TO Instructor, DBManager;
 
 
---The folowing procedure revokes the Instructor role from an Instructor, along with their entry
--- in the classdb.Instructor table. If the Instructor role was the only role that the
--- instructor was a member of, the instructor's schema, and the objects contained within, are
--- removed along with the the role representing the instructor.
+--The folowing procedure revokes the Instructor role from an Instructor, along 
+-- with their entry in the classdb.Instructor table. If the Instructor role was
+-- the only role that the instructor was a member of, the instructor's schema, 
+-- and the objects contained within, are removed along with the the role
+-- representing the instructor.
 CREATE OR REPLACE FUNCTION classdb.dropInstructor(userName VARCHAR(50)) RETURNS VOID AS
 $$
 BEGIN
@@ -345,7 +347,7 @@ BEGIN
       DELETE FROM classdb.Instructor S WHERE S.userName = $1;
       IF EXISTS(SELECT * FROM pg_catalog.pg_roles
                 WHERE pg_catalog.pg_has_role($1, oid, 'member') AND rolname != $1
-				) THEN
+               ) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
          EXECUTE format('DROP SCHEMA %I CASCADE', $1);
@@ -365,9 +367,10 @@ GRANT EXECUTE ON FUNCTION
    classdb.dropInstructor(userName VARCHAR(50)) TO Instructor, DBManager;
 
 
---The folowing procedure revokes the DBManager role from a DBManager. If the DBManager role was
--- the only role that they were a member of, the manager's schema, and the objects contained
--- within, are removed along with the the role representing the DBManager.
+--The folowing procedure revokes the DBManager role from a DBManager. If the 
+-- DBManager role was the only role that they were a member of, the manager's
+-- schema, and the objects contained within, are removed along with the the role
+-- representing the DBManager.
 CREATE OR REPLACE FUNCTION classdb.dropDBManager(userName VARCHAR(50)) RETURNS VOID AS
 $$
 BEGIN
@@ -398,10 +401,11 @@ GRANT EXECUTE ON FUNCTION
    classdb.dropDBManager(userName VARCHAR(50)) TO Instructor, DBManager;
 
 
---The following procedure drops a user regardless of their role memberships. This will also
--- drop the user's schema and the objects contained within, if the schema exists. Currently,
--- it also drops the value from the Student table if the user was a member of the Student role,
--- and from the Instructor table if they were an instructor.
+--The following procedure drops a user regardless of their role memberships. 
+-- This will also drop the user's schema and the objects contained within, if
+-- the schema exists. Currently, it also drops the value from the Student table
+-- if the user was a member of the Student role, and from the Instructor table if
+-- they were an instructor.
 CREATE OR REPLACE FUNCTION classdb.dropUser(userName VARCHAR(50)) RETURNS VOID AS
 $$
 BEGIN
@@ -426,17 +430,20 @@ $$ LANGUAGE plpgsql
 --Change function ownership and set execution permissions
 ALTER FUNCTION classdb.dropUser(userName VARCHAR(50)) OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION classdb.dropUser(userName VARCHAR(50)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(50)) TO Instructor, DBManager;
+GRANT EXECUTE ON FUNCTION 
+   classdb.dropUser(userName VARCHAR(50))
+   TO Instructor, DBManager;
 
 
---The following procedure allows changing the password for a given username, given both the
--- username and password. NOTICEs are raised if the user does not exist or if the password
--- does not meet the requirements.
+--The following procedure allows changing the password for a given username, 
+-- given both the username and password. NOTICEs are raised if the user does not
+-- exist or if the password does not meet the requirements.
 --Current password requirements:
 -- - Must be 4 or more characters
 -- - Must contain at least one numerical digit (0-9)
 CREATE OR REPLACE FUNCTION
-   classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128)) RETURNS VOID AS
+   classdb.changeUserPassword(userName VARCHAR(50), password VARCHAR(128)) 
+   RETURNS VOID AS
 $$
 DECLARE
    userExists BOOLEAN;
@@ -449,7 +456,8 @@ BEGIN
       THEN
          EXECUTE format('ALTER ROLE %I ENCRYPTED PASSWORD %L', userName, password);
       ELSE
-         RAISE NOTICE 'Password does not meet requirements. Must be 6 or more characters and contain at least 1 number';
+         RAISE NOTICE 'Password does not meet requirements. Must be 6 or more'
+                       || 'characters and contain at least 1 number';
       END IF;
    ELSE
       RAISE NOTICE 'User: "%" does not exist', userName;
@@ -473,7 +481,8 @@ GRANT EXECUTE ON FUNCTION
 --Define a function to reset a user's password to a default value
 -- default password is not the same as the initialPwd used at role creation
 -- default password is always the username
-CREATE OR REPLACE FUNCTION classdb.resetUserPassword(userName VARCHAR(50)) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION classdb.resetUserPassword(userName VARCHAR(50))
+   RETURNS VOID AS
 $$
 DECLARE
    studentID VARCHAR(128);
@@ -510,33 +519,38 @@ GRANT EXECUTE ON FUNCTION
    TO Instructor, DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.listUserConnections(VARCHAR(50)); --Need to drop the function prior to the return type
-DROP TYPE IF EXISTS classdb.listUserConnectionsReturn; --No IF EXISTS or OR REPLACE possible with CREATE TYPE
+--Need to drop the function prior to the return type
+DROP FUNCTION IF EXISTS classdb.listUserConnections(VARCHAR(50));
+
+--No IF EXISTS or OR REPLACE possible with CREATE TYPE
+DROP TYPE IF EXISTS classdb.listUserConnectionsReturn;
 
 --Return type for listUserConnections
 CREATE TYPE classdb.listUserConnectionsReturn AS
 (
-   userName VARCHAR(50), --VARCHAR(50) used as NAME replacement
+   userName VARCHAR(50),
    pid INT,
    applicationName VARCHAR(63),
-   clientAddress INET, --Will hold client ip address
-   connectionStartTime TIMESTAMPTZ, --This is provided by backend_start in pg_stat_activity
-   lastQueryStartTime TIMESTAMPTZ --This is provided by query_start in pg_stat_activity
+   clientAddress INET, --will hold client ip address
+   connectionStartTime TIMESTAMPTZ, --provided by backend_start in pg_stat_activity
+   lastQueryStartTime TIMESTAMPTZ --provided by query_start in pg_stat_activity
 );
 
 
---Lists all connections for a specific user.  Gets relevant information from pg_stat_activity
+--Lists all connections for a specific user.
+-- Gets relevant information from pg_stat_activity
 CREATE FUNCTION classdb.listUserConnections(VARCHAR(50))
 RETURNS SETOF classdb.listUserConnectionsReturn AS $$
-	SELECT usename::VARCHAR(50), pid, application_name, client_addr, backend_start, query_start
-	FROM pg_stat_activity
-	WHERE usename = $1;
+   SELECT usename::VARCHAR(50), pid, application_name, client_addr, backend_start,
+          query_start
+   FROM pg_stat_activity
+   WHERE usename = $1;
 $$ LANGUAGE sql
    SECURITY DEFINER;
 
---Change function ownership and set execution permissions
+--Set execution permissions:
 --Currently, we are keeping listUserConnections() owned by the creating user.
--- This allows instructors and dbmanagers unrestricted access to pg_stat_activity
+-- This allows instructors and db managers unrestricted access to pg_stat_activity
 -- if the creating user is a superuser.
 --Otherwise, they cannot see info like ip address and timestamps of other users
 --In all cases, listUserConnections will be able to list PIDs from all users
@@ -561,7 +575,8 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 
 --Change function ownership and set execution permissions
---We can change the owner of this to dbmanager because it is a member of pg_signal_backend
+-- We can change the owner of this to ClassDB because it is a member of 
+-- pg_signal_backend
 ALTER FUNCTION
    classdb.killUserConnections(VARCHAR(50))
    OWNER TO ClassDB;
@@ -573,8 +588,9 @@ GRANT EXECUTE ON FUNCTION
    TO Instructor;
 
 
---Kills a specific connection given a pid INT4
-CREATE OR REPLACE FUNCTION classdb.killConnection(INT) --pg_terminate_backend takes pid as INT4
+--Kills a specific connection given a pid
+-- pg_terminate_backend takes pid as INT4
+CREATE OR REPLACE FUNCTION classdb.killConnection(INT)
 RETURNS BOOLEAN AS $$
    SELECT pg_terminate_backend($1);
 $$ LANGUAGE sql
