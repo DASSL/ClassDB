@@ -4,38 +4,48 @@
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
---Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
+--Licensed to others under CC 4.0 BY-SA-NC
+--https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 
---Need to be superuser for ALTER SYSTEM, 
---however the ALTER SYSTEMS can't be placed in the same transaction
+--Need to be superuser for ALTER SYSTEM,
+-- however the ALTER SYSTEMS can't be placed in the same transaction
 ALTER SYSTEM SET log_connections TO 'on';
-ALTER SYSTEM SET log_destination TO 'csvlog'; --This outputs the log in a csv format, 
-                                              --which allows COPY...FROM to read it
+
+--This outputs the log in a csv format, which allows COPY...FROM to read it
+ALTER SYSTEM SET log_destination TO 'csvlog';
+
+--Set the log file name.  Using the date/time vars can help with log rotation.
+-- Right now, the file name is postgresql-<month>.<day>, ie. postgresql-06.10.
 ALTER SYSTEM SET log_filename TO 'postgresql-%m.%d.log';
---Set the log file name.  Using the date/time vars can help with log rotation.  
---Right now, the file name is postgresql-<month>.<day>, ie. postgresql-06.10.
 
 SELECT pg_reload_conf();
 
-START TRANSACTION;
+START TRANSACTI
+ON;
+
+
 --Check for superuser
 DO
 $$
 BEGIN
-   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user AND rolsuper = 't') THEN
+   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user 
+                                                         AND rolsuper = 't') THEN
       RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
    END IF;
 END
 $$;
 
+
 --Drop the event triggers now so we can drop tables without error
 DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
 DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
 
---This table format suggested by the Postgres documentation for use with the COPY statement
+
+--This table format suggested by the Postgres documentation for use with the 
+-- COPY statement
 --https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html
 DROP TABLE IF EXISTS classdb.postgresLog;
 CREATE TABLE classdb.postgresLog
@@ -63,34 +73,34 @@ CREATE TABLE classdb.postgresLog
    query_pos INTEGER,
    location TEXT,
    application_name TEXT,
-   PRIMARY KEY (session_id, session_line_num)   
+   PRIMARY KEY (session_id, session_line_num)
 );
+
 
 --Function to import a given day's log to a table, 
 --The latest connection in the student table supplied the assumed last import date
---Logs later than this date are imported.  If this value is null, logs are parsed, 
+--Logs later than this date are imported.  If this value is null, logs are parsed,
 --starting with the supplied date (startDate)
-CREATE OR REPLACE FUNCTION classdb.importLog(startDate DATE) 
-RETURNS VOID AS
+CREATE OR REPLACE FUNCTION classdb.importLog(startDate DATE) RETURNS VOID AS
 $$
 DECLARE
    logPath VARCHAR(4096); --Max file path length on Linux
    lastConDate DATE;
 BEGIN
-	--The double parens around the subquery seem to be required 
-	--Set the date of last logged connection to either the latest connection in
-	--classdb.student, or startDate if that is NULL
-	lastConDate := COALESCE(date((SELECT MAX(lastConnection) FROM classdb.student)), $1);
-	
-	--We want to import all logs between the lastConDate and current date
-	WHILE lastConDate <= current_date LOOP
-	   --Get the full path to the log, assumes a log file name of postgresql-%m.%d.csv
-	   --the log_directory setting holds the log path
-      logPath := (SELECT setting FROM pg_settings WHERE "name" = 'log_directory') || 
-         '/postgresql-' || to_char(lastConDate, 'MM.DD') || '.csv';
+   --The double parens around the subquery seem to be required 
+   --Set the date of last logged connection to either the latest connection in
+   --classdb.student, or startDate if that is NULL
+   lastConDate := COALESCE(date((SELECT MAX(lastConnection) FROM classdb.student)), $1);
+   
+   --We want to import all logs between the lastConDate and current date
+   WHILE lastConDate <= current_date LOOP
+      --Get the full path to the log, assumes a log file name of postgresql-%m.%d.csv
+      --the log_directory setting holds the log path
+       logPath := (SELECT setting FROM pg_settings WHERE "name" = 'log_directory')
+                  || '/postgresql-' || to_char(lastConDate, 'MM.DD') || '.csv';
       --Use copy to fill the temp import table
       EXECUTE format('COPY classdb.postgresLog FROM ''%s'' WITH csv', logPath);
-      lastConDate := lastConDate + 1;  --Check the next day
+      lastConDate := lastConDate + 1; --Check the next day
    END LOOP;
    
    --Update the student table based on the temp log table
@@ -112,15 +122,16 @@ BEGIN
          FROM classdb.postgresLog pg 
          WHERE pg.user_name = userName
          AND pg.log_time > COALESCE(lastConnection, to_timestamp(0))
-         AND message LIKE 'connection%' --connection log messages start with 'connection'
+         AND message LIKE 'connection%' --conn log messages start w/ 'connection'
       ), lastConnection);
    --Clear the log table
    TRUNCATE classdb.postgresLog;
 END;
 $$ LANGUAGE plpgsql;
 
+
 --Override that supplies the current date as the manual last log import date
---For day to day usage, this will be preferable, since (generally) at least one 
+--For day to day usage, this will be preferable, since (generally) at least one
 --student will have their lastConnection field populated after the first import
 CREATE OR REPLACE FUNCTION classdb.importLog()
 RETURNS VOID AS
@@ -130,25 +141,27 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
 --SET up DDL command logging
 --This function updates the LastActivity field for a given student
 CREATE OR REPLACE FUNCTION classdb.updateStudentActivity() 
 RETURNS event_trigger AS
 $$
 DECLARE
-   objId VARCHAR(256); --Name of the db object that was targeted by the triggering statement
+   --Name of the db object that was targeted by the triggering statement
+   objId VARCHAR(256);
 BEGIN
-	--Check if the calling event is sql_drop or ddl_command_end
-	IF TG_EVENT = 'ddl_command_end' THEN
+   --Check if the calling event is sql_drop or ddl_command_end
+   IF TG_EVENT = 'ddl_command_end' THEN
       SELECT object_identity --Get the statement target object 
-      FROM pg_event_trigger_ddl_commands() --Each of these functions can only 
+      FROM pg_event_trigger_ddl_commands() --Each of these functions can only
                                            --be called for the appropriate event type
       WHERE object_identity IS NOT NULL
-      ORDER BY object_identity LIMIT 1 
+      ORDER BY object_identity LIMIT 1
       INTO objId;
    ELSIF TG_EVENT = 'sql_drop' THEN
       SELECT object_identity --Same thing, but for drop statements
-      FROM pg_event_trigger_dropped_objects() 
+      FROM pg_event_trigger_dropped_objects()
       WHERE object_identity IS NOT NULL
       ORDER BY object_identity LIMIT 1
       INTO objId;
@@ -172,7 +185,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
-   
+
+
 --Event triggers to update user last activity time on DDL events
 CREATE EVENT TRIGGER updateStudentActivityTriggerDrop
 ON sql_drop
@@ -181,5 +195,6 @@ EXECUTE PROCEDURE classdb.updateStudentActivity();
 CREATE EVENT TRIGGER updateStudentActivityTriggerDDL
 ON ddl_command_end
 EXECUTE PROCEDURE classdb.updateStudentActivity();
+
 
 COMMIT;
