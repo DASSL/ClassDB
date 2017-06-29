@@ -430,8 +430,7 @@ $$ LANGUAGE plpgsql
 --Change function ownership and set execution permissions
 ALTER FUNCTION classdb.dropUser(userName VARCHAR(50)) OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION classdb.dropUser(userName VARCHAR(50)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION 
-   classdb.dropUser(userName VARCHAR(50))
+GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(50))
    TO Instructor, DBManager;
 
 
@@ -548,7 +547,7 @@ RETURNS SETOF classdb.listUserConnectionsReturn AS $$
 $$ LANGUAGE sql
    SECURITY DEFINER;
 
---Set execution permissions:
+--Set execution permissions
 --Currently, we are keeping listUserConnections() owned by the creating user.
 -- This allows instructors and db managers unrestricted access to pg_stat_activity
 -- if the creating user is a superuser.

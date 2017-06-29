@@ -11,10 +11,10 @@
 
 
 --Need to be superuser for ALTER SYSTEM,
--- however the ALTER SYSTEMS can't be placed in the same transaction
+-- however, the ALTER SYSTEMs cannnot be placed in the same transaction
 ALTER SYSTEM SET log_connections TO 'on';
 
---This outputs the log in a csv format, which allows COPY...FROM to read it
+--Outputs the log in a csv format, which allows it to be read by COPY...FROM
 ALTER SYSTEM SET log_destination TO 'csvlog';
 
 --Set the log file name.  Using the date/time vars can help with log rotation.
@@ -23,8 +23,7 @@ ALTER SYSTEM SET log_filename TO 'postgresql-%m.%d.log';
 
 SELECT pg_reload_conf();
 
-START TRANSACTI
-ON;
+START TRANSACTION;
 
 
 --Check for superuser
