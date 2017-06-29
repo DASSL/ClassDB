@@ -10,16 +10,13 @@
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 
---This script should be run as a user with createrole privileges
+--This script should be run as either a superuser or as the owner of the current
+-- database, provided that the user has createrole privileges.
 
 --This script should be run after running the script "prepareClassServer.sql"
 
---This script first prevents student roles from modiying the public schema, and then creates a
--- classdb schema. Following that, a stored procedure for creating any type of user is defined,
--- along with procedures for creating and dropping students and instructors. Finally,
--- procedures for resetting a users password are created. This script also creates Student and
--- Instructor tables in the classdb schema, and an event trigger that records the timestamp of
--- the last ddl statement issued by each student.
+--This script will create all procedures used to manage ClassDB users, and will
+-- set up appropriate access controls for each of the four ClassDB roles.
 
 
 START TRANSACTION;
@@ -174,6 +171,8 @@ BEGIN
    PERFORM classdb.createUser(studentUserName, initialPwd);
    EXECUTE format('GRANT Student TO %I', $1);
    EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', $1);
+   EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA %I GRANT SELECT'
+    || ' ON TABLES TO Instructor', $1, $1);
    EXECUTE format('ALTER ROLE %I CONNECTION LIMIT 5', $1);
    EXECUTE format('ALTER ROLE %I SET statement_timeout = 2000', $1);
 
