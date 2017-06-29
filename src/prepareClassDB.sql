@@ -90,11 +90,12 @@ GRANT ALL PRIVILEGES ON SCHEMA classdb TO ClassDB, Instructor, DBManager;
 GRANT ClassDB TO current_user;
 
 
+DROP FUNCTION IF EXISTS classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128));
 --Define a function to create a user with the name and password supplied
 -- set user name as the initial password if pwd supplied is NULL
 -- also create a user-specific schema and give them all rights on their schema
 -- exceptions: a user/schema already exists w/ same name as the user name supplied
-CREATE OR REPLACE FUNCTION
+CREATE FUNCTION
    classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128)) RETURNS VOID AS
 $$
 BEGIN
@@ -160,12 +161,15 @@ GRANT SELECT ON classdb.Student TO Instructor, DBManager;
 GRANT UPDATE (studentName, schoolID) ON classdb.Student TO Instructor, DBManager;
 
 
+DROP FUNCTION IF EXISTS classdb.createStudent(studentUserName VARCHAR(63),
+                        studentName VARCHAR(100), schoolID VARCHAR(20),
+                        initialPwd VARCHAR(128));
 --Define a function to register a student user and associate w/ group role Student
 -- schoolID and initialPwd are optional
 -- give Instructors read access to the student-specific schema
 -- limit number of concurrent connections and set time-out period for each query
 -- record the user name in the Student table
-CREATE OR REPLACE FUNCTION
+CREATE FUNCTION
    classdb.createStudent(studentUserName VARCHAR(63), studentName VARCHAR(100),
                          schoolID VARCHAR(20) DEFAULT NULL,
 						 initialPwd VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
@@ -219,10 +223,12 @@ GRANT SELECT ON classdb.Student TO Instructor, DBManager;
 GRANT UPDATE (instructorName) ON classdb.Instructor TO Instructor, DBManager;
 
 
+DROP FUNCTION IF EXISTS classdb.createInstructor(instructorUserName VARCHAR(63),
+                        instructorName VARCHAR(100), initialPwd VARCHAR(128));
 --Define a function to register an instructor user and associate w/ Instructor role
 -- initial password is optional
 -- record the user name in the Instructor table
-CREATE OR REPLACE FUNCTION
+CREATE FUNCTION
    classdb.createInstructor(instructorUserName VARCHAR(63), instructorName VARCHAR(100),
                             initialPwd VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
 $$
@@ -253,9 +259,11 @@ GRANT EXECUTE ON FUNCTION
    TO Instructor, DBManager;
 
 
+DROP FUNCTION IF EXISTS classdb.createDBManager(managerUserName VARCHAR(63), managerName VARCHAR(100),
+                        initialPwd VARCHAR(128));
 --Define a function to register a user in DBManager role
 -- initial password is optional
-CREATE OR REPLACE FUNCTION
+CREATE FUNCTION
    classdb.createDBManager(managerUserName VARCHAR(63), managerName VARCHAR(100),
                            initialPwd VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
 $$
@@ -280,10 +288,11 @@ GRANT EXECUTE ON FUNCTION
                            initialPwd VARCHAR(128)) TO Instructor, DBManager;
 
 
+DROP FUNCTION IF EXISTS classdb.dropStudent(userName VARCHAR(63));
 --Define a function to revoke Student role from a user
 -- remove the entry for user from table classdb.Student
 -- remove user's schema and contained objects if Student role was user's only role
-CREATE OR REPLACE FUNCTION classdb.dropStudent(userName VARCHAR(63)) RETURNS VOID AS
+CREATE FUNCTION classdb.dropStudent(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
    IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) AND
@@ -315,9 +324,10 @@ GRANT EXECUTE ON FUNCTION
    TO Instructor, DBManager;
 
 
+DROP FUNCTION IF EXISTS classdb.dropAllStudents();
 --Define a function to drop all students presently registered
 -- simply call function dropStudent for each row in classdb.Student
-CREATE OR REPLACE FUNCTION dropAllStudents() RETURNS VOID AS
+CREATE FUNCTION classdb.dropAllStudents() RETURNS VOID AS
 $$
 BEGIN
    SELECT classdb.dropStudent(S.userName) FROM classdb.Student S;
@@ -326,16 +336,17 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 --Change function ownership and set execution permissions
-ALTER FUNCTION dropAllStudents() OWNER TO ClassDB;
-REVOKE ALL ON FUNCTION dropAllStudents() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION dropAllStudents() TO Instructor, DBManager;
+ALTER FUNCTION classdb.dropAllStudents() OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION classdb.dropAllStudents() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION classdb.dropAllStudents() TO Instructor, DBManager;
 
 
+DROP FUNCTION IF EXISTS classdb.dropInstructor(userName VARCHAR(63));
 --The folowing procedure revokes the Instructor role from an Instructor, along with their entry
 -- in the classdb.Instructor table. If the Instructor role was the only role that the
 -- instructor was a member of, the instructor's schema, and the objects contained within, are
 -- removed along with the the role representing the instructor.
-CREATE OR REPLACE FUNCTION classdb.dropInstructor(userName VARCHAR(63)) RETURNS VOID AS
+CREATE FUNCTION classdb.dropInstructor(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
    IF
@@ -366,10 +377,11 @@ GRANT EXECUTE ON FUNCTION
    classdb.dropInstructor(userName VARCHAR(63)) TO Instructor, DBManager;
 
 
+DROP FUNCTION IF EXISTS classdb.dropDBManager(userName VARCHAR(63));
 --The folowing procedure revokes the DBManager role from a DBManager. If the DBManager role was
 -- the only role that they were a member of, the manager's schema, and the objects contained
 -- within, are removed along with the the role representing the DBManager.
-CREATE OR REPLACE FUNCTION classdb.dropDBManager(userName VARCHAR(63)) RETURNS VOID AS
+CREATE FUNCTION classdb.dropDBManager(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
    IF
@@ -399,11 +411,12 @@ GRANT EXECUTE ON FUNCTION
    classdb.dropDBManager(userName VARCHAR(63)) TO Instructor, DBManager;
 
 
+DROP FUNCTION IF EXISTS classdb.dropUser(userName VARCHAR(63));
 --The following procedure drops a user regardless of their role memberships. This will also
 -- drop the user's schema and the objects contained within, if the schema exists. Currently,
 -- it also drops the value from the Student table if the user was a member of the Student role,
 -- and from the Instructor table if they were an instructor.
-CREATE OR REPLACE FUNCTION classdb.dropUser(userName VARCHAR(63)) RETURNS VOID AS
+CREATE FUNCTION classdb.dropUser(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
    IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) THEN
@@ -430,6 +443,7 @@ REVOKE ALL ON FUNCTION classdb.dropUser(userName VARCHAR(63)) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(63)) TO Instructor, DBManager;
 
 
+DROP FUNCTION IF EXISTS classdb.changeUserPassword(userName VARCHAR(63), password VARCHAR(128));
 --The following procedure allows changing the password for a given username, given both the
 -- username and password. NOTICEs are raised if the user does not exist or if the password
 -- does not meet the requirements.
@@ -471,10 +485,11 @@ GRANT EXECUTE ON FUNCTION
    TO Instructor, DBManager;
 
 
+DROP FUNCTION IF EXISTS classdb.resetUserPassword(userName VARCHAR(63));
 --Define a function to reset a user's password to a default value
 -- default password is not the same as the initialPwd used at role creation
 -- default password is always the username
-CREATE OR REPLACE FUNCTION classdb.resetUserPassword(userName VARCHAR(63)) RETURNS VOID AS
+CREATE FUNCTION classdb.resetUserPassword(userName VARCHAR(63)) RETURNS VOID AS
 $$
 DECLARE
    studentID VARCHAR(128);
@@ -512,10 +527,8 @@ GRANT EXECUTE ON FUNCTION
 
 
 DROP FUNCTION IF EXISTS classdb.listUserConnections(VARCHAR(63)); --Need to drop the function prior to the return type
-DROP TYPE IF EXISTS classdb.listUserConnectionsReturn; --No IF EXISTS or OR REPLACE possible with CREATE TYPE
-
 --Lists all connections for a specific user.  Gets relevant information from pg_stat_activity
-CREATE FUNCTION classdb.listUserConnections(VARCHAR(63))
+CREATE FUNCTION classdb.listUserConnections(userName VARCHAR(63))
 RETURNS TABLE
 (
    userName VARCHAR(63), --VARCHAR(63) used as NAME replacement
@@ -549,8 +562,9 @@ GRANT EXECUTE ON FUNCTION
    TO DBManager;
 
 
+DROP FUNCTION IF EXISTS classdb.killUserConnections(VARCHAR(63));
 --Kills all open connections for a specific user
-CREATE OR REPLACE FUNCTION classdb.killUserConnections(VARCHAR(63))
+CREATE FUNCTION classdb.killUserConnections(userName VARCHAR(63))
 RETURNS TABLE (Success BOOLEAN)
 AS $$
    SELECT pg_terminate_backend(pid)
@@ -571,8 +585,9 @@ GRANT EXECUTE ON FUNCTION
    classdb.killUserConnections(VARCHAR(63))
    TO Instructor;
 
+DROP FUNCTION IF EXISTS classdb.killConnection(INT);
 --Kills a specific connection given a pid INT4
-CREATE OR REPLACE FUNCTION classdb.killConnection(INT) --pg_terminate_backend takes pid as INT4
+CREATE OR REPLACE FUNCTION classdb.killConnection(pid INT) --pg_terminate_backend takes pid as INT4
 RETURNS BOOLEAN AS $$
    SELECT pg_terminate_backend($1);
 $$ LANGUAGE sql
