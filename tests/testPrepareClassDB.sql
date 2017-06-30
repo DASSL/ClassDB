@@ -12,7 +12,7 @@
 
 --The following test script should be run as a superuser, otherwise tests will fail
 
-START TRANSACTION
+START TRANSACTION;
 
 
 --Tests for superuser privilege on current_user

@@ -31,11 +31,11 @@ END
 $$;
 
 
+DROP FUNCTION IF EXISTS pg_temp.createGroupRole(roleName VARCHAR(63));
 --Define a convenient ephemeral function to create a role with the given name
 -- create the role only if it does not already exist
 -- this function will be automatically dropped when the current session ends
-CREATE OR REPLACE FUNCTION pg_temp.createGroupRole(roleName VARCHAR(50)) 
-   RETURNS VOID AS
+CREATE FUNCTION pg_temp.createGroupRole(roleName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
@@ -55,6 +55,7 @@ BEGIN
    PERFORM pg_temp.createGroupRole('ClassDB');
 
    ALTER ROLE ClassDB CREATEROLE CREATEDB;
+   GRANT pg_signal_backend TO ClassDB;
 
    PERFORM pg_temp.createGroupRole('Student');
    PERFORM pg_temp.createGroupRole('Instructor');
