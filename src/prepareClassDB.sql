@@ -495,7 +495,7 @@ DROP FUNCTION IF EXISTS classdb.resetUserPassword(userName VARCHAR(63));
 --Define a function to reset a user's password to a default value
 -- default password is not the same as the initialPwd used at role creation
 -- default password is always the username
-CREATE OR REPLACE FUNCTION classdb.resetUserPassword(userName VARCHAR(63))
+CREATE FUNCTION classdb.resetUserPassword(userName VARCHAR(63))
    RETURNS VOID AS
 $$
 DECLARE
