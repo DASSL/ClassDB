@@ -554,11 +554,9 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 
 --Set execution permissions
---Currently, we are keeping listUserConnections() owned by the creating user.
+--The function remains owned by the creating user (a "superuser"):
 -- This allows instructors and db managers unrestricted access to pg_stat_activity
--- if the creating user is a superuser.
 --Otherwise, they cannot see info like ip address and timestamps of other users
---In all cases, listUserConnections will be able to list PIDs from all users
 REVOKE ALL ON FUNCTION
    classdb.listUserConnections(VARCHAR(63))
    FROM PUBLIC;
