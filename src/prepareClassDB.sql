@@ -10,8 +10,7 @@
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 
---This script should be run as either a superuser or as the owner of the current
--- database, provided that the user has createrole privileges.
+--This script requires the current user to be a superuser
 
 --This script should be run after running the script "prepareClassServer.sql"
 
@@ -22,15 +21,15 @@
 START TRANSACTION;
 
 --Make sure the current user has sufficient privilege to run this script
--- privileges required: CREATEROLE
+-- privileges required: superuser
 DO
 $$
 BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
-                  WHERE rolname = current_user AND rolcreaterole = TRUE
+                  WHERE rolname = current_user AND rolsuper = TRUE
                  ) THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
-                        || ' createrole privileges';
+                        ' superuser privileges';
    END IF;
 END
 $$;
@@ -470,7 +469,7 @@ BEGIN
          EXECUTE format('ALTER ROLE %I ENCRYPTED PASSWORD %L', userName, password);
       ELSE
          RAISE NOTICE 'Password does not meet requirements. Must be 6 or more'
-                       || 'characters and contain at least 1 number';
+                        'characters and contain at least 1 number';
       END IF;
    ELSE
       RAISE NOTICE 'User: "%" does not exist', userName;
@@ -555,11 +554,9 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 
 --Set execution permissions
---Currently, we are keeping listUserConnections() owned by the creating user.
+--The function remains owned by the creating user (a "superuser"):
 -- This allows instructors and db managers unrestricted access to pg_stat_activity
--- if the creating user is a superuser.
 --Otherwise, they cannot see info like ip address and timestamps of other users
---In all cases, listUserConnections will be able to list PIDs from all users
 REVOKE ALL ON FUNCTION
    classdb.listUserConnections(VARCHAR(63))
    FROM PUBLIC;
