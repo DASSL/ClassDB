@@ -4,7 +4,8 @@
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
---Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
+--Licensed to others under CC 4.0 BY-SA-NC
+--https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
@@ -33,21 +34,27 @@ ALTER SYSTEM SET log_filename TO 'postgresql-%m.%d.log';
 SELECT pg_reload_conf();
 
 START TRANSACTION;
+
+
 --Check for superuser
 DO
 $$
 BEGIN
-   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user AND rolsuper = 't') THEN
+   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user
+                                                    AND rolsuper = 't') THEN
       RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
    END IF;
 END
 $$;
 
+
 --Drop the event triggers now so we can drop tables without error
 DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
 DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
 
---This table format suggested by the Postgres documentation for use with the COPY statement
+
+--This table format suggested by the Postgres documentation for use with the
+-- COPY statement
 --https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html
 DROP TABLE IF EXISTS classdb.postgresLog;
 CREATE TABLE classdb.postgresLog
@@ -78,13 +85,14 @@ CREATE TABLE classdb.postgresLog
    PRIMARY KEY (session_id, session_line_num)
 );
 
+
 DROP FUNCTION IF EXISTS classdb.importLog(startDate DATE);
 --Function to import a given day's log to a table,
 --The latest connection in the student table supplied the assumed last import date
 --Logs later than this date are imported.  If this value is null, logs are parsed,
 --starting with the supplied date (startDate)
 CREATE FUNCTION classdb.importLog(startDate DATE)
-RETURNS VOID AS
+   RETURNS VOID AS
 $$
 DECLARE
    logPath VARCHAR(4096); --Max file path length on Linux
@@ -103,7 +111,7 @@ BEGIN
          '/postgresql-' || to_char(lastConDate, 'MM.DD') || '.csv';
       --Use copy to fill the temp import table
       EXECUTE format('COPY classdb.postgresLog FROM ''%s'' WITH csv', logPath);
-      lastConDate := lastConDate + 1;  --Check the next day
+      lastConDate := lastConDate + 1; --Check the next day
    END LOOP;
 
    --Update the student table based on the temp log table
@@ -125,12 +133,13 @@ BEGIN
          FROM classdb.postgresLog pg
          WHERE pg.user_name = userName
          AND pg.log_time > COALESCE(lastConnection, to_timestamp(0))
-         AND message LIKE 'connection%' --connection log messages start with 'connection'
+         AND message LIKE 'connection%' --conn log messages start w/ 'connection'
       ), lastConnection);
    --Clear the log table
    TRUNCATE classdb.postgresLog;
 END;
 $$ LANGUAGE plpgsql;
+
 
 DROP FUNCTION IF EXISTS classdb.updateStudentActivity();
 --SET up DDL command logging
@@ -139,7 +148,8 @@ CREATE FUNCTION classdb.updateStudentActivity()
 RETURNS event_trigger AS
 $$
 DECLARE
-   objId VARCHAR(256); --Name of the db object that was targeted by the triggering statement
+   --Name of the db object that was targeted by the triggering statement
+   objId VARCHAR(256);
 BEGIN
 	--Check if the calling event is sql_drop or ddl_command_end
 	IF TG_EVENT = 'ddl_command_end' THEN
@@ -157,13 +167,13 @@ BEGIN
       INTO objId;
    END IF;
    --Note: DROP statements cause this trigger to be executed twice,
-   --see https://www.postgresql.org/docs/9.6/static/event-trigger-matrix.html
-   --ddl_commend_end is triggered on all DDL statements.  However,
-   --pg_event_trigger_ddl_commands().object_identity is NULL for DROP statements
-   --Since ddl_command_end is sent after sql_drop, we don't update if objId
-   --IS NULL, because that is the ddl_command_end event after sql_drop,
-   --and we would overwrite student.lastDDLObject with NULL
-   IF objId IS NOT NULL THEN
+   -- see https://www.postgresql.org/docs/9.6/static/event-trigger-matrix.html
+   -- ddl_commend_end is triggered on all DDL statements. However,
+   -- pg_event_trigger_ddl_commands().object_identity is NULL for DROP statements
+   -- Since ddl_command_end is sent after sql_drop, we don't update if objId 
+   -- IS NULL, because that is the ddl_command_end event after sql_drop,
+   -- and we would overwrite student.lastDDLObject with NULL
+   IF objId IS NOT NULL THEN 
       UPDATE classdb.Student
       SET lastDDLActivity = (SELECT statement_timestamp() AT TIME ZONE 'utc'),
       DDLCount = DDLCount + 1, --Increment the student's DDL statement count
@@ -176,6 +186,7 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
+
 --Event triggers to update user last activity time on DDL events
 CREATE EVENT TRIGGER updateStudentActivityTriggerDrop
 ON sql_drop
@@ -184,5 +195,6 @@ EXECUTE PROCEDURE classdb.updateStudentActivity();
 CREATE EVENT TRIGGER updateStudentActivityTriggerDDL
 ON ddl_command_end
 EXECUTE PROCEDURE classdb.updateStudentActivity();
+
 
 COMMIT;

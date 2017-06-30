@@ -4,7 +4,8 @@
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
---Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
+--Licensed to others under CC 4.0 BY-SA-NC
+--https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
@@ -52,7 +53,6 @@ DROP ROLE "testDBManager1";
 DROP SCHEMA "testInstManage0";
 DROP ROLE "testInstManage0";
 DELETE FROM classdb.Instructor WHERE userName = 'testInstManage0';
-
 
 
 DROP FUNCTION classdb.prepareClassDBTest();

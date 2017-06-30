@@ -4,13 +4,16 @@
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
---Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
+--Licensed to others under CC 4.0 BY-SA-NC
+--https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+
 
 --The following test script should be run as a superuser, otherwise tests will fail
 
 START TRANSACTION;
+
 
 --Tests for superuser privilege on current_user
 DO
@@ -35,8 +38,8 @@ BEGIN
    --  login abilities and passwords can be tested though the creation of User and user
    --  roles in the following functions.
 
-   -- If the above lines created the roles correctly, the following 4 lines should not result
-   --  in an exception.
+   --If the above lines created the roles correctly, the following 4 lines should
+   -- not result in an exception.
    PERFORM classdb.dropUser('testUser0');
    PERFORM classdb.dropUser('lowercaseuser');
    RETURN 'PASS';
@@ -57,8 +60,8 @@ BEGIN
    PERFORM classdb.createStudent('testStudent2', 'Ramon Harrington', '102', 'testpass');
    --initialPassword with no schoolID: Password should be set to 'testPass2'
    PERFORM classdb.createStudent('testStudent3', 'Cathy Young', NULL, 'testpass2');
-   --Multi-role: Should not result in an exception or error (NOTICE is expected), password
-   -- should not change
+   --Multi-role: Should not result in an exception or error (NOTICE is expected),
+   -- password should not change
    PERFORM classdb.createInstructor('testStuInst0', 'Edwin Morrison', 'testpass3');
    PERFORM classdb.createStudent('testStuInst0', 'Edwin Morrison', '102', 'notPass');
 
@@ -71,7 +74,7 @@ BEGIN
    END IF;
 
    --Test role membership
-   IF  pg_has_role('testStudent0', 'student', 'member') AND
+   IF pg_has_role('testStudent0', 'student', 'member') AND
       pg_has_role('testStudent1', 'student', 'member') AND
       pg_has_role('testStudent2', 'student', 'member') AND
       pg_has_role('testStudent3', 'student', 'member') AND
@@ -94,8 +97,8 @@ BEGIN
    PERFORM classdb.createInstructor('testInstructor0', 'Dave Paul');
    --initialPassword used: Password should be set to 'testpass4'
    PERFORM classdb.createInstructor('testInstructor1', 'Dianna Wilson', 'testpass4');
-   --Multi-role: Should not result in an exception or error (NOTICE is expected), password
-   -- should not change
+   --Multi-role: Should not result in an exception or error (NOTICE is expected),
+   -- password should not change
    PERFORM classdb.createStudent('testStuInst1', 'Rosalie Flowers', '106', 'testpass5');
    PERFORM classdb.createInstructor('testStuInst1', 'Rosalie Flowers');
 
@@ -107,7 +110,7 @@ BEGIN
       RETURN 'FAIL: Code 1';
    END IF;
 
-   IF  pg_has_role('testInstructor0', 'instructor', 'member') AND
+   IF pg_has_role('testInstructor0', 'instructor', 'member') AND
       pg_has_role('testInstructor1', 'instructor', 'member') THEN
       RETURN 'PENDING - see testPrepareClassDBREADME.txt';
    ELSE
@@ -115,6 +118,7 @@ BEGIN
    END IF;
 END
 $$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE FUNCTION classdb.createDBManagerTest() RETURNS TEXT AS
 $$
@@ -125,8 +129,8 @@ BEGIN
    PERFORM classdb.createDBmanager('testDBManager0', 'Colin Cooper');
    --initialPassword used: Password should be set to 'testpass6'
    PERFORM classdb.createDBManager('testDBManager1', 'Dianna Wilson', 'testpass6');
-   --Multi-role: Should not result in an exception or error (NOTICE is expected), password
-   -- should not change
+   --Multi-role: Should not result in an exception or error (NOTICE is expected),
+   -- password should not change
    PERFORM classdb.createDBManager('testInstManage0', 'Shawn Nash', 'testpass7');
    PERFORM classdb.createInstructor('testInstManage0', 'Shawn Nash');
 
@@ -138,7 +142,7 @@ BEGIN
       RETURN 'FAIL: Code 1';
    END IF;
 
-   IF  pg_has_role('testDBManager0', 'dbmanager', 'member') AND
+   IF pg_has_role('testDBManager0', 'dbmanager', 'member') AND
       pg_has_role('testDBManager1', 'dbmanager', 'member') THEN
       RETURN 'PENDING - see testPrepareClassDBREADME.txt';
    ELSE
@@ -160,7 +164,8 @@ BEGIN
    IF valueExists THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testStudent4' INTO valueExists;
+   SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testStudent4'
+   INTO valueExists;
    IF valueExists THEN
       RETURN 'FAIL: Code 2';
    END IF;
@@ -173,7 +178,8 @@ BEGIN
 
    SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testStuInst2' INTO valueExists;
    IF valueExists THEN
-      SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testStuInst2' INTO valueExists;
+      SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testStuInst2'
+      INTO valueExists;
       IF valueExists THEN
          PERFORM classdb.dropInstructor('testStuInst2');
       ELSE
@@ -199,20 +205,22 @@ BEGIN
    IF valueExists THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testInstructor2' INTO valueExists;
+   SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testInstructor2'
+   INTO valueExists;
    IF valueExists THEN
       RETURN 'FAIL: Code 2';
    END IF;
 
-   --Multi-role case, user is a member of both Student and Instructor roles: Schema and Role
-   -- should still exist
+   --Multi-role case, user is a member of both Student and Instructor roles: Schema
+   -- and Role should still exist
    PERFORM classdb.createInstructor('testStuInst3', 'Julius Patton');
    PERFORM classdb.createStudent('testStuInst3', 'Julius Paton');
    PERFORM classdb.dropInstructor('testStuInst3');
 
    SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testStuInst3' INTO valueExists;
    IF valueExists THEN
-      SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testStuInst3' INTO valueExists;
+      SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testStuInst3'
+      INTO valueExists;
       IF valueExists THEN
          PERFORM classdb.dropStudent('testStuInst3');
       ELSE
@@ -239,20 +247,22 @@ BEGIN
    IF valueExists THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testDBMangager2' INTO valueExists;
+   SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testDBMangager2'
+   INTO valueExists;
    IF valueExists THEN
       RETURN 'FAIL: Code 2';
    END IF;
 
-   --Multi-role case, user is a member of both Student and Instructor roles: Schema and Role
-   -- should still exist
+   --Multi-role case, user is a member of both Student and Instructor roles: Schema
+   -- and Role should still exist
    PERFORM classdb.createDBManager('testInstManage2', 'Alice West');
    PERFORM classdb.createInstructor('testInstManage2', 'Alice West');
    PERFORM classdb.dropDBManager('testInstManage2');
 
    SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testInstManage2' INTO valueExists;
    IF valueExists THEN
-      SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testInstManage2' INTO valueExists;
+      SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testInstManage2'
+      INTO valueExists;
       IF valueExists THEN
          PERFORM classdb.dropInstructor('testInstManage2');
       ELSE
@@ -279,6 +289,8 @@ BEGIN
 END
 $$  LANGUAGE plpgsql;
 
+
 SELECT classdb.prepareClassDBTest();
+
 
 COMMIT;

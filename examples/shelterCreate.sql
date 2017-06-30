@@ -4,17 +4,19 @@
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
---Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
+--Licensed to others under CC 4.0 BY-SA-NC
+--https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
---This shelter schema was originally created by Dr. Gancho Ganchev and Julie Gordon as a part
--- of a workbook to introduce SQL*Plus. This schema was originally implemented for Oracle as
--- a part of a term project by Julie Gordon, a Student at Western Connecticut State University
--- for a Data Modeling and Database Design class in 2003/2004.
+--This shelter schema was originally created by Dr. Gancho Ganchev and Julie 
+-- Gordon as a part of a workbook to introduce SQL*Plus. This schema was originally
+-- implemented for Oracle as a part of a term project by Julie Gordon, a Student
+-- at Western Connecticut State University for a Data Modeling and Database Design
+-- class in 2003/2004.
 
---This schema has been ported to pgSQL for implementation in Postgres 9.6 while making the
--- fewest changes possible.
+--This schema has been ported to pgSQL for implementation in Postgres 9.6 while 
+-- making the fewest changes possible.
 
 CREATE TABLE IF NOT EXISTS dog
 (
@@ -116,7 +118,8 @@ CREATE TABLE IF NOT EXISTS assignment
    PRIMARY KEY(vol_id, responsibility)
 );
 
---The following lines populate the shelter schema with the data from the shelter scenario
+--The following lines populate the shelter schema with the data from the shelter
+-- scenario
 
 
 INSERT INTO dog VALUES('101', 'Amanda', '01-JAN-03', 'shepherd', '01-JAN-02', 70);
