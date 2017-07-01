@@ -10,22 +10,22 @@
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 
---This script should be run as a user with createrole privileges
+--This script should be run as a user with CREATEROLE privileges
 
 --This script creates app-specific roles: ClassDB, Student, Instructor, DBManager
 
 START TRANSACTION;
 
 
---Make sure current user has sufficient privilege ("createrole") to run the script
+--Make sure current user has sufficient privilege (CREATEROLE) to run the script
 DO
 $$
 BEGIN
    IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles
                  WHERE rolname = current_user AND rolcreaterole = TRUE
                 ) THEN
-      RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
-                        || 'createrole privileges';
+      RAISE EXCEPTION 'Insufficient privileges: script must be run as a user '
+                      'with createrole privileges';
    END IF;
 END
 $$;
