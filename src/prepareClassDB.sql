@@ -591,6 +591,10 @@ REVOKE ALL ON FUNCTION
 GRANT EXECUTE ON FUNCTION
    classdb.killUserConnections(VARCHAR(63))
    TO Instructor;
+GRANT EXECUTE ON FUNCTION
+   classdb.killUserConnections(VARCHAR(63))
+   TO DBManager;
+
 
 
 DROP FUNCTION IF EXISTS classdb.killConnection(INT);
@@ -612,6 +616,9 @@ REVOKE ALL ON FUNCTION
 GRANT EXECUTE ON FUNCTION
    classdb.killConnection(INT)
    TO Instructor;
+GRANT EXECUTE ON FUNCTION
+   classdb.killConnection(INT)
+   TO DBManager;
 
 
 COMMIT;
