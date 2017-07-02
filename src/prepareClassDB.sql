@@ -569,35 +569,6 @@ GRANT EXECUTE ON FUNCTION
    TO DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.killUserConnections(VARCHAR(63));
---Kills all open connections for a specific user
-CREATE FUNCTION classdb.killUserConnections(userName VARCHAR(63))
-RETURNS TABLE (Success BOOLEAN)
-AS $$
-   SELECT pg_terminate_backend(pid)
-   FROM pg_stat_activity
-   WHERE usename = $1;
-$$ LANGUAGE sql
-   SECURITY DEFINER;
-
---Change function ownership and set execution permissions
--- We can change the owner of this to ClassDB because it is a member of
--- pg_signal_backend
-ALTER FUNCTION
-   classdb.killUserConnections(VARCHAR(63))
-   OWNER TO ClassDB;
-REVOKE ALL ON FUNCTION
-   classdb.killUserConnections(VARCHAR(63))
-   FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION
-   classdb.killUserConnections(VARCHAR(63))
-   TO Instructor;
-GRANT EXECUTE ON FUNCTION
-   classdb.killUserConnections(VARCHAR(63))
-   TO DBManager;
-
-
-
 DROP FUNCTION IF EXISTS classdb.killConnection(INT);
 --Kills a specific connection given a pid INT4
 -- pg_terminate_backend takes pid as INT4
@@ -620,6 +591,38 @@ GRANT EXECUTE ON FUNCTION
 GRANT EXECUTE ON FUNCTION
    classdb.killConnection(INT)
    TO DBManager;
+
+
+   DROP FUNCTION IF EXISTS classdb.killUserConnections(VARCHAR(63));
+   --Kills all open connections for a specific user
+   CREATE FUNCTION classdb.killUserConnections(userName VARCHAR(63))
+   RETURNS TABLE
+   (
+      pid INT,
+      Success BOOLEAN
+   )
+   AS $$
+      SELECT pid, classdb.killConnection(pid)
+      FROM pg_stat_activity
+      WHERE usename = $1;
+   $$ LANGUAGE sql
+      SECURITY DEFINER;
+
+   --Change function ownership and set execution permissions
+   -- We can change the owner of this to ClassDB because it is a member of
+   -- pg_signal_backend
+   ALTER FUNCTION
+      classdb.killUserConnections(VARCHAR(63))
+      OWNER TO ClassDB;
+   REVOKE ALL ON FUNCTION
+      classdb.killUserConnections(VARCHAR(63))
+      FROM PUBLIC;
+   GRANT EXECUTE ON FUNCTION
+      classdb.killUserConnections(VARCHAR(63))
+      TO Instructor;
+   GRANT EXECUTE ON FUNCTION
+      classdb.killUserConnections(VARCHAR(63))
+      TO DBManager;
 
 
 COMMIT;
