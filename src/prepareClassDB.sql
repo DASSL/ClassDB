@@ -174,6 +174,7 @@ BEGIN
    PERFORM classdb.createUser(studentUserName, initialPwd);
    EXECUTE format('GRANT Student TO %I', $1);
    EXECUTE format('GRANT USAGE ON SCHEMA %I TO Instructor', $1);
+   EXECUTE format('GRANT %I TO ClassDB', $1);
    EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA %I GRANT SELECT'
                    || ' ON TABLES TO Instructor', $1, $1);
    EXECUTE format('ALTER ROLE %I CONNECTION LIMIT 5', $1);
@@ -300,8 +301,8 @@ BEGIN
       EXECUTE format('REVOKE Student FROM %I', $1);
       DELETE FROM classdb.Student S WHERE S.userName = $1;
 
-      IF EXISTS(SELECT * FROM pg_catalog.pg_roles 
-                WHERE pg_catalog.pg_has_role($1, oid, 'member') AND rolname != $1 
+      IF EXISTS(SELECT * FROM pg_catalog.pg_roles
+                WHERE pg_catalog.pg_has_role($1, oid, 'member') AND rolname != $1
                ) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
@@ -341,9 +342,9 @@ GRANT EXECUTE ON FUNCTION classdb.dropAllStudents() TO Instructor, DBManager;
 
 
 DROP FUNCTION IF EXISTS classdb.dropInstructor(userName VARCHAR(63));
---The folowing procedure revokes the Instructor role from an Instructor, along 
+--The folowing procedure revokes the Instructor role from an Instructor, along
 -- with their entry in the classdb.Instructor table. If the Instructor role was
--- the only role that the instructor was a member of, the instructor's schema, 
+-- the only role that the instructor was a member of, the instructor's schema,
 -- and the objects contained within, are removed along with the the role
 -- representing the instructor.
 CREATE FUNCTION classdb.dropInstructor(userName VARCHAR(63)) RETURNS VOID AS
@@ -378,7 +379,7 @@ GRANT EXECUTE ON FUNCTION
 
 
 DROP FUNCTION IF EXISTS classdb.dropDBManager(userName VARCHAR(63));
---The folowing procedure revokes the DBManager role from a DBManager. If the 
+--The folowing procedure revokes the DBManager role from a DBManager. If the
 -- DBManager role was the only role that they were a member of, the manager's
 -- schema, and the objects contained within, are removed along with the the role
 -- representing the DBManager.
@@ -413,7 +414,7 @@ GRANT EXECUTE ON FUNCTION
 
 
 DROP FUNCTION IF EXISTS classdb.dropUser(userName VARCHAR(63));
---The following procedure drops a user regardless of their role memberships. 
+--The following procedure drops a user regardless of their role memberships.
 -- This will also drop the user's schema and the objects contained within, if
 -- the schema exists. Currently, it also drops the value from the Student table
 -- if the user was a member of the Student role, and from the Instructor table if
@@ -446,9 +447,9 @@ GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(63))
    TO Instructor, DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.changeUserPassword(userName VARCHAR(63), 
+DROP FUNCTION IF EXISTS classdb.changeUserPassword(userName VARCHAR(63),
                                                    password VARCHAR(128));
---The following procedure allows changing the password for a given username, 
+--The following procedure allows changing the password for a given username,
 -- given both the username and password. NOTICEs are raised if the user does not
 -- exist or if the password does not meet the requirements.
 --Current password requirements:
@@ -580,7 +581,7 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 
 --Change function ownership and set execution permissions
--- We can change the owner of this to ClassDB because it is a member of 
+-- We can change the owner of this to ClassDB because it is a member of
 -- pg_signal_backend
 ALTER FUNCTION
    classdb.killUserConnections(VARCHAR(63))
