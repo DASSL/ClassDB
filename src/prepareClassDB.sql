@@ -491,28 +491,15 @@ GRANT EXECUTE ON FUNCTION
    TO Instructor, DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.resetUserPassword(userName VARCHAR(63));
 --Define a function to reset a user's password to a default value
+-- default password is the username
 -- default password is not the same as the initialPwd used at role creation
--- default password is always the username
+DROP FUNCTION IF EXISTS classdb.resetUserPassword(userName VARCHAR(63));
 CREATE FUNCTION classdb.resetUserPassword(userName VARCHAR(63))
    RETURNS VOID AS
 $$
-DECLARE
-   studentID VARCHAR(128);
 BEGIN
-   IF
-      pg_catalog.pg_has_role($1, 'student', 'member')
-   THEN
-      SELECT ID FROM classdb.Student WHERE userName = $1 INTO studentID;
-      IF studentID IS NULL THEN
-         PERFORM classdb.changeUserPassword(userName, userName);
-      ELSE
-         PERFORM classdb.changeUserPassword(userName, studentID);
-      END IF;
-   ELSIF
-      pg_catalog.pg_has_role(userName, 'instructor', 'member')
-   THEN
+   IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) THEN
       PERFORM classdb.changeUserPassword(userName, userName);
    ELSE
       RAISE NOTICE 'User "%" not found among registered users', userName;
@@ -593,36 +580,36 @@ GRANT EXECUTE ON FUNCTION
    TO DBManager;
 
 
-   DROP FUNCTION IF EXISTS classdb.killUserConnections(VARCHAR(63));
-   --Kills all open connections for a specific user
-   CREATE FUNCTION classdb.killUserConnections(userName VARCHAR(63))
-   RETURNS TABLE
-   (
-      pid INT,
-      Success BOOLEAN
-   )
-   AS $$
-      SELECT pid, classdb.killConnection(pid)
-      FROM pg_stat_activity
-      WHERE usename = $1;
-   $$ LANGUAGE sql
-      SECURITY DEFINER;
+DROP FUNCTION IF EXISTS classdb.killUserConnections(VARCHAR(63));
+--Kills all open connections for a specific user
+CREATE FUNCTION classdb.killUserConnections(userName VARCHAR(63))
+RETURNS TABLE
+(
+   pid INT,
+   Success BOOLEAN
+)
+AS $$
+   SELECT pid, classdb.killConnection(pid)
+   FROM pg_stat_activity
+   WHERE usename = $1;
+$$ LANGUAGE sql
+   SECURITY DEFINER;
 
-   --Change function ownership and set execution permissions
-   -- We can change the owner of this to ClassDB because it is a member of
-   -- pg_signal_backend
-   ALTER FUNCTION
-      classdb.killUserConnections(VARCHAR(63))
-      OWNER TO ClassDB;
-   REVOKE ALL ON FUNCTION
-      classdb.killUserConnections(VARCHAR(63))
-      FROM PUBLIC;
-   GRANT EXECUTE ON FUNCTION
-      classdb.killUserConnections(VARCHAR(63))
-      TO Instructor;
-   GRANT EXECUTE ON FUNCTION
-      classdb.killUserConnections(VARCHAR(63))
-      TO DBManager;
+--Change function ownership and set execution permissions
+-- We can change the owner of this to ClassDB because it is a member of
+-- pg_signal_backend
+ALTER FUNCTION
+   classdb.killUserConnections(VARCHAR(63))
+   OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION
+   classdb.killUserConnections(VARCHAR(63))
+   FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION
+   classdb.killUserConnections(VARCHAR(63))
+   TO Instructor;
+GRANT EXECUTE ON FUNCTION
+   classdb.killUserConnections(VARCHAR(63))
+   TO DBManager;
 
 
 COMMIT;
