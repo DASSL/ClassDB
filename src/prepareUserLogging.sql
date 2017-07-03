@@ -22,21 +22,30 @@
 -- DDL Logging: Two event triggers log the last DDL statement executed for each student
 -- in the student table
 
---Need to be superuser for ALTER SYSTEM,
---however the ALTER SYSTEMS can't be placed in the same transaction
-ALTER SYSTEM SET log_connections TO 'on';
-ALTER SYSTEM SET log_destination TO 'csvlog'; --This outputs the log in a csv format,
-                                              --which allows COPY...FROM to read it
-ALTER SYSTEM SET log_filename TO 'postgresql-%m.%d.log';
---Set the log file name.  Using the date/time vars can help with log rotation.
---Right now, the file name is postgresql-<month>.<day>, ie. postgresql-06.10.
 
-SELECT pg_reload_conf();
+--Use ALTER SYSTEM statements to change the Postgres server log settings for
+-- the connection logging system. These statements must be run as superuser, but
+-- can't be run inside a TRANSACTION block, however they will still fail if they
+-- are run with insufficient permissions.
+
+--The following changes are made:
+-- log_connections TO 'on' causes user connections to the DBMS to be reported in
+-- the log file
+--log_destination TO 'csvlog' cause the logs to be recorded in a csv format,
+-- making it possible to use the COPY statement on them
+--log_filename sets the log file name. %m and %d are placeholders for month and
+-- day respectively, ie. the log file name on June 10th would be postgresql-06.10.
+ALTER SYSTEM SET log_connections TO 'on';
+ALTER SYSTEM SET log_destination TO 'csvlog';
+ALTER SYSTEM SET log_filename TO 'postgresql-%m.%d.log';
+
 
 START TRANSACTION;
 
-
---Check for superuser
+--Check for superuser. This check can't be performed earlier, since the ALTER SYSTEM
+-- statements can't be placed in a transaction.  Since the check throws an exception,
+-- and the exception only aborts the current transaction, it would have no effect
+-- on the ALTER SYSTEM statements
 DO
 $$
 BEGIN
@@ -48,12 +57,14 @@ END
 $$;
 
 
---Drop the event triggers now so we can drop tables without error
-DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
-DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
+--pg_reload_conf() reloads the postgres setting so the changes from ALTER SYSTEM
+-- statements apply without having to restart the server
+SELECT pg_reload_conf();
 
 
---This table format suggested by the Postgres documentation for use with the
+--classdb.postgresLog is a temporary staging table for data imported from the logs.
+-- The data is then processed in classdb.importLog()
+-- This table format suggested by the Postgres documentation for use with the
 -- COPY statement
 --https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html
 DROP TABLE IF EXISTS classdb.postgresLog;
@@ -86,27 +97,28 @@ CREATE TABLE classdb.postgresLog
 );
 
 
+--Function to import a given day's log file, and update student connection information
+-- The latest connection in the student table supplied the assumed last import date,
+-- so logs later than this date are imported.  If this value is null, logs are parsed,
+-- starting with the supplied date (startDate)
+-- For each line containing connection information, the matching student's
+-- connection info is updated
 DROP FUNCTION IF EXISTS classdb.importLog(startDate DATE);
---Function to import a given day's log to a table,
---The latest connection in the student table supplied the assumed last import date
---Logs later than this date are imported.  If this value is null, logs are parsed,
---starting with the supplied date (startDate)
 CREATE FUNCTION classdb.importLog(startDate DATE)
    RETURNS VOID AS
 $$
 DECLARE
-   logPath VARCHAR(4096); --Max file path length on Linux
+   logPath VARCHAR(4096); --Max file path length on Linux, > max length on Windows
    lastConDate DATE;
 BEGIN
-	--The double parens around the subquery seem to be required
 	--Set the date of last logged connection to either the latest connection in
-	--classdb.student, or startDate if that is NULL
-	lastConDate := COALESCE(date((SELECT MAX(lastConnection) FROM classdb.student)), $1);
+	-- classdb.student, or startDate if that is NULL
+	lastConDate := COALESCE(date((SELECT MAX(lastConnection) FROM classdb.student)), startDate);
 
 	--We want to import all logs between the lastConDate and current date
 	WHILE lastConDate <= current_date LOOP
 	   --Get the full path to the log, assumes a log file name of postgresql-%m.%d.csv
-	   --the log_directory setting holds the log path
+	   -- the log_directory setting holds the log path
       logPath := (SELECT setting FROM pg_settings WHERE "name" = 'log_directory') ||
          '/postgresql-' || to_char(lastConDate, 'MM.DD') || '.csv';
       --Use copy to fill the temp import table
@@ -141,10 +153,18 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS classdb.updateStudentActivity();
 --SET up DDL command logging
---This function updates the LastActivity field for a given student
-CREATE FUNCTION classdb.updateStudentActivity()
+
+--This function records information on DDL statements issued by students.
+-- It is called by two event triggers, which are fired on DDL statements.  when
+-- the function is executed, it gets the timestamp, statement, and target object
+-- of the trigger DDL statement, and records those in the triggering student's
+-- record in the student table. It also increments the student's total DDL
+-- statement count
+
+--We use CREATE OR REPLACE for this function because it can't be dropped if the
+-- event triggers already exist.  For example, when re-runing this script
+CREATE OR REPLACE FUNCTION classdb.updateStudentActivity()
 RETURNS event_trigger AS
 $$
 DECLARE
@@ -170,10 +190,10 @@ BEGIN
    -- see https://www.postgresql.org/docs/9.6/static/event-trigger-matrix.html
    -- ddl_commend_end is triggered on all DDL statements. However,
    -- pg_event_trigger_ddl_commands().object_identity is NULL for DROP statements
-   -- Since ddl_command_end is sent after sql_drop, we don't update if objId 
+   -- Since ddl_command_end is sent after sql_drop, we don't update if objId
    -- IS NULL, because that is the ddl_command_end event after sql_drop,
    -- and we would overwrite student.lastDDLObject with NULL
-   IF objId IS NOT NULL THEN 
+   IF objId IS NOT NULL THEN
       UPDATE classdb.Student
       SET lastDDLActivity = (SELECT statement_timestamp() AT TIME ZONE 'utc'),
       DDLCount = DDLCount + 1, --Increment the student's DDL statement count
@@ -188,10 +208,17 @@ $$ LANGUAGE plpgsql
 
 
 --Event triggers to update user last activity time on DDL events
+-- the 'Drop' trigger is fired during the sql_drop event, which occurs when
+-- DROP statements are executed. The 'DDL' trigger is executed on ddl_command_end
+-- which is fired when any DDL statement finishes executing. Both triggers are
+-- needed to log all DDL statements, as not all infomation about DROP statements
+-- is provided by the ddl_command_end event
+DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
 CREATE EVENT TRIGGER updateStudentActivityTriggerDrop
 ON sql_drop
 EXECUTE PROCEDURE classdb.updateStudentActivity();
 
+DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
 CREATE EVENT TRIGGER updateStudentActivityTriggerDDL
 ON ddl_command_end
 EXECUTE PROCEDURE classdb.updateStudentActivity();
