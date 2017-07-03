@@ -46,10 +46,11 @@ DROP TABLE test;
 SELECT * FROM testInsTab;
 
 
---Create table in $user schema to test read privileges for Instructors
-CREATE TABLE insStuTest
+--Create table in $user schema to test read privileges for Instructors and non-
+-- access for DBManagers
+CREATE TABLE testStuUsr
 (
    col1 VARCHAR(20)
 );
 
-INSERT INTO testStuTab VALUES ('Hello instructor');
+INSERT INTO testStuUsr VALUES ('Read by: Instructor');

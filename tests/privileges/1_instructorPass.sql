@@ -91,10 +91,18 @@ WHERE userName = 'teststu';
 SELECT classdb.dropStudent('teststu');
 
 
---Create table in public schema to test read privileges for Students
-CREATE TABLE public.testInsTab
+--Create table in public schema to test read privileges for Students and DBManagers
+CREATE TABLE public.testInsPub
 (
    col1 VARCHAR(20)
 );
 
-INSERT INTO public.testInsTab VALUES ('Hello student');
+INSERT INTO public.testInsTab VALUES ('Read by: anyone');
+
+--Create table in $user schema to test non-access for other roles
+CREATE TABLE testInsUsr
+(
+   col1 VARCHAR(20)
+)
+
+INSERT INTO testInsUsr VALUES('Read by: no one');

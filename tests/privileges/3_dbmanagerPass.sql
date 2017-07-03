@@ -66,3 +66,16 @@ SET studentName = 'NoName', schoolID = '50125'
 WHERE userName = 'teststu';
 
 SELECT classdb.dropStudent('teststu');
+
+
+--Read on tables in the public schema created by Instructor (should return 1 row)
+SELECT * FROM testInsTab;
+
+
+--Create table in $user schema to test non-access for other roles
+CREATE TABLE testDbmUsr
+(
+   col1 VARCHAR(20)
+)
+
+INSERT INTO testDbmUsr VALUES('Read by: no one');

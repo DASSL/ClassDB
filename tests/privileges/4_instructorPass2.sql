@@ -19,4 +19,3 @@ SELECT listTables('stu0');
 
 SELECT describe('stupubtest', 'public');
 SELECT describe('insstutest', 'stu0');
-

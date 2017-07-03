@@ -45,11 +45,3 @@ SELECT classdb.dropAllStudents();
 --Not read Student or Instructor tables (non-access to class schema should also prevent this)
 SELECT * FROM classdb.Student;
 SELECT * FROM classdb.Instructor;
-
-
---Not be able to alter role improperly
---TODO: Tests Pending
-
-
---Be able to change their password with /password
---TODO: Tests Pending

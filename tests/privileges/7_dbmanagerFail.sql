@@ -13,8 +13,11 @@
 --Not read Student's $user schemas
 SELECT * FROM stu0.insStuTest;
 
+
 --Not read other instructors or dbmanagers tables
---TODO: These tests are pending
+--TODO: Some of these tests are pending
+SELECT * FROM ins0.testInsUsr;
+
 
 --Not drop classdb functions (also covers ALTER and REPLACE)
 DROP FUNCTION IF EXISTS classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128));

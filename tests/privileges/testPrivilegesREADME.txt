@@ -13,6 +13,9 @@ PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 The files in this folder test the effective privileges of each role in ClassDB.
 Scripts that contain "Pass" in their file name are intended to run without issues,
 those that contain "Fail" should run only with issues (every statement should fail).
+These tests are only intended to examine the prvileges of each role, and not the
+functionality of any of ClassDB's facilities. See testPrepareClassDB.sql for tests
+which perform those tasks.
 
 The files will be run in the order below, but it is necessary to switch users
 between the execution of each script.
@@ -47,7 +50,7 @@ Execute: 5_instructorFail.sql
 Switch to stu0
 Execute: 6_studentFail.sql
 
-Switch to stu0
+Switch to dbm0
 Execute: 7_dbmanagerFail.sql
 
 Switch back to superuser
