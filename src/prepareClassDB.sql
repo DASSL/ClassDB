@@ -446,50 +446,6 @@ GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(63))
    TO Instructor, DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.changeUserPassword(userName VARCHAR(63),
-                                                   password VARCHAR(128));
---The following procedure allows changing the password for a given username,
--- given both the username and password. NOTICEs are raised if the user does not
--- exist or if the password does not meet the requirements.
---Current password requirements:
--- - Must be 4 or more characters
--- - Must contain at least one numerical digit (0-9)
-CREATE FUNCTION classdb.changeUserPassword(userName VARCHAR(63), password VARCHAR(128))
-   RETURNS VOID AS
-$$
-DECLARE
-   userExists BOOLEAN;
-BEGIN
-   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1 INTO userExists;
-   IF userExists THEN
-      IF
-         LENGTH(password) > 3 AND
-         SUBSTRING(password from '[0-9]') IS NOT NULL
-      THEN
-         EXECUTE format('ALTER ROLE %I ENCRYPTED PASSWORD %L', userName, password);
-      ELSE
-         RAISE NOTICE 'Password does not meet requirements. Must be 6 or more'
-                        'characters and contain at least 1 number';
-      END IF;
-   ELSE
-      RAISE NOTICE 'User: "%" does not exist', userName;
-   END IF;
-END;
-$$ LANGUAGE plpgsql
-   SECURITY DEFINER;
-
---Change function ownership and set execution permissions
-ALTER FUNCTION
-   classdb.changeUserPassword(userName VARCHAR(63), password VARCHAR(128))
-   OWNER TO ClassDB;
-REVOKE ALL ON FUNCTION
-   classdb.changeUserPassword(userName VARCHAR(63), password VARCHAR(128))
-   FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION
-   classdb.changeUserPassword(userName VARCHAR(63), password VARCHAR(128))
-   TO Instructor, DBManager;
-
-
 --Define a function to reset a user's password to a default value
 -- default password is the username
 -- default password is not the same as the initialPwd used at role creation
@@ -499,7 +455,7 @@ CREATE FUNCTION classdb.resetUserPassword(userName VARCHAR(63))
 $$
 BEGIN
    IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) THEN
-      PERFORM classdb.changeUserPassword(userName, userName);
+      EXECUTE format('ALTER ROLE %I ENCRYPTED PASSWORD %L', userName, userName);
    ELSE
       RAISE NOTICE 'User "%" not found among registered users', userName;
    END IF;
