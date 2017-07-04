@@ -57,9 +57,9 @@ BEGIN
    ALTER ROLE ClassDB CREATEROLE CREATEDB;
    GRANT pg_signal_backend TO ClassDB;
 
-   PERFORM pg_temp.createGroupRole('Student');
-   PERFORM pg_temp.createGroupRole('Instructor');
-   PERFORM pg_temp.createGroupRole('DBManager');
+   PERFORM pg_temp.createGroupRole('ClassDB_Student');
+   PERFORM pg_temp.createGroupRole('ClassDB_Instructor');
+   PERFORM pg_temp.createGroupRole('ClassDB_DBManager');
 END
 $$;
 
