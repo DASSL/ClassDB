@@ -43,9 +43,9 @@ $$;
 --Drop app-specific roles
 -- need to make sure that removeClassDBFromDB is complete
 
---DROP ROLE IF EXISTS Instructor;
---DROP ROLE IF EXISTS DBManager;
---DROP ROLE IF EXISTS Student;
+--DROP ROLE IF EXISTS ClassDB_Instructor;
+--DROP ROLE IF EXISTS ClassDB_DBManager;
+--DROP ROLE IF EXISTS ClassDB_Student;
 --DROP ROLE IF EXISTS ClassDB;
 
 --create a list of things users have to do on their own
