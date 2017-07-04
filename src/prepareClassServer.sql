@@ -18,14 +18,15 @@ START TRANSACTION;
 
 
 --Make sure current user has sufficient privilege (CREATEROLE) to run the script
+-- privileges required: superuser
 DO
 $$
 BEGIN
-   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles
-                 WHERE rolname = current_user AND rolcreaterole = TRUE
-                ) THEN
-      RAISE EXCEPTION 'Insufficient privileges: script must be run as a user '
-                      'with createrole privileges';
+   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
+                  WHERE rolname = current_user AND rolsuper = TRUE
+                 ) THEN
+      RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
+                      ' superuser privileges';
    END IF;
 END
 $$;
