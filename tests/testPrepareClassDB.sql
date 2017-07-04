@@ -19,7 +19,7 @@ START TRANSACTION;
 DO
 $$
 BEGIN
-   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user 
+   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user
     AND rolsuper = TRUE) THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a superuser';
    END IF;

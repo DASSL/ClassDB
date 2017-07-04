@@ -42,7 +42,7 @@ $$
 BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
                   WHERE rolname IN ('classdb', 'classdb_instructor',
-				           'classdb_dbmanager', 'class_dbstudent')
+                           'classdb_dbmanager', 'class_dbstudent')
                  ) THEN
       RAISE EXCEPTION
          'Missing group roles: one or more expected group roles are undefined';
@@ -81,7 +81,7 @@ REVOKE CREATE ON SCHEMA public FROM ClassDB_Student;
 
 --Create a schema to hold app's admin info and assign privileges on that schema
 CREATE SCHEMA IF NOT EXISTS classdb;
-GRANT ALL PRIVILEGES ON SCHEMA classdb 
+GRANT ALL PRIVILEGES ON SCHEMA classdb
    TO ClassDB, ClassDB_Instructor, ClassDB_DBManager;
 
 --Grant ClassDB to the current user
@@ -155,10 +155,10 @@ REVOKE ALL PRIVILEGES ON classdb.Student FROM PUBLIC;
 --Permit instructors and DB managers to read rows and to update only some columns
 -- username cannot be edited by anyone because its value must match a login role
 -- inserts and deletes are performed only in functions which run as ClassDB
-GRANT SELECT ON classdb.Student 
+GRANT SELECT ON classdb.Student
    TO ClassDB_Instructor, ClassDB_DBManager;
-   
-GRANT UPDATE (studentName, schoolID) ON classdb.Student 
+
+GRANT UPDATE (studentName, schoolID) ON classdb.Student
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
@@ -224,10 +224,10 @@ ALTER TABLE classdb.Instructor OWNER TO ClassDB;
 --Limit operations on rows and columns
 REVOKE ALL PRIVILEGES ON classdb.Student FROM PUBLIC;
 
-GRANT SELECT ON classdb.Student 
+GRANT SELECT ON classdb.Student
    TO ClassDB_Instructor, ClassDB_DBManager;
 
-GRANT UPDATE (instructorName) ON classdb.Instructor 
+GRANT UPDATE (instructorName) ON classdb.Instructor
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
@@ -294,7 +294,7 @@ REVOKE ALL ON FUNCTION
 
 GRANT EXECUTE ON FUNCTION
    classdb.createDBManager(managerUserName VARCHAR(63), managerName VARCHAR(100),
-                           initialPwd VARCHAR(128)) 
+                           initialPwd VARCHAR(128))
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
@@ -384,7 +384,7 @@ $$ LANGUAGE plpgsql
 --Change function ownership and set execution permissions
 ALTER FUNCTION classdb.dropInstructor(userName VARCHAR(63)) OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION classdb.dropInstructor(userName VARCHAR(63)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName VARCHAR(63)) 
+GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName VARCHAR(63))
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
@@ -522,11 +522,11 @@ $$ LANGUAGE plpgsql
 ALTER FUNCTION
    classdb.resetUserPassword(userName VARCHAR(63))
    OWNER TO ClassDB;
-   
+
 REVOKE ALL ON FUNCTION
    classdb.resetUserPassword(userName VARCHAR(63))
    FROM PUBLIC;
-   
+
 GRANT EXECUTE ON FUNCTION
    classdb.resetUserPassword(userName VARCHAR(63))
    TO ClassDB_Instructor, ClassDB_DBManager;
@@ -547,9 +547,9 @@ CREATE FUNCTION classdb.listUserConnections(userName VARCHAR(63))
    lastQueryStartTime TIMESTAMPTZ   --provided by query_start in pg_stat_activity
 )
 AS $$
-	SELECT usename::VARCHAR(63), pid, application_name, client_addr, backend_start, query_start
-	FROM pg_stat_activity
-	WHERE usename = $1;
+   SELECT usename::VARCHAR(63), pid, application_name, client_addr, backend_start, query_start
+   FROM pg_stat_activity
+   WHERE usename = $1;
 $$ LANGUAGE sql
    SECURITY DEFINER;
 
