@@ -52,6 +52,9 @@ BEGIN
 END
 $$;
 
+DROP OWNED BY Instructor;
+DROP OWNED BY ClassDB;
+
 --Drop app-specific roles
 -- need to make sure that removeClassDBFromDB is complete
 DROP ROLE IF EXISTS Instructor;

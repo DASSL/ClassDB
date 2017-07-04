@@ -9,16 +9,18 @@
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
---This shelter schema was originally created by Dr. Gancho Ganchev and Julie 
+--This shelter schema was originally created by Dr. Gancho Ganchev and Julie
 -- Gordon as a part of a workbook to introduce SQL*Plus. This schema was originally
 -- implemented for Oracle as a part of a term project by Julie Gordon, a Student
 -- at Western Connecticut State University for a Data Modeling and Database Design
 -- class in 2003/2004.
 
---This schema has been ported to pgSQL for implementation in Postgres 9.6 while 
+--This schema has been ported to pgSQL for implementation in Postgres 9.6 while
 -- making the fewest changes possible.
 
-CREATE TABLE IF NOT EXISTS dog
+--Create an AnimalWelfare schema to hold these tables
+
+CREATE TABLE IF NOT EXISTS public.dog
 (
    dog_id        CHAR(3) NOT NULL,
    name          VARCHAR(15),
@@ -29,7 +31,7 @@ CREATE TABLE IF NOT EXISTS dog
    PRIMARY KEY(dog_id)
 );
 
-CREATE TABLE IF NOT EXISTS adopter
+CREATE TABLE IF NOT EXISTS public.adopter
 (
    adopter_id CHAR(3),
    fname      VARCHAR(10),
@@ -42,7 +44,7 @@ CREATE TABLE IF NOT EXISTS adopter
    PRIMARY KEY(adopter_id)
 );
 
-CREATE TABLE IF NOT EXISTS volunteer
+CREATE TABLE IF NOT EXISTS public.volunteer
 (
    vol_id CHAR(3),
    fname  VARCHAR(10),
@@ -52,13 +54,13 @@ CREATE TABLE IF NOT EXISTS volunteer
    PRIMARY KEY(vol_id)
 );
 
-CREATE TABLE IF NOT EXISTS responsibility
+CREATE TABLE IF NOT EXISTS public.responsibility
 (
    title VARCHAR(20),
    PRIMARY KEY(title)
 );
 
-CREATE TABLE IF NOT EXISTS vet
+CREATE TABLE IF NOT EXISTS public.vet
 (
    vet_id  CHAR(1),
    fname   VARCHAR(10),
@@ -71,7 +73,7 @@ CREATE TABLE IF NOT EXISTS vet
    PRIMARY KEY(vet_id)
 );
 
-CREATE TABLE IF NOT EXISTS adoption
+CREATE TABLE IF NOT EXISTS public.adoption
 (
    dog_id        CHAR(3),
    adopter_id    CHAR(3),
@@ -84,7 +86,7 @@ CREATE TABLE IF NOT EXISTS adoption
    PRIMARY KEY(dog_id, adopter_id, vol_id)
 );
 
-CREATE TABLE IF NOT EXISTS treatment
+CREATE TABLE IF NOT EXISTS public.treatment
 (
    treatment_id   CHAR(3),
    vet_id         CHAR(1),
@@ -98,7 +100,7 @@ CREATE TABLE IF NOT EXISTS treatment
    PRIMARY KEY(treatment_id)
 );
 
-CREATE TABLE IF NOT EXISTS return
+CREATE TABLE IF NOT EXISTS public.return
 (
    dog_id      CHAR(3),
    adopter_id  CHAR(3),
@@ -109,7 +111,7 @@ CREATE TABLE IF NOT EXISTS return
    PRIMARY KEY(dog_id, adopter_id)
 );
 
-CREATE TABLE IF NOT EXISTS assignment
+CREATE TABLE IF NOT EXISTS public.assignment
 (
    vol_id         CHAR(3),
    responsibility VARCHAR(20),
