@@ -104,7 +104,7 @@ CREATE TABLE classdb.postgresLog
 -- For each line containing connection information, the matching student's
 -- connection info is updated
 DROP FUNCTION IF EXISTS classdb.importLog(startDate DATE);
-CREATE FUNCTION classdb.importLog(startDate DATE)
+CREATE FUNCTION classdb.importLog(startDate DATE DEFAULT current_date)
    RETURNS VOID AS
 $$
 DECLARE
@@ -135,8 +135,9 @@ BEGIN
       SELECT COUNT(user_name)
       FROM classdb.postgresLog pg
       WHERE pg.user_name = userName
-      AND pg.log_time > COALESCE(lastConnection, to_timestamp(0))
+      AND (pg.log_time AT TIME ZONE 'utc') > COALESCE(lastConnection, to_timestamp(0))
       AND message LIKE 'connection%' --Filter out extraneous log lines
+      AND database_name = current_database() --Limit to log lines for current db only
    ),
    --Find the latest connection date in the logs
    lastConnection = COALESCE(
@@ -144,8 +145,9 @@ BEGIN
          SELECT MAX(log_time AT TIME ZONE 'utc')
          FROM classdb.postgresLog pg
          WHERE pg.user_name = userName
-         AND pg.log_time > COALESCE(lastConnection, to_timestamp(0))
+         AND (pg.log_time AT TIME ZONE 'utc') > COALESCE(lastConnection, to_timestamp(0))
          AND message LIKE 'connection%' --conn log messages start w/ 'connection'
+         AND database_name = current_database()
       ), lastConnection);
    --Clear the log table
    TRUNCATE classdb.postgresLog;
