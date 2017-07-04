@@ -40,18 +40,23 @@ BEGIN
 END
 $$;
 
---REVOKE CONNECT from each ClassDB role, since all permissions must be removed from roles
--- before they can be dropped
-REVOKE CONNECT ON DATABASE current_database() FROM ClassDB_Instructor;
-REVOKE CONNECT ON DATABASE current_database() FROM ClassDB_DBManager;
-REVOKE CONNECT ON DATABASE current_database() FROM ClassDB_Student;
-REVOKE CONNECT ON DATABASE current_database() FROM ClassDB;
+--REVOKE permissions on the current database from each ClassDB role, since all
+-- permissions must be removed from roles before they can be dropped
+DO
+$$
+BEGIN
+   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM instructor;', current_database());
+   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM dbmanager;', current_database());
+   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM student;', current_database());
+   EXECUTE format('REVOKE CREATE ON DATABASE %I FROM classdb;', current_database());
+END
+$$;
 
 --Drop app-specific roles
 -- need to make sure that removeClassDBFromDB is complete
-DROP ROLE IF EXISTS ClassDB_Instructor;
-DROP ROLE IF EXISTS ClassDB_DBManager;
-DROP ROLE IF EXISTS ClassDB_Student;
+DROP ROLE IF EXISTS Instructor;
+DROP ROLE IF EXISTS DBManager;
+DROP ROLE IF EXISTS Student;
 DROP ROLE IF EXISTS ClassDB;
 
 --create a list of things users have to do on their own
