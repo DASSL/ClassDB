@@ -1,6 +1,6 @@
 --removeClassDBFromServer.sql - ClassDB
 
---Sean Murthy
+--Sean Murthy, Steven Rollo
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
@@ -40,17 +40,26 @@ BEGIN
 END
 $$;
 
+--REVOKE CONNECT from each ClassDB role, since all permissions must be removed from roles
+-- before they can be dropped
+REVOKE CONNECT ON DATABASE current_database() FROM ClassDB_Instructor;
+REVOKE CONNECT ON DATABASE current_database() FROM ClassDB_DBManager;
+REVOKE CONNECT ON DATABASE current_database() FROM ClassDB_Student;
+REVOKE CONNECT ON DATABASE current_database() FROM ClassDB;
+
 --Drop app-specific roles
 -- need to make sure that removeClassDBFromDB is complete
-
---DROP ROLE IF EXISTS Instructor;
---DROP ROLE IF EXISTS DBManager;
---DROP ROLE IF EXISTS Student;
---DROP ROLE IF EXISTS ClassDB;
+DROP ROLE IF EXISTS ClassDB_Instructor;
+DROP ROLE IF EXISTS ClassDB_DBManager;
+DROP ROLE IF EXISTS ClassDB_Student;
+DROP ROLE IF EXISTS ClassDB;
 
 --create a list of things users have to do on their own
--- commenting out the RAISE NOTICE statement because it causes syntax error
-
---RAISE NOTICE 'Run ALTER SYSTEM statements to disable/modify logging';
+DO
+$$
+BEGIN
+   RAISE NOTICE 'Run ALTER SYSTEM statements to disable/modify logging';
+END
+$$;
 
 COMMIT;
