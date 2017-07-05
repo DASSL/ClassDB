@@ -15,16 +15,18 @@
 --This script drops the tables and views from the shelter scenario. Not all tables
 -- or views may exist, depending on the queries the user has run.
 
-DROP VIEW IF EXISTS public.dog_treatment;
-DROP VIEW IF EXISTS public.treatment_view;
-DROP VIEW IF EXISTS public.nvl_example;
-DROP TABLE IF EXISTS public.phone_list;
-DROP TABLE IF EXISTS public.adoption;
-DROP TABLE IF EXISTS public.return;
-DROP TABLE IF EXISTS public.treatment;
-DROP TABLE IF EXISTS public.assignment;
-DROP TABLE IF EXISTS public.volunteer;
-DROP TABLE IF EXISTS public.adopter;
-DROP TABLE IF EXISTS public.dog;
-DROP TABLE IF EXISTS public.vet;
-DROP TABLE IF EXISTS public.responsibility;
+DROP VIEW IF EXISTS shelter.dog_treatment;
+DROP VIEW IF EXISTS shelter.treatment_view;
+DROP VIEW IF EXISTS shelter.nvl_example;
+DROP TABLE IF EXISTS shelter.phone_list;
+DROP TABLE IF EXISTS shelter.adoption;
+DROP TABLE IF EXISTS shelter.return;
+DROP TABLE IF EXISTS shelter.treatment;
+DROP TABLE IF EXISTS shelter.assignment;
+DROP TABLE IF EXISTS shelter.volunteer;
+DROP TABLE IF EXISTS shelter.adopter;
+DROP TABLE IF EXISTS shelter.dog;
+DROP TABLE IF EXISTS shelter.vet;
+DROP TABLE IF EXISTS shelter.responsibility;
+
+DROP SCHEMA IF EXISTS shelter;
