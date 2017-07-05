@@ -57,7 +57,7 @@ $$;
 DROP OWNED BY Instructor;
 
 
---Dynamically create a query to reassign all schemas owned by classdb users to
+--Dynamically create a query to reassign all user schemas owned by classdb to
 -- be owned by themselves, instead of ClassDB
 -- One ALTER SCHEMA statement is generated per schema classdb owns
 DO
