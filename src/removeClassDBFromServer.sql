@@ -52,8 +52,26 @@ BEGIN
 END
 $$;
 
+--Drop all remaining objects/permissions owned by Instructor.  At this point, this
+-- should only drop the SELECT permissions instructors have on student schemas
 DROP OWNED BY Instructor;
-DROP OWNED BY ClassDB;
+
+
+--Dynamically create a query to reassign all schemas owned by classdb users to
+-- be owned by themselves, instead of ClassDB
+-- One ALTER SCHEMA statement is generated per schema classdb owns
+DO
+$$
+BEGIN
+   EXECUTE
+   (
+      SELECT string_agg(format('ALTER SCHEMA %I OWNER TO %I;', schema_name, schema_name), ' ')
+      FROM INFORMATION_SCHEMA.SCHEMATA
+      WHERE schema_owner = 'classdb'
+   );
+END
+$$;
+
 
 --Drop app-specific roles
 -- need to make sure that removeClassDBFromDB is complete
@@ -61,6 +79,7 @@ DROP ROLE IF EXISTS Instructor;
 DROP ROLE IF EXISTS DBManager;
 DROP ROLE IF EXISTS Student;
 DROP ROLE IF EXISTS ClassDB;
+
 
 --create a list of things users have to do on their own
 DO
