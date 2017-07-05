@@ -45,17 +45,17 @@ $$;
 DO
 $$
 BEGIN
-   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM instructor;', current_database());
-   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM dbmanager;', current_database());
-   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM student;', current_database());
-   EXECUTE format('REVOKE CREATE ON DATABASE %I FROM classdb;', current_database());
+   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM classdb_instructor;', current_database());
+   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM classdb_dbmanager;', current_database());
+   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM classdb_student;', current_database());
+   EXECUTE format('REVOKE CREATE ON DATABASE %I FROM classdb_classdb;', current_database());
 END
 $$;
 
 --Drop all remaining objects/permissions owned by Instructor.
 -- At this point, this should only drop the SELECT permissions instructors have
 -- on student schemas
-DROP OWNED BY Instructor;
+DROP OWNED BY ClassDB_Instructor;
 
 
 --Dynamically create a query to reassign all user schemas owned by classdb to

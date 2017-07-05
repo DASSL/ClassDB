@@ -10,11 +10,22 @@
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 
---This script must be run under the role that is the owner of the shelter schema.
+--This script must be run as a superuser
+
+BEGIN TRANSACTION;
+
+--Check for superuser
+DO
+$$
+BEGIN
+   IF NOT (SELECT classdb.isSuperUser()) THEN
+      RAISE EXCEPTION 'This script must be run as a superuser';
+   END IF;
+END
+$$;
 
 --This script drops the tables and views from the shelter scenario. Not all tables
 -- or views may exist, depending on the queries the user has run.
-
 DROP VIEW IF EXISTS shelter.dog_treatment;
 DROP VIEW IF EXISTS shelter.treatment_view;
 DROP VIEW IF EXISTS shelter.nvl_example;
@@ -30,3 +41,5 @@ DROP TABLE IF EXISTS shelter.vet;
 DROP TABLE IF EXISTS shelter.responsibility;
 
 DROP SCHEMA IF EXISTS shelter;
+
+COMMIT;

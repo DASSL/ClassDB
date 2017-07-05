@@ -322,14 +322,14 @@ INSERT INTO shelter.assignment VALUES('V10', 'walking');
 RESET ROLE;
 
 --Allow instructors and dbmanagers full access to the schema
-GRANT ALL ON SCHEMA shelter TO Instructor, DBManager;
-GRANT ALL ON ALL TABLES IN SCHEMA shelter TO Instructor, DBManager;
+GRANT ALL ON SCHEMA shelter TO ClassDB_Instructor, ClassDB_DBManager;
+GRANT ALL ON ALL TABLES IN SCHEMA shelter TO ClassDB_Instructor, ClassDB_DBManager;
 
 --GRANT USAGE and SELECT to students.  Note, this does not give
 -- any permissions to use the schema/contained objects themselves, however it
 -- is necessary to have USAGE + the other needed permissions.  For example,
 -- to select from shelter.dog, you need USAGE on shelter and SELECT on dog
-GRANT USAGE ON SCHEMA shelter TO Student;
-GRANT SELECT ON ALL TABLES IN SCHEMA shelter TO Student;
+GRANT USAGE ON SCHEMA shelter TO ClassDB_Student;
+GRANT SELECT ON ALL TABLES IN SCHEMA shelter TO ClassDB_Student;
 
 COMMIT;
