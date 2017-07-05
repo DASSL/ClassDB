@@ -52,8 +52,9 @@ BEGIN
 END
 $$;
 
---Drop all remaining objects/permissions owned by Instructor.  At this point, this
--- should only drop the SELECT permissions instructors have on student schemas
+--Drop all remaining objects/permissions owned by Instructor.
+-- At this point, this should only drop the SELECT permissions instructors have
+-- on student schemas
 DROP OWNED BY Instructor;
 
 
@@ -65,7 +66,17 @@ $$
 BEGIN
    EXECUTE
    (
-      SELECT string_agg(format('ALTER SCHEMA %I OWNER TO %I;', schema_name, schema_name), ' ')
+      SELECT string_agg
+      (
+         format
+         (
+            'ALTER SCHEMA %I OWNER TO %I;',
+            schema_name,
+            --Check if there is a user matching the schema name, and try and assign the
+            -- shcema to them.  Otherwise, give it to the executing user.
+            COALESCE((SELECT rolname FROM pg_roles WHERE rolname = schema_name), current_user)
+         ), ' '
+      )
       FROM INFORMATION_SCHEMA.SCHEMATA
       WHERE schema_owner = 'classdb'
    );
