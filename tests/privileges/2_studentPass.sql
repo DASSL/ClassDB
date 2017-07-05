@@ -19,6 +19,8 @@ CREATE TABLE test
 SELECT listTables();
 SELECT describe('test');
 
+DROP TABLE test;
+
 
 --CRUD on tables created by the student. This table should be placed in their own schema
 -- and be accessed without needing to be fully schema qualified
@@ -48,6 +50,7 @@ SELECT * FROM testInsTab;
 
 --Create table in $user schema to test read privileges for Instructors and non-
 -- access for DBManagers
+DROP TABLE IF EXISTS testStuUsr;
 CREATE TABLE testStuUsr
 (
    col1 VARCHAR(20)

@@ -10,6 +10,36 @@
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 
+--Not modify username or logging columns in Student and instructor tables
+UPDATE classdb.Student
+SET userName = 'diffName'
+WHERE userName = 'stu0';
+
+UPDATE classdb.Student
+SET lastddlactivity = '2017-06-30'
+WHERE userName = 'stu0';
+
+UPDATE classdb.Student
+SET lastddloperation = 'CREATE TABLE'
+WHERE userName = 'stu0';
+
+UPDATE classdb.Student
+SET lastddlobject = 'test'
+WHERE userName = 'stu0';
+
+UPDATE classdb.Student
+SET ddlcount = 20
+WHERE userName = 'stu0';
+
+UPDATE classdb.Student
+SET lastconnection = '2017-06-30'
+WHERE userName = 'stu0';
+
+UPDATE classdb.Student
+SET connectioncount = 10
+WHERE userName = 'stu0';
+
+
 --Not read Student's $user schemas
 SELECT * FROM stu0.insStuTest;
 

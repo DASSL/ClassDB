@@ -28,7 +28,7 @@ SELECT classdb.dropInstructor('testins');
 SELECT classdb.createDBManager('testman', 'noname');
 SELECT classdb.dropDBManager('testman');
 
-SELECT classdb.dropAllStudents();
+--SELECT classdb.dropAllStudents();
 
 
 --CRUD on tables created by the instructor. This table should be placed in their own schema
@@ -61,7 +61,7 @@ DROP TABLE test;
 CREATE TABLE public.pubTest
 (
    col1 VARCHAR(10)
-)
+);
 
 INSERT INTO public.pubTest VALUES ('hello');
 
@@ -82,27 +82,29 @@ SELECT * FROM classdb.Instructor;
 
 
 --Update name and schoolID in Student table
-SELECT classdb.createStudent('teststu', 'Nonme', '50124');
+SELECT classdb.createStudent('teststu1', 'Nonme', '50124');
 
 UPDATE classdb.Student
 SET studentName = 'NoName', schoolID = '50125'
-WHERE userName = 'teststu';
+WHERE userName = 'teststu1';
 
-SELECT classdb.dropStudent('teststu');
+SELECT classdb.dropStudent('teststu1');
 
 
 --Create table in public schema to test read privileges for Students and DBManagers
+DROP TABLE IF EXISTS public.testInsPub;
 CREATE TABLE public.testInsPub
 (
    col1 VARCHAR(20)
 );
 
-INSERT INTO public.testInsTab VALUES ('Read by: anyone');
+INSERT INTO public.testInsPub VALUES ('Read by: anyone');
 
 --Create table in $user schema to test non-access for other roles
+DROP TABLE IF EXISTS testInsUsr;
 CREATE TABLE testInsUsr
 (
    col1 VARCHAR(20)
-)
+);
 
 INSERT INTO testInsUsr VALUES('Read by: no one');

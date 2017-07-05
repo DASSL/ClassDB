@@ -28,7 +28,7 @@ SELECT classdb.dropInstructor('testins');
 SELECT classdb.createDBManager('testman', 'noname');
 SELECT classdb.dropDBManager('testman');
 
-SELECT classdb.dropAllStudents();
+--SELECT classdb.dropAllStudents();
 
 --CRUD on tables created by the DBManager. This table should be placed in their own schema
 -- and be accessed without needing to be fully schema qualified
@@ -69,13 +69,14 @@ SELECT classdb.dropStudent('teststu');
 
 
 --Read on tables in the public schema created by Instructor (should return 1 row)
-SELECT * FROM testInsTab;
+SELECT * FROM public.testInsPub;
 
 
 --Create table in $user schema to test non-access for other roles
+DROP TABLE IF EXISTS testDbmUsr;
 CREATE TABLE testDbmUsr
 (
    col1 VARCHAR(20)
-)
+);
 
 INSERT INTO testDbmUsr VALUES('Read by: no one');

@@ -20,7 +20,7 @@ SET lastddlactivity = '2017-06-30'
 WHERE userName = 'stu0';
 
 UPDATE classdb.Student
-SET lastddloperation = 'CREATE'
+SET lastddloperation = 'CREATE TABLE'
 WHERE userName = 'stu0';
 
 UPDATE classdb.Student
