@@ -268,12 +268,12 @@ GRANT EXECUTE ON FUNCTION
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.createDBManager(managerUserName VARCHAR(63), managerName VARCHAR(100),
+DROP FUNCTION IF EXISTS classdb.createDBManager(managerUserName VARCHAR(63),
                         initialPwd VARCHAR(128));
---Define a function to register a user in DBManager role
+--Define a function to register a user in the DBManager role
 -- initial password is optional
 CREATE FUNCTION
-   classdb.createDBManager(managerUserName VARCHAR(63), managerName VARCHAR(100),
+   classdb.createDBManager(managerUserName VARCHAR(63),
                            initialPwd VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
 $$
 BEGIN
@@ -285,16 +285,15 @@ $$ LANGUAGE plpgsql
 
 --Change function ownership and set execution permissions
 ALTER FUNCTION
-   classdb.createDBManager(managerUserName VARCHAR(63), managerName VARCHAR(100),
-                           initialPwd VARCHAR(128)) OWNER TO ClassDB;
+   classdb.createDBManager(managerUserName VARCHAR(63), initialPwd VARCHAR(128))
+   OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION
-   classdb.createDBManager(managerUserName VARCHAR(63), managerName VARCHAR(100),
-                           initialPwd VARCHAR(128)) FROM PUBLIC;
+   classdb.createDBManager(managerUserName VARCHAR(63), initialPwd VARCHAR(128))
+   FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION
-   classdb.createDBManager(managerUserName VARCHAR(63), managerName VARCHAR(100),
-                           initialPwd VARCHAR(128))
+   classdb.createDBManager(managerUserName VARCHAR(63), initialPwd VARCHAR(128))
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
