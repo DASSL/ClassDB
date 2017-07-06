@@ -32,7 +32,8 @@ END
 $$;
 
 
---Suppress NOTICE messages - we don't care
+--Suppress NOTICE messages for this script only, this will not apply to functions
+-- defined within. This hides messages that are unimportant, but possibly confusing
 SET LOCAL client_min_messages TO WARNING;
 
 --Define a convenient ephemeral function to create a role with the given name
