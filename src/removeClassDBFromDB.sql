@@ -55,6 +55,45 @@ DROP SCHEMA IF EXISTS ClassDB CASCADE;
 --change ownership of the current DB to current user so they can delete the DB
 -- TBD
 
+
+--Dynamically create a query to reassign all user schemas owned by classdb to
+-- be owned by themselves, instead of ClassDB
+-- One ALTER SCHEMA statement is generated per schema classdb owns
+DO
+$$
+BEGIN
+   IF EXISTS(SELECT schema_name
+             FROM INFORMATION_SCHEMA.SChEMATA
+             WHERE schema_owner = 'classdb') THEN
+      EXECUTE
+      (
+         SELECT string_agg
+         (
+            format
+            (
+               'ALTER SCHEMA %I OWNER TO %I;',
+               schema_name,
+               --Check if there is a user matching the schema name, and try and assign the
+               -- shcema to them.  Otherwise, give it to the executing user.
+               COALESCE((SELECT rolname FROM pg_roles WHERE rolname = schema_name), current_user)
+            ), ' '
+         )
+         FROM INFORMATION_SCHEMA.SCHEMATA
+         WHERE schema_owner = 'classdb'
+      );
+   ELSE
+      RAISE NOTICE 'No schemas are owned by ClassDB - skipping reassignment';
+   END IF;
+END
+$$;
+
+
+--Drop all remaining ClassDB objects/permissions in this database.
+DROP OWNED BY ClassDB_Instructor;
+DROP OWNED BY ClassDB_DBManager;
+DROP OWNED BY ClassDB_Student;
+
+
 --create a list of things users have to do on their own
 -- commenting out the RAISE NOTICE statements because they cause syntax error
 DO
