@@ -59,22 +59,28 @@ $$;
 DO
 $$
 BEGIN
-   EXECUTE
-   (
-      SELECT string_agg
+   IF EXISTS(SELECT schema_name
+             FROM INFORMATION_SCHEMA.SChEMATA
+             WHERE schema_owner = 'classdb') THEN
+      EXECUTE
       (
-         format
+         SELECT string_agg
          (
-            'ALTER SCHEMA %I OWNER TO %I;',
-            schema_name,
-            --Check if there is a user matching the schema name, and try and assign the
-            -- shcema to them.  Otherwise, give it to the executing user.
-            COALESCE((SELECT rolname FROM pg_roles WHERE rolname = schema_name), current_user)
-         ), ' '
-      )
-      FROM INFORMATION_SCHEMA.SCHEMATA
-      WHERE schema_owner = 'classdb'
-   );
+            format
+            (
+               'ALTER SCHEMA %I OWNER TO %I;',
+               schema_name,
+               --Check if there is a user matching the schema name, and try and assign the
+               -- shcema to them.  Otherwise, give it to the executing user.
+               COALESCE((SELECT rolname FROM pg_roles WHERE rolname = schema_name), current_user)
+            ), ' '
+         )
+         FROM INFORMATION_SCHEMA.SCHEMATA
+         WHERE schema_owner = 'classdb'
+      );
+   ELSE
+      RAISE NOTICE 'No schemas are owned by ClassDB - skipping reassignment';
+   END IF;
 END
 $$;
 
