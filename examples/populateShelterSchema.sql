@@ -1,4 +1,4 @@
---shelterCreate.sql - Schemas for CS205
+--populateShelterSchema.sql - Schemas for CS205
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
