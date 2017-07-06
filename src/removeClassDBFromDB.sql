@@ -70,9 +70,14 @@ BEGIN
              FROM pg_auth_members am
              JOIN pg_roles r1 ON am.member = r1.oid
              JOIN pg_roles r2 ON am.roleid = r2.oid
-             WHERE r2.rolname = 'classdb_instructor'
+             WHERE (r2.rolname = 'classdb_instructor'
              OR r2.rolname = 'classdb_dbmanager'
-             OR r2.rolname = 'classdb_student') THEN
+             OR r2.rolname = 'classdb_student')
+             AND EXISTS(SELECT schema_name
+                        FROM INFORMATION_SCHEMA.SCHEMATA
+                        WHERE schema_name = r1.rolname
+                        AND catalog_name = current_database())
+             ) THEN
       EXECUTE
       (
          SELECT string_agg
@@ -90,6 +95,10 @@ BEGIN
          WHERE r2.rolname = 'classdb_instructor'
          OR r2.rolname = 'classdb_dbmanager'
          OR r2.rolname = 'classdb_student'
+         AND EXISTS(SELECT schema_name
+                    FROM INFORMATION_SCHEMA.SCHEMATA
+                    WHERE schema_name = r1.rolname
+                    AND catalog_name = current_database())
       );
    ELSE
       RAISE NOTICE 'No schemas are owned by ClassDB - skipping reassignment';
