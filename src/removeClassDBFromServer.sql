@@ -40,18 +40,6 @@ BEGIN
 END
 $$;
 
---REVOKE permissions on the current database from each ClassDB role, since all
--- permissions must be removed from roles before they can be dropped
-DO
-$$
-BEGIN
-   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM classdb_instructor;', current_database());
-   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM classdb_dbmanager;', current_database());
-   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM classdb_student;', current_database());
-   EXECUTE format('REVOKE CREATE ON DATABASE %I FROM classdb;', current_database());
-END
-$$;
-
 --Drop app-specific roles
 -- need to make sure that removeClassDBFromDB is complete
 DROP ROLE IF EXISTS ClassDB_Instructor;

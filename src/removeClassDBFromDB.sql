@@ -56,6 +56,18 @@ DROP SCHEMA IF EXISTS ClassDB CASCADE;
 -- TBD
 
 
+--REVOKE permissions on the current database from each ClassDB role
+DO
+$$
+BEGIN
+   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM classdb_instructor;', current_database());
+   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM classdb_dbmanager;', current_database());
+   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM classdb_student;', current_database());
+   EXECUTE format('REVOKE CREATE ON DATABASE %I FROM classdb;', current_database());
+END
+$$;
+
+
 --Dynamically create a query to reassign all user schemas owned by classdb to
 -- be owned by themselves, instead of ClassDB
 -- One ALTER SCHEMA statement is generated per schema classdb owns
