@@ -35,7 +35,7 @@ $$;
 --Define a convenient ephemeral function to create a role with the given name
 -- create the role only if it does not already exist
 -- this function will be automatically dropped when the current session ends
-CREATE FUNCTION pg_temp.createGroupRole(roleName VARCHAR(63)) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION pg_temp.createGroupRole(roleName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
