@@ -66,6 +66,8 @@ $$;
 DO
 $$
 BEGIN
+   --The query on pg_roles and pg_auth_members returns all users that belong to
+   -- a classdb user role (Instructor, DBManager, or Student)
    IF EXISTS(SELECT r1.rolname
              FROM pg_auth_members am
              JOIN pg_roles r1 ON am.member = r1.oid
@@ -73,6 +75,8 @@ BEGIN
              WHERE (r2.rolname = 'classdb_instructor'
              OR r2.rolname = 'classdb_dbmanager'
              OR r2.rolname = 'classdb_student')
+             --This subquery checks that a schema matching the user's name exists,
+             -- and that it is in the current database
              AND EXISTS(SELECT schema_name
                         FROM INFORMATION_SCHEMA.SCHEMATA
                         WHERE schema_name = r1.rolname
