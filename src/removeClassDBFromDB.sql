@@ -1,6 +1,6 @@
 --removeClassDBFromDB.sql - ClassDB
 
---Sean Murthy
+--Sean Murthy, Steven Rollo
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
@@ -32,7 +32,7 @@ BEGIN
                   WHERE rolname = current_user AND rolsuper = TRUE
                  ) THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
-                        ' superuser privileges';
+                      ' superuser privileges';
    END IF;
 END
 $$;
@@ -40,6 +40,10 @@ $$;
 --event triggers
 DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
 DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
+
+--Drop the metaFunctions from public, if they exist
+DROP FUNCTION IF EXISTS public.describe(VARCHAR(63), VARCHAR(63));
+DROP FUNCTION IF EXISTS public.listTables(VARCHAR(63));
 
 --remove membership of students, instructors, and db managers
 -- TBD
@@ -53,11 +57,16 @@ DROP SCHEMA IF EXISTS ClassDB CASCADE;
 
 --create a list of things users have to do on their own
 -- commenting out the RAISE NOTICE statements because they cause syntax error
-
---RAISE NOTICE 'Drop user roles or adjust their privileges';
---RAISE NOTICE 'Adjust privileges on PUBLIC schema if appropriate';
---RAISE NOTICE 'Run DROP DATABASE statement to remove the database if appropriate';
---RAISE NOTICE 'Run prepareClassServer.sql after removing ClassDB '
---             'from other databases';
+DO
+$$
+BEGIN
+   RAISE NOTICE 'Drop user roles or adjust their privileges';
+   RAISE NOTICE 'Drop user schemas or adjust their privilege';
+   RAISE NOTICE 'Adjust privileges on PUBLIC schema if appropriate';
+   RAISE NOTICE 'Run DROP DATABASE statement to remove the database if appropriate';
+   RAISE NOTICE 'Run prepareClassServer.sql after removing ClassDB '
+                'from other databases';
+END
+$$;
 
 COMMIT;
