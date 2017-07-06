@@ -32,6 +32,9 @@ END
 $$;
 
 
+--Suppress NOTICE messages - we don't care
+SET LOCAL client_min_messages TO WARNING;
+
 --Define a convenient ephemeral function to create a role with the given name
 -- create the role only if it does not already exist
 -- this function will be automatically dropped when the current session ends

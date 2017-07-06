@@ -51,6 +51,10 @@ END
 $$;
 
 
+--Suppress NOTICE messages - we don't care
+SET LOCAL client_min_messages TO WARNING;
+
+
 --Grant appropriate privileges to different roles to the current database
 DO
 $$
