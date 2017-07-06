@@ -48,14 +48,6 @@ DROP FUNCTION IF EXISTS public.listTables(VARCHAR(63));
 --remove membership of students, instructors, and db managers
 -- TBD
 
---Delete the entire classdb schema in the current database
--- no need to drop individual objects created in that schema
-DROP SCHEMA IF EXISTS ClassDB CASCADE;
-
---change ownership of the current DB to current user so they can delete the DB
--- TBD
-
-
 --REVOKE permissions on the current database from each ClassDB role
 DO
 $$
@@ -74,9 +66,13 @@ $$;
 DO
 $$
 BEGIN
-   IF EXISTS(SELECT schema_name
-             FROM INFORMATION_SCHEMA.SChEMATA
-             WHERE schema_owner = 'classdb') THEN
+   IF EXISTS(SELECT r1.rolname
+             FROM pg_auth_members am
+             JOIN pg_roles r1 ON am.member = r1.oid
+             JOIN pg_roles r2 ON am.roleid = r2.oid
+             WHERE r2.rolname = 'classdb_instructor'
+             OR r2.rolname = 'classdb_dbmanager'
+             OR r2.rolname = 'classdb_student') THEN
       EXECUTE
       (
          SELECT string_agg
@@ -84,14 +80,16 @@ BEGIN
             format
             (
                'ALTER SCHEMA %I OWNER TO %I;',
-               schema_name,
-               --Check if there is a user matching the schema name, and try and assign the
-               -- shcema to them.  Otherwise, give it to the executing user.
-               COALESCE((SELECT rolname FROM pg_roles WHERE rolname = schema_name), current_user)
+               r1.rolname,
+               r1.rolname
             ), ' '
          )
-         FROM INFORMATION_SCHEMA.SCHEMATA
-         WHERE schema_owner = 'classdb'
+         FROM pg_auth_members am
+         JOIN pg_roles r1 ON am.member = r1.oid
+         JOIN pg_roles r2 ON am.roleid = r2.oid
+         WHERE r2.rolname = 'classdb_instructor'
+         OR r2.rolname = 'classdb_dbmanager'
+         OR r2.rolname = 'classdb_student'
       );
    ELSE
       RAISE NOTICE 'No schemas are owned by ClassDB - skipping reassignment';
@@ -104,6 +102,14 @@ $$;
 DROP OWNED BY ClassDB_Instructor;
 DROP OWNED BY ClassDB_DBManager;
 DROP OWNED BY ClassDB_Student;
+
+
+--Delete the entire classdb schema in the current database
+-- no need to drop individual objects created in that schema
+DROP SCHEMA IF EXISTS ClassDB CASCADE;
+
+--change ownership of the current DB to current user so they can delete the DB
+-- TBD
 
 
 --create a list of things users have to do on their own
