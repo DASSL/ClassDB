@@ -57,10 +57,6 @@ BEGIN
 END
 $$;
 
-
---Suppress NOTICE messages - we don't care
-SET LOCAL client_min_messages TO WARNING;
-
 --Define a function to test if a role is "defined"
 -- a role is defined if a pg_catalog.pg_roles row exists for the supplied name
 -- use this function to test if a string represents the name of a server role
