@@ -56,6 +56,9 @@ BEGIN
 END
 $$;
 
+--Suppress NOTICE messages for this script only, this will not apply to functions
+-- defined within. This hides messages that are unimportant, but possibly confusing
+SET LOCAL client_min_messages TO WARNING;
 
 --pg_reload_conf() reloads the postgres setting so the changes from ALTER SYSTEM
 -- statements apply without having to restart the server
