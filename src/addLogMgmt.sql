@@ -10,8 +10,9 @@
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 --This script must be run as superuser.
---enableServerLogging.sql must be run prior to this script, or classdb.importLog()
--- will fail to execute
+--This script should be run in every database in which log management is required
+-- it should be run after running enableServerLogging.sql for the server and after running
+-- addUserMgmt.sql for the current database
 
 --This script adds the connection logging portion of the ClassDB user monitoring
 -- system.  It provides the classdb.importLog () function to import
