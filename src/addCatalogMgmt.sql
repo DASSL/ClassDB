@@ -1,4 +1,4 @@
---addCatalogMgmt - ClassDB
+--addCatalogMgmt.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
