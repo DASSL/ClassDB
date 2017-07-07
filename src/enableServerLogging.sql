@@ -43,6 +43,7 @@ BEGIN
       RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
    END IF;
 END
+$$;
 
 --We are running pg_reload_conf() in a transaction block so we don't extraneously
 -- reload the settings.
