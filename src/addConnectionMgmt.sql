@@ -26,7 +26,7 @@ $$
 BEGIN
    IF NOT classdb.isSuperUser() THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
-                        ' superuser privileges';
+                      ' superuser privileges';
    END IF;
 END
 $$;
