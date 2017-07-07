@@ -17,6 +17,7 @@
 
 START TRANSACTION;
 
+
 --Make sure the current user has sufficient privilege to run this script
 -- privileges required: superuser
 DO
@@ -28,6 +29,12 @@ BEGIN
    END IF;
 END
 $$;
+
+
+--Suppress NOTICE messages for this script only, this will not apply to functions
+-- defined within. This hides messages that are unimportant, but possibly confusing
+SET LOCAL client_min_messages TO WARNING;
+
 
 DROP FUNCTION IF EXISTS classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128));
 --Define a function to create a user with the name and password supplied
