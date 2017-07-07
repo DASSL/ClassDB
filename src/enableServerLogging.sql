@@ -10,7 +10,8 @@
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 --This script must be run as superuser.
---This script must be run after initalizeDB.sql and before addLogMgmt.sql
+--This script must be run before addLogMgmt.sql.  This script only needs to be run
+-- once per server, however.
 
 --Additonally, this script must be run using a client that will send each statement
 -- individually, such as psql.  Some clients, like pgAdmin 4, cannot run this script
@@ -33,23 +34,6 @@ ALTER SYSTEM SET log_connections TO 'on';
 ALTER SYSTEM SET log_destination TO 'csvlog';
 ALTER SYSTEM SET log_filename TO 'postgresql-%m.%d.log';
 
-START TRANSACTION;
-
---Check for superuser
-DO
-$$
-BEGIN
-   IF NOT (SELECT classdb.isSuperUser()) THEN
-      RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
-   END IF;
-END
-$$;
-
---We are running pg_reload_conf() in a transaction block so we don't extraneously
--- reload the settings.
-
 --pg_reload_conf() reloads the postgres setting so the changes from ALTER SYSTEM
 -- statements apply without having to restart the server
 SELECT pg_reload_conf();
-
-COMMIT;
