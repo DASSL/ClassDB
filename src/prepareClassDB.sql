@@ -51,6 +51,11 @@ END
 $$;
 
 
+--Suppress NOTICE messages for this script only, this will not apply to functions
+-- defined within. This hides messages that are unimportant, but possibly confusing
+SET LOCAL client_min_messages TO WARNING;
+
+
 --Grant appropriate privileges to different roles to the current database
 DO
 $$
