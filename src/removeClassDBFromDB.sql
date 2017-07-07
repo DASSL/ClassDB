@@ -72,16 +72,11 @@ BEGIN
              FROM pg_auth_members am
              JOIN pg_roles r1 ON am.member = r1.oid
              JOIN pg_roles r2 ON am.roleid = r2.oid
-             WHERE (r2.rolname = 'classdb_instructor'
-             OR r2.rolname = 'classdb_dbmanager'
-             OR r2.rolname = 'classdb_student')
-             --This subquery checks that a schema matching the user's name exists,
-             -- and that it is in the current database
-             AND EXISTS(SELECT schema_name
-                        FROM INFORMATION_SCHEMA.SCHEMATA
-                        WHERE schema_name = r1.rolname
-                        AND catalog_name = current_database())
-             ) THEN
+             --This join allows us to check that a schema matching the user's name exists,
+             -- and that it is owned by ClassDB
+             JOIN INFORMATION_SCHEMA.SCHEMATA iss ON iss.schema_name = r1.rolname
+             WHERE r2.rolname IN ('classdb_instructor', 'classdb_dbmanager', 'classdb_student')
+             AND iss.schema_owner = 'classdb') THEN
       EXECUTE
       (
          SELECT string_agg
@@ -96,13 +91,11 @@ BEGIN
          FROM pg_auth_members am
          JOIN pg_roles r1 ON am.member = r1.oid
          JOIN pg_roles r2 ON am.roleid = r2.oid
-         WHERE r2.rolname = 'classdb_instructor'
-         OR r2.rolname = 'classdb_dbmanager'
-         OR r2.rolname = 'classdb_student'
-         AND EXISTS(SELECT schema_name
-                    FROM INFORMATION_SCHEMA.SCHEMATA
-                    WHERE schema_name = r1.rolname
-                    AND catalog_name = current_database())
+         --This join allows us to check that a schema matching the user's name exists,
+         -- and that it is owned by ClassDB
+         JOIN INFORMATION_SCHEMA.SCHEMATA iss ON iss.schema_name = r1.rolname
+         WHERE r2.rolname IN ('classdb_instructor', 'classdb_dbmanager', 'classdb_student')
+         AND iss.schema_owner = 'classdb'
       );
    ELSE
       RAISE NOTICE 'No schemas are owned by ClassDB - skipping reassignment';
