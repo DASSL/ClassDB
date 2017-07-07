@@ -15,7 +15,7 @@
 --This script adds the ClassDB DDL statement monitoring system.  Two event triggers
 -- log the last DDL statement executed for each student in the student table
 
-BEGIN TRANSACTION;
+START TRANSACTION;
 
 --Check for superuser
 DO
