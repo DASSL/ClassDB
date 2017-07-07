@@ -98,7 +98,7 @@ CREATE FUNCTION
    classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128)) RETURNS VOID AS
 $$
 BEGIN
-   IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = classdb.foldPgID($1)) 
+   IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = classdb.foldPgID($1))
       THEN
       RAISE NOTICE 'User "%" already exists, password not modified', $1;
    ELSE
@@ -106,7 +106,7 @@ BEGIN
          format('CREATE USER %s ENCRYPTED PASSWORD %L', $1, COALESCE($2, $1));
    END IF;
 
-   IF EXISTS(SELECT * FROM pg_catalog.pg_namespace WHERE nspname = classdb.foldPgID($1)) 
+   IF EXISTS(SELECT * FROM pg_catalog.pg_namespace WHERE nspname = classdb.foldPgID($1))
       THEN
       RAISE NOTICE 'Schema "%" already exists', $1;
    ELSE
@@ -313,8 +313,8 @@ BEGIN
       DELETE FROM classdb.Student S WHERE S.userName = classdb.foldPgID($1);
 
       IF EXISTS(SELECT * FROM pg_catalog.pg_roles
-                WHERE pg_catalog.pg_has_role(classdb.foldPgID($1), oid, 'member') AND 
-				      rolname != classdb.foldPgID($1)
+                WHERE pg_catalog.pg_has_role(classdb.foldPgID($1), oid, 'member') AND
+                      rolname != classdb.foldPgID($1)
                ) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
@@ -370,7 +370,7 @@ BEGIN
       DELETE FROM classdb.Instructor S WHERE S.userName = classdb.foldPgID($1);
       IF EXISTS(SELECT * FROM pg_catalog.pg_roles
                 WHERE pg_catalog.pg_has_role(classdb.foldPgID($1), oid, 'member') AND
-				      rolname != classdb.foldPgID($1)
+                      rolname != classdb.foldPgID($1)
                ) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
@@ -406,7 +406,7 @@ BEGIN
       EXECUTE format('REVOKE ClassDB_DBManager FROM %s', userName);
       IF EXISTS(SELECT * FROM pg_catalog.pg_roles
                 WHERE pg_catalog.pg_has_role(classdb.foldPgID($1), oid, 'member') AND
-				      rolname != classdb.foldPgID($1)
+                      rolname != classdb.foldPgID($1)
                ) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
@@ -436,15 +436,15 @@ DROP FUNCTION IF EXISTS classdb.dropUser(userName VARCHAR(63));
 CREATE FUNCTION classdb.dropUser(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
-   IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = classdb.foldPgID($1)) 
+   IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = classdb.foldPgID($1))
       THEN
-      IF pg_catalog.pg_has_role(classdb.foldPgID($1), 'classdb_student', 'member') 
-	     THEN
+      IF pg_catalog.pg_has_role(classdb.foldPgID($1), 'classdb_student', 'member')
+         THEN
          DELETE FROM classdb.Student WHERE userName = classdb.foldPgID($1);
       END IF;
 
       IF pg_catalog.pg_has_role(classdb.foldPgID($1), 'classdb_instructor', 'member')
-	     THEN
+         THEN
          DELETE FROM classdb.Instructor WHERE userName = classdb.foldPgID($1);
       END IF;
 

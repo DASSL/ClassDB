@@ -102,23 +102,23 @@ BEGIN
    IF classdb.foldPgID('test') <> 'test' THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   
+
    IF classdb.foldPgID('Test') <> 'test' THEN
       RETURN 'FAIL: Code 2';
    END IF;
-   
+
    IF classdb.foldPgID('"test"') <> 'test' THEN
       RETURN 'FAIL: Code 3';
    END IF;
-   
+
    IF classdb.foldPgID('"Test"') <> 'Test' THEN
       RETURN 'FAIL: Code 4';
    END IF;
-   
+
    IF classdb.foldPgID('""Test""') <> '"Test"' THEN
       RETURN 'FAIL: Code 5';
    END IF;
-   
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
@@ -148,7 +148,7 @@ BEGIN
    RAISE INFO '%   testUser2_NoLogin',
       pg_temp.testRoleCapabilities('testUser2_NoLogin');
    DROP USER testUser2_NoLogin;
-   
+
    --test foldPgID
    RAISE INFO '%   foldPgID()', pg_temp.testFoldPgID();
    
