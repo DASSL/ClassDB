@@ -94,9 +94,11 @@ BEGIN
    --initialPassword given with no schoolID
    PERFORM classdb.createStudent('testStu3', 'Cathy Young', NULL, 'testpass2');
 
-   --Multi-role: NOTICE is expected password should not change
+   --Multi-role: NOTICE is suppressed; password should not change
    PERFORM classdb.createStudent('testStuDBM0', 'Edwin Morrison', NULL, 'notPass');
+   SET LOCAL client_min_messages TO WARNING;
    PERFORM classdb.createDBManager('testStuDBM0', 'testpass3');
+   RESET client_min_messages;
 
    --Test existence of all schemas
    IF NOT(pg_temp.isSchemaDefined('testStu0') AND pg_temp.isSchemaDefined('testStu1')
@@ -128,9 +130,11 @@ BEGIN
    --initialPassword given: Password should be set to 'testpass4'
    PERFORM classdb.createInstructor('testIns1', 'Dianna Wilson', 'testpass4');
 
-   --Multi-role: NOTICE is expected, password should not change
+   --Multi-role: NOTICE is suppressed; password should not change
    PERFORM classdb.createInstructor('testStuIns1', 'Rosalie Flowers');
+   SET LOCAL client_min_messages TO WARNING;
    PERFORM classdb.createStudent('testStuIns1', 'Rosalie Flowers', '106', 'testpass5');
+   RESET client_min_messages;
 
 
    --Test existence of all schemas
@@ -158,9 +162,11 @@ BEGIN
    --initialPassword used: Password should be set to 'testpass6'
    PERFORM classdb.createDBManager('testDBM1', 'testpass6');
 
-   --Multi-role: NOTICE is expected, password should not change
+   --Multi-role: NOTICE is suppressed; password should not change
    PERFORM classdb.createDBManager('testInsMg0', 'testpass7');
+   SET LOCAL client_min_messages TO WARNING;
    PERFORM classdb.createInstructor('testInsMg0', 'Shawn Nash');
+   RESET client_min_messages;
 
    --Test existence of all schemas
    IF NOT(pg_temp.isSchemaDefined('testDBM0') AND pg_temp.isSchemaDefined('testDBM1')
@@ -198,8 +204,10 @@ BEGIN
 
    --Multi-role case: schema and role should still exist after dropStudent
    PERFORM classdb.createStudent('testStuIns2', 'Roland Baker');
+   SET LOCAL client_min_messages TO WARNING;
    PERFORM classdb.createInstructor('testStuIns2', 'Roland Baker');
    PERFORM classdb.dropStudent('testStuIns2');
+   RESET client_min_messages;
 
    IF classdb.isRoleDefined('testStuIns2') THEN
       IF pg_temp.isSchemaDefined('testStuIns2') THEN
@@ -235,8 +243,10 @@ BEGIN
 
    --Multi-role case: schema and role should still exist after dropInstructor
    PERFORM classdb.createInstructor('testStuIns3', 'Julius Patton');
+   SET LOCAL client_min_messages TO WARNING;
    PERFORM classdb.createStudent('testStuIns3', 'Julius Paton');
    PERFORM classdb.dropInstructor('testStuIns3');
+   RESET client_min_messages;
 
    IF classdb.isRoleDefined('testStuIns3') THEN
       IF pg_temp.isSchemaDefined('testStuIns3') THEN
@@ -272,8 +282,10 @@ BEGIN
 
    --Multi-role case: schema and role should still exist after dropDBManager
    PERFORM classdb.createDBManager('testInsMg2');
+   SET LOCAL client_min_messages TO WARNING;
    PERFORM classdb.createInstructor('testInsMg2', 'Alice West');
    PERFORM classdb.dropDBManager('testInsMg2');
+   RESET client_min_messages;
 
    IF classdb.isRoleDefined('testInsMg2') THEN
       IF pg_temp.isSchemaDefined('testInsMg2') THEN
