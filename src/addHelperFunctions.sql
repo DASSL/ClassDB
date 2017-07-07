@@ -183,7 +183,7 @@ SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
 $$ LANGUAGE sql;
 
 ALTER FUNCTION
-   classb.foldPgID(identifier VARCHAR(65))
+   classdb.foldPgID(identifier VARCHAR(65))
    OWNER TO ClassDB;
 
 
