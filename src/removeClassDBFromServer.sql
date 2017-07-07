@@ -40,6 +40,10 @@ BEGIN
 END
 $$;
 
+--Suppress NOTICE messages for this script only, this will not apply to functions
+-- defined within. This hides messages that are unimportant, but possibly confusing
+SET LOCAL client_min_messages TO WARNING;
+
 --Drop app-specific roles
 -- need to make sure that removeClassDBFromDB is complete
 DROP ROLE IF EXISTS ClassDB_Instructor;
