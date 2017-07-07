@@ -10,7 +10,8 @@
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 --This script must be run as superuser.
---initalizeDB.sql must be run prior to this script
+--This script should be run in every database in which DDL activity monitoring is required
+-- it should be run after running addUserMgmt.sql
 
 --This script adds the ClassDB DDL statement monitoring system.  Two event triggers
 -- log the last DDL statement executed for each student in the student table
@@ -42,7 +43,7 @@ SET LOCAL client_min_messages TO WARNING;
 
 --We use CREATE OR REPLACE for this function because it can't be dropped if the
 -- event triggers already exist.  For example, when re-runing this script
-CREATE OR REPLACE FUNCTION classdb.updateStudentActivity()
+CREATE OR REPLACE FUNCTION classdb.updateDDLActivity()
 RETURNS event_trigger AS
 $$
 DECLARE
@@ -91,14 +92,14 @@ $$ LANGUAGE plpgsql
 -- which is fired when any DDL statement finishes executing. Both triggers are
 -- needed to log all DDL statements, as not all infomation about DROP statements
 -- is provided by the ddl_command_end event
-DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
-CREATE EVENT TRIGGER updateStudentActivityTriggerDrop
+DROP EVENT TRIGGER IF EXISTS triggerDDLCommandSqlDrop;
+CREATE EVENT TRIGGER triggerDDLCommandSqlDrop
 ON sql_drop
-EXECUTE PROCEDURE classdb.updateStudentActivity();
+EXECUTE PROCEDURE classdb.updateDDLActivity();
 
-DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
-CREATE EVENT TRIGGER updateStudentActivityTriggerDDL
+DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
+CREATE EVENT TRIGGER triggerDDLCommandEnd
 ON ddl_command_end
-EXECUTE PROCEDURE classdb.updateStudentActivity();
+EXECUTE PROCEDURE classdb.updateDDLActivity();
 
 COMMIT;
