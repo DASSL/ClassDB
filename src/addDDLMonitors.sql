@@ -17,6 +17,16 @@
 
 BEGIN TRANSACTION;
 
+--Check for superuser
+DO
+$$
+BEGIN
+   IF NOT (SELECT classdb.isSuperUser()) THEN
+      RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
+   END IF;
+END
+$$;
+
 --Suppress NOTICE messages for this script only, this will not apply to functions
 -- defined within. This hides messages that are unimportant, but possibly confusing
 SET LOCAL client_min_messages TO WARNING;
