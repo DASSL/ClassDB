@@ -1,4 +1,4 @@
---prepareClassDB.sql - ClassDB
+--addUserMgmt.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
@@ -9,16 +9,14 @@
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
-
 --This script requires the current user to be a superuser
 
---This script should be run after running the script "prepareClassServer.sql"
+--This script should be run after initializeDB.sql
 
---This script will create all procedures used to manage ClassDB users, and will
--- set up appropriate access controls for each of the four ClassDB roles.
-
+--This script will create all procedures used to manage ClassDB users
 
 START TRANSACTION;
+
 
 --Make sure the current user has sufficient privilege to run this script
 -- privileges required: superuser
@@ -33,63 +31,9 @@ END
 $$;
 
 
---Make sure the expected app-specific roles are already defined:
--- roles expected: ClassDB, Student, Instructor, DBManager
-DO
-$$
-BEGIN
-   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
-                  WHERE rolname IN ('classdb', 'classdb_instructor',
-                           'classdb_dbmanager', 'class_dbstudent')
-                 ) THEN
-      RAISE EXCEPTION
-         'Missing group roles: one or more expected group roles are undefined';
-   END IF;
-END
-$$;
-
-
 --Suppress NOTICE messages for this script only, this will not apply to functions
 -- defined within. This hides messages that are unimportant, but possibly confusing
 SET LOCAL client_min_messages TO WARNING;
-
-
---Grant appropriate privileges to different roles to the current database
-DO
-$$
-DECLARE
-   currentDB VARCHAR(128);
-BEGIN
-   currentDB := current_database();
-
-   --Disallow DB connection to all users
-   -- Postgres grants CONNECT to all by default
-   EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM PUBLIC', currentDB);
-
-   --Let only app-specific roles connect to the DB
-   -- no need for ClassDB to connect to the DB
-   EXECUTE format('GRANT CONNECT ON DATABASE %I TO ClassDB_Instructor, ClassDB_Student,'
-                   ||'ClassDB_DBManager', currentDB);
-
-   --Allow ClassDB to create schemas on the current database
-   -- all schema-creation operations are done only by this role in this app
-   EXECUTE format('GRANT CREATE ON DATABASE %I TO ClassDB', currentDB);
-END
-$$;
-
-
---Prevent students from modifying the public schema
--- public schema contains objects and functions students can read
-REVOKE CREATE ON SCHEMA public FROM ClassDB_Student;
-
---Create a schema to hold app's admin info and assign privileges on that schema
-CREATE SCHEMA IF NOT EXISTS classdb;
-GRANT ALL PRIVILEGES ON SCHEMA classdb
-   TO ClassDB, ClassDB_Instructor, ClassDB_DBManager;
-
---Grant ClassDB to the current user
--- This allows altering privilieges of objects, even after being owned by ClassDB
-GRANT ClassDB TO current_user;
 
 
 DROP FUNCTION IF EXISTS classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128));
@@ -492,89 +436,6 @@ REVOKE ALL ON FUNCTION
 
 GRANT EXECUTE ON FUNCTION
    classdb.resetUserPassword(userName VARCHAR(63))
-   TO ClassDB_Instructor, ClassDB_DBManager;
-
-
---Need to drop the function prior to the return type
-DROP FUNCTION IF EXISTS classdb.listUserConnections(VARCHAR(63));
-
---List all connections for a specific user. Gets information from pg_stat_activity
-CREATE FUNCTION classdb.listUserConnections(userName VARCHAR(63))
-   RETURNS TABLE
-(
-   userName VARCHAR(63), --VARCHAR(63) used as NAME replacement
-   pid INT,
-   applicationName VARCHAR(63),
-   clientAddress INET, --holds client ip address
-   connectionStartTime TIMESTAMPTZ, --provided by backend_start in pg_stat_activity
-   lastQueryStartTime TIMESTAMPTZ   --provided by query_start in pg_stat_activity
-)
-AS $$
-   SELECT usename::VARCHAR(63), pid, application_name, client_addr, backend_start, query_start
-   FROM pg_stat_activity
-   WHERE usename = classdb.foldPgID($1);
-$$ LANGUAGE sql
-   SECURITY DEFINER;
-
---Set execution permissions
---The function remains owned by the creating user (a "superuser"):
--- This allows instructors and db managers unrestricted access to pg_stat_activity
---Otherwise, they cannot see info like ip address and timestamps of other users
-REVOKE ALL ON FUNCTION
-   classdb.listUserConnections(VARCHAR(63))
-   FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION
-   classdb.listUserConnections(VARCHAR(63))
-   TO ClassDB_Instructor, ClassDB_DBManager;
-
-
-DROP FUNCTION IF EXISTS classdb.killConnection(INT);
---Kills a specific connection given a pid INT4
--- pg_terminate_backend takes pid as INT4
-CREATE FUNCTION classdb.killConnection(pid INT)
-RETURNS BOOLEAN AS $$
-   SELECT pg_terminate_backend($1);
-$$ LANGUAGE sql
-   SECURITY DEFINER;
-
---Change function ownership and set execution permissions
-ALTER FUNCTION
-   classdb.killConnection(INT)
-   OWNER TO ClassDB;
-REVOKE ALL ON FUNCTION
-   classdb.killConnection(INT)
-   FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION
-   classdb.killConnection(INT)
-   TO ClassDB_Instructor, ClassDB_DBManager;
-
-
-DROP FUNCTION IF EXISTS classdb.killUserConnections(VARCHAR(63));
---Kills all open connections for a specific user
-CREATE FUNCTION classdb.killUserConnections(userName VARCHAR(63))
-RETURNS TABLE
-(
-   pid INT,
-   Success BOOLEAN
-)
-AS $$
-   SELECT pid, classdb.killConnection(pid)
-   FROM pg_stat_activity
-   WHERE usename = classdb.foldPgID($1);
-$$ LANGUAGE sql
-   SECURITY DEFINER;
-
---Change function ownership and set execution permissions
--- We can change the owner of this to ClassDB because it is a member of
--- pg_signal_backend
-ALTER FUNCTION
-   classdb.killUserConnections(VARCHAR(63))
-   OWNER TO ClassDB;
-REVOKE ALL ON FUNCTION
-   classdb.killUserConnections(VARCHAR(63))
-   FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION
-   classdb.killUserConnections(VARCHAR(63))
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
