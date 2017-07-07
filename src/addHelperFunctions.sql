@@ -57,6 +57,7 @@ BEGIN
 END
 $$;
 
+
 --Define a function to replicate PostgreSQL's folding behavior for SQL IDs
 -- If identifier is quoted, then the same value is returned with quotes removed
 -- If it is not, then identifier is returned, but made lowercase

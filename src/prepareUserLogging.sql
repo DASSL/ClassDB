@@ -56,6 +56,9 @@ BEGIN
 END
 $$;
 
+--Suppress NOTICE messages for this script only, this will not apply to functions
+-- defined within. This hides messages that are unimportant, but possibly confusing
+SET LOCAL client_min_messages TO WARNING;
 
 --pg_reload_conf() reloads the postgres setting so the changes from ALTER SYSTEM
 -- statements apply without having to restart the server
@@ -96,6 +99,9 @@ CREATE TABLE classdb.postgresLog
    PRIMARY KEY (session_id, session_line_num)
 );
 
+--Change owner of the import staging table to ClassDB
+ALTER TABLE classdb.postgresLog OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON classdb.postgresLog FROM PUBLIC;
 
 --Function to import a given day's log file, and update student connection information
 -- The latest connection in the student table supplied the assumed last import date,
@@ -152,8 +158,19 @@ BEGIN
    --Clear the log table
    TRUNCATE classdb.postgresLog;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
 
+--The COPY statement requires importLog() to be run as a superuser, with SECURITY
+-- DEFINER
+--Revoke permissions on classdb.importLog(startDate DATE) from PUBLIC, but allow
+-- Instructors and DBManagers to use it
+REVOKE ALL ON FUNCTION
+   classdb.importLog(startDate DATE)
+   FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION
+   classdb.importLog(startDate DATE)
+   TO ClassDB_Instructor, ClassDB_DBManager;
 
 --SET up DDL command logging
 

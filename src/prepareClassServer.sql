@@ -18,23 +18,28 @@ START TRANSACTION;
 
 
 --Make sure current user has sufficient privilege (CREATEROLE) to run the script
+-- privileges required: superuser
 DO
 $$
 BEGIN
-   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles
-                 WHERE rolname = current_user AND rolcreaterole = TRUE
-                ) THEN
-      RAISE EXCEPTION 'Insufficient privileges: script must be run as a user '
-                      'with createrole privileges';
+   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
+                  WHERE rolname = current_user AND rolsuper = TRUE
+                 ) THEN
+      RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
+                      ' superuser privileges';
    END IF;
 END
 $$;
 
 
+--Suppress NOTICE messages for this script only, this will not apply to functions
+-- defined within. This hides messages that are unimportant, but possibly confusing
+SET LOCAL client_min_messages TO WARNING;
+
 --Define a convenient ephemeral function to create a role with the given name
 -- create the role only if it does not already exist
 -- this function will be automatically dropped when the current session ends
-CREATE FUNCTION pg_temp.createGroupRole(roleName VARCHAR(63)) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION pg_temp.createGroupRole(roleName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles

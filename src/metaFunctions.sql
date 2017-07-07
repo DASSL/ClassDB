@@ -20,6 +20,13 @@
 -- INFORMATION_SCHEMA queries
 
 
+BEGIN TRANSACTION;
+
+--Suppress NOTICE messages for this script only, this will not apply to functions
+-- defined within. This hides messages that are unimportant, but possibly confusing
+SET LOCAL client_min_messages TO WARNING;
+
+
 DROP FUNCTION IF EXISTS public.listTables(VARCHAR(63));
 --Returns a list of tables and views in the specified schema
 --Defaults to current_user, as each student (the intended users of this function)
@@ -65,3 +72,6 @@ LANGUAGE sql;
 
 ALTER FUNCTION public.describe(VARCHAR(63), VARCHAR(63)) OWNER TO ClassDB;
 GRANT EXECUTE ON FUNCTION public.describe(VARCHAR(63), VARCHAR(63)) TO PUBLIC;
+
+
+COMMIT;
