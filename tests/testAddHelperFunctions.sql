@@ -93,7 +93,7 @@ BEGIN
    INTO retrievedIsSuperUser, retrievedHasCreateRole,
         retrievedCanCreateDatabase, retrievedCanLogin
    FROM pg_catalog.pg_roles
-   WHERE rolname = $1;
+   WHERE rolname = classdb.foldPgID($1);
 
    --variable FOUND is set to true if the SELECT query above returned a row
    SELECT FOUND INTO queryFoundTheRole;
