@@ -14,17 +14,33 @@
 
 START TRANSACTION;
 
+--Define a temporary function to test if a schema is "defined"
+-- a schema is defined if a pg_catalog.pg_namespace row exists for schemaName
+-- use to test if a string represents the name of a schema in the current db
+CREATE OR REPLACE FUNCTION pg_temp.isSchemaDefined(schemaName VARCHAR(63))
+   RETURNS BOOLEAN AS
+$$
+BEGIN
+   IF EXISTS (SELECT * FROM pg_catalog.pg_namespace
+              WHERE nspname = classdb.foldpgID($1)) THEN
+      RETURN TRUE;
+   ELSE
+      RETURN FALSE;
+   END IF;
+END;
+$$ LANGUAGE plpgsql;
+
 
 --Tests for superuser privilege on current_user
 DO
 $$
 BEGIN
-   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user
-    AND rolsuper = TRUE) THEN
+   IF NOT classdb.isSuperUser() THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a superuser';
    END IF;
 END
 $$;
+
 
 CREATE OR REPLACE FUNCTION classdb.createDropUserTest() RETURNS TEXT AS
 $$
@@ -40,8 +56,8 @@ BEGIN
    END IF;
 
    --Check that all 3 schemas were created
-   IF (SELECT COUNT(*) FROM information_schema.schemata
-       WHERE schema_name IN('testlc', 'testuc', 'testQUC')) != 3 THEN
+   IF NOT (pg_temp.isSchemaDefined('testlc') AND pg_temp.isSchemaDefined('testUC')
+      AND pg_temp.isSchemaDefined('"testQUC"')) THEN
       RETURN 'FAIL: Code 2';
    END IF;
 
@@ -56,8 +72,8 @@ BEGIN
    END IF;
 
    --Check that all 3 schemas no longer exist
-   IF (SELECT COUNT(*) FROM information_schema.schemata
-       WHERE schema_name IN('testlc', 'testuc', 'testQUC')) != 0 THEN
+   IF pg_temp.isSchemaDefined('testlc') OR pg_temp.isSchemaDefined('testUC')
+      OR pg_temp.isSchemaDefined('"testQUC"') THEN
       RETURN 'FAIL: Code 4';
    END IF;
 
@@ -83,9 +99,9 @@ BEGIN
    PERFORM classdb.createDBManager('testStuDBM0', 'testpass3');
 
    --Test existence of all schemas
-   IF (SELECT COUNT(*) FROM information_schema.schemata
-       WHERE schema_name IN ('teststu0', 'teststu1', 'teststu2', 'teststu3',
-                             'teststudbm0')) != 5 THEN
+   IF NOT(pg_temp.isSchemaDefined('testStu0') AND pg_temp.isSchemaDefined('testStu1')
+      AND pg_temp.isSchemaDefined('testStu2') AND pg_temp.isSchemaDefined('testStu3')
+      AND pg_temp.isSchemaDefined('testStuDBM0')) THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
@@ -118,9 +134,8 @@ BEGIN
 
 
    --Test existence of all schemas
-   IF (SELECT COUNT(*) FROM information_schema.schemata
-       WHERE schema_name IN ('testins0', 'testins1',
-                             'teststuins1')) != 3 THEN
+   IF NOT(pg_temp.isSchemaDefined('testIns0') AND pg_temp.isSchemaDefined('testIns1')
+      AND pg_temp.isSchemaDefined('testStuIns1')) THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
@@ -148,8 +163,8 @@ BEGIN
    PERFORM classdb.createInstructor('testInsMg0', 'Shawn Nash');
 
    --Test existence of all schemas
-   IF (SELECT COUNT(*) FROM information_schema.schemata
-       WHERE schema_name IN ('testdbm0', 'testdbm1', 'testinsmg0')) != 3 THEN
+   IF NOT(pg_temp.isSchemaDefined('testDBM0') AND pg_temp.isSchemaDefined('testDBM1')
+      AND pg_temp.isSchemaDefined('testInsMg0')) THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
@@ -177,7 +192,7 @@ BEGIN
    END IF;
 
    --Check for existence of schema
-   IF EXISTS(SELECT * FROM information_schema.schemata WHERE schema_name = 'teststu4') THEN
+   IF pg_temp.isSchemaDefined('testStu4') THEN
       RETURN 'FAIL: Code 2';
    END IF;
 
@@ -187,7 +202,7 @@ BEGIN
    PERFORM classdb.dropStudent('testStuIns2');
 
    IF classdb.isRoleDefined('testStuIns2') THEN
-      IF EXISTS(SELECT * FROM information_schema.schemata WHERE schema_name = 'teststuins2') THEN
+      IF pg_temp.isSchemaDefined('testStuIns2') THEN
          PERFORM classdb.dropInstructor('testStuIns2');
       ELSE
          RETURN 'FAIL: Code 4';
@@ -214,7 +229,7 @@ BEGIN
    END IF;
 
    --Check for existence of schema
-   IF EXISTS(SELECT * FROM information_schema.schemata WHERE schema_name = 'testins2') THEN
+   IF pg_temp.isSchemaDefined('testIns2') THEN
       RETURN 'FAIL: Code 2';
    END IF;
 
@@ -224,7 +239,7 @@ BEGIN
    PERFORM classdb.dropInstructor('testStuIns3');
 
    IF classdb.isRoleDefined('testStuIns3') THEN
-      IF EXISTS(SELECT * FROM information_schema.schemata WHERE schema_name = 'teststuins3') THEN
+      IF pg_temp.isSchemaDefined('testStuIns3') THEN
          PERFORM classdb.dropStudent('testStuIns3');
       ELSE
          RETURN 'FAIL: Code 4';
@@ -251,7 +266,7 @@ BEGIN
    END IF;
 
    --Check for existence of schema
-   IF EXISTS(SELECT * FROM information_schema.schemata WHERE schema_name = 'testdbm2') THEN
+   IF pg_temp.isSchemaDefined('testDBM2') THEN
       RETURN 'FAIL: Code 2';
    END IF;
 
@@ -261,7 +276,7 @@ BEGIN
    PERFORM classdb.dropDBManager('testInsMg2');
 
    IF classdb.isRoleDefined('testInsMg2') THEN
-      IF EXISTS(SELECT * FROM information_schema.schemata WHERE schema_name = 'testinsmg2') THEN
+      IF pg_temp.isSchemaDefined('testInsMg2') THEN
          PERFORM classdb.dropInstructor('testInsMg2');
       ELSE
          RETURN 'FAIL: Code 4';
