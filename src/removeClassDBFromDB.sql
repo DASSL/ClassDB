@@ -121,10 +121,6 @@ DROP OWNED BY ClassDB_Student;
 -- no need to drop individual objects created in that schema
 DROP SCHEMA IF EXISTS ClassDB CASCADE;
 
---change ownership of the current DB to current user so they can delete the DB
--- TBD
-
-
 --create a list of things users have to do on their own
 -- commenting out the RAISE NOTICE statements because they cause syntax error
 DO
