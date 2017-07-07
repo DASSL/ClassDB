@@ -1,4 +1,4 @@
---removeClassDBFromServer.sql - ClassDB
+--removeFromServer.sql - ClassDB
 
 --Sean Murthy, Steven Rollo
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
