@@ -19,7 +19,7 @@ START TRANSACTION;
 DO
 $$
 BEGIN
-   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user 
+   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = current_user
     AND rolsuper = TRUE) THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a superuser';
    END IF;
@@ -74,12 +74,12 @@ BEGIN
    END IF;
 
    --Test role membership
-   IF pg_has_role('testStudent0', 'student', 'member') AND
-      pg_has_role('testStudent1', 'student', 'member') AND
-      pg_has_role('testStudent2', 'student', 'member') AND
-      pg_has_role('testStudent3', 'student', 'member') AND
-      pg_has_role('testStuInst0', 'student', 'member') AND
-      pg_has_role('testStuInst0', 'instructor', 'member') THEN
+   IF pg_has_role('testStudent0', 'classdb_student', 'member') AND
+      pg_has_role('testStudent1', 'classdb_student', 'member') AND
+      pg_has_role('testStudent2', 'classdb_student', 'member') AND
+      pg_has_role('testStudent3', 'classdb_student', 'member') AND
+      pg_has_role('testStuInst0', 'classdb_student', 'member') AND
+      pg_has_role('testStuInst0', 'classdb_instructor', 'member') THEN
       RETURN 'PENDING - see testPrepareClassDBREADME.txt';
    ELSE
       RETURN 'FAIL: Code 2';
@@ -110,8 +110,8 @@ BEGIN
       RETURN 'FAIL: Code 1';
    END IF;
 
-   IF pg_has_role('testInstructor0', 'instructor', 'member') AND
-      pg_has_role('testInstructor1', 'instructor', 'member') THEN
+   IF pg_has_role('testInstructor0', 'classdb_instructor', 'member') AND
+      pg_has_role('testInstructor1', 'classdb_instructor', 'member') THEN
       RETURN 'PENDING - see testPrepareClassDBREADME.txt';
    ELSE
       RETURN 'FAIL: Code 2';
@@ -142,8 +142,8 @@ BEGIN
       RETURN 'FAIL: Code 1';
    END IF;
 
-   IF pg_has_role('testDBManager0', 'dbmanager', 'member') AND
-      pg_has_role('testDBManager1', 'dbmanager', 'member') THEN
+   IF pg_has_role('testDBManager0', 'classdb_dbmanager', 'member') AND
+      pg_has_role('testDBManager1', 'classdb_dbmanager', 'member') THEN
       RETURN 'PENDING - see testPrepareClassDBREADME.txt';
    ELSE
       RETURN 'FAIL: Code 2';

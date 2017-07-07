@@ -1,4 +1,4 @@
---prepareClassServer.sql - ClassDB
+--prepareServer.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
@@ -10,32 +10,39 @@
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 
---This script should be run as a user with createrole privileges
+--This script should be run as a user with CREATEROLE privileges
+
+--This script should be run once on the server to which ClassDB is to be added
+-- it should be the first script to run in the ClassDB installation process
 
 --This script creates app-specific roles: ClassDB, Student, Instructor, DBManager
 
 START TRANSACTION;
 
 
---Make sure current user has sufficient privilege ("createrole") to run the script
+--Make sure current user has sufficient privilege (CREATEROLE) to run the script
+-- privileges required: superuser
 DO
 $$
 BEGIN
-   IF NOT EXISTS(SELECT * FROM pg_catalog.pg_roles
-                 WHERE rolname = current_user AND rolcreaterole = TRUE
-                ) THEN
+   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
+                  WHERE rolname = current_user AND rolsuper = TRUE
+                 ) THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
-                        || 'createrole privileges';
+                      ' superuser privileges';
    END IF;
 END
 $$;
 
 
-DROP FUNCTION IF EXISTS pg_temp.createGroupRole(roleName VARCHAR(63));
+--Suppress NOTICE messages for this script only, this will not apply to functions
+-- defined within. This hides messages that are unimportant, but possibly confusing
+SET LOCAL client_min_messages TO WARNING;
+
 --Define a convenient ephemeral function to create a role with the given name
 -- create the role only if it does not already exist
 -- this function will be automatically dropped when the current session ends
-CREATE FUNCTION pg_temp.createGroupRole(roleName VARCHAR(63)) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION pg_temp.createGroupRole(roleName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
@@ -52,14 +59,14 @@ $$ LANGUAGE plpgsql
 DO
 $$
 BEGIN
-   PERFORM pg_temp.createGroupRole('ClassDB');
+   PERFORM pg_temp.createGroupRole('classdb');
 
    ALTER ROLE ClassDB CREATEROLE CREATEDB;
    GRANT pg_signal_backend TO ClassDB;
 
-   PERFORM pg_temp.createGroupRole('Student');
-   PERFORM pg_temp.createGroupRole('Instructor');
-   PERFORM pg_temp.createGroupRole('DBManager');
+   PERFORM pg_temp.createGroupRole('classdb_student');
+   PERFORM pg_temp.createGroupRole('classdb_instructor');
+   PERFORM pg_temp.createGroupRole('classdb_dbmanager');
 END
 $$;
 
