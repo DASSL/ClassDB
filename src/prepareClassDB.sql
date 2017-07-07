@@ -25,9 +25,7 @@ START TRANSACTION;
 DO
 $$
 BEGIN
-   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
-                  WHERE rolname = current_user AND rolsuper = TRUE
-                 ) THEN
+   IF NOT classdb.isSuperUser() THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
                         ' superuser privileges';
    END IF;
@@ -98,8 +96,7 @@ CREATE FUNCTION
    classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128)) RETURNS VOID AS
 $$
 BEGIN
-   IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = classdb.foldPgID($1))
-      THEN
+   IF classdb.isRoleDefined($1) THEN
       RAISE NOTICE 'User "%" already exists, password not modified', $1;
    ELSE
       EXECUTE
@@ -306,7 +303,7 @@ DROP FUNCTION IF EXISTS classdb.dropStudent(userName VARCHAR(63));
 CREATE FUNCTION classdb.dropStudent(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
-   IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = classdb.foldPgID($1)) AND
+   IF classdb.isRoleDefined($1) AND
       pg_catalog.pg_has_role(classdb.foldPgID($1), 'classdb_student', 'member')
    THEN
       EXECUTE format('REVOKE ClassDB_Student FROM %s', $1);
@@ -362,8 +359,7 @@ DROP FUNCTION IF EXISTS classdb.dropInstructor(userName VARCHAR(63));
 CREATE FUNCTION classdb.dropInstructor(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
-   IF
-      EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = classdb.foldPgID($1)) AND
+   IF classdb.isRoleDefined($1) AND
       pg_catalog.pg_has_role(classdb.foldPgID($1), 'classdb_instructor', 'member')
    THEN
       EXECUTE format('REVOKE ClassDB_Instructor FROM %s', $1);
@@ -399,8 +395,7 @@ DROP FUNCTION IF EXISTS classdb.dropDBManager(userName VARCHAR(63));
 CREATE FUNCTION classdb.dropDBManager(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
-   IF
-      EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = classdb.foldPgID($1)) AND
+   IF classdb.isRoleDefined($1) AND
       pg_catalog.pg_has_role(classdb.foldPgID($1), 'classdb_dbmanager', 'member')
    THEN
       EXECUTE format('REVOKE ClassDB_DBManager FROM %s', userName);
@@ -436,7 +431,7 @@ DROP FUNCTION IF EXISTS classdb.dropUser(userName VARCHAR(63));
 CREATE FUNCTION classdb.dropUser(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
-   IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = classdb.foldPgID($1))
+   IF classdb.isRoleDefined($1)
       THEN
       IF pg_catalog.pg_has_role(classdb.foldPgID($1), 'classdb_student', 'member')
          THEN
@@ -472,7 +467,7 @@ CREATE FUNCTION classdb.resetUserPassword(userName VARCHAR(63))
    RETURNS VOID AS
 $$
 BEGIN
-   IF EXISTS(SELECT * FROM pg_catalog.pg_roles WHERE rolname = classdb.foldPgID($1)) THEN
+   IF classdb.isRoleDefined($1) THEN
       EXECUTE format('ALTER ROLE %s ENCRYPTED PASSWORD %L', userName, userName);
    ELSE
       RAISE NOTICE 'User "%" not found among registered users', userName;
