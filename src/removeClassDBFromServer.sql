@@ -51,6 +51,8 @@ DROP ROLE IF EXISTS ClassDB_DBManager;
 DROP ROLE IF EXISTS ClassDB_Student;
 DROP ROLE IF EXISTS ClassDB;
 
+RESET client_min_messages;
+
 --create a list of things users have to do on their own
 DO
 $$
