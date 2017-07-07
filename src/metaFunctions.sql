@@ -42,7 +42,7 @@ CREATE FUNCTION public.listTables(schemaName VARCHAR(63) DEFAULT current_user)
 AS $$
    SELECT table_name, table_type
    FROM INFORMATION_SCHEMA.TABLES
-   WHERE table_schema = $1;
+   WHERE table_schema = classdb.foldPgID($1);
 $$
 LANGUAGE sql;
 
@@ -54,7 +54,6 @@ DROP FUNCTION IF EXISTS public.describe(VARCHAR(63), VARCHAR(63));
 --Returns a list of columns in the specified table or view in the specified schema
 --schemaName also defaults to current_user, for the same reasons as above
 CREATE FUNCTION public.describe(tableName VARCHAR(63),
-
    schemaName VARCHAR(63) DEFAULT current_user)
 RETURNS TABLE
 (
@@ -66,8 +65,8 @@ RETURNS TABLE
 AS $$
    SELECT table_name, column_name, data_type, character_maximum_length
    FROM INFORMATION_SCHEMA.COLUMNS
-   WHERE table_name = $1
-   AND table_schema = $2;
+   WHERE table_name = classdb.foldPgID($1)
+   AND table_schema = classdb.foldPgID($2);
 $$
 LANGUAGE sql;
 
