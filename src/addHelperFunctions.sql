@@ -167,6 +167,19 @@ ALTER FUNCTION
    classdb.canLogin(roleName VARCHAR(63))
    OWNER TO ClassDB;
 
+--Define a function to replicate PostgreSQL's folding behavior for SQL IDs
+-- If identifier is quoted, then the same value is retuned with quotes removed
+-- If it is not, then identifier is returned, but made lowercase
+CREATE OR REPLACE FUNCTION foldPgID(identifier VARCHAR(65)) RETURNS VARCHAR(63) AS
+$$
+SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
+                 SUBSTRING($1 from LENGTH($1) for 1) = '"' THEN
+                   SUBSTRING($1 from 2 for LENGTH($1) - 2)
+            ELSE 
+              LOWER($1)
+       END;
+$$ LANGUAGE sql;
+
 
 --Define a function to retrieve specific capabilities a user has
 -- use this function to get status of different capabilities in one call
