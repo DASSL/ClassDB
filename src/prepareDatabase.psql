@@ -1,0 +1,7 @@
+
+
+\set ON_ERROR_STOP on
+\i initializeDB.sql
+\i addHelpers.sql
+\i addConnectionMgmt.sql
+\i addUserMgmt.sql
