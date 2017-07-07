@@ -37,20 +37,6 @@ BEGIN
 END
 $$;
 
---Suppress NOTICE messages for this script only, this will not apply to functions
--- defined within. This hides messages that are unimportant, but possibly confusing
-SET LOCAL client_min_messages TO WARNING;
-
---event triggers
-DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
-DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
-
---Drop the metaFunctions from public, if they exist
-DROP FUNCTION IF EXISTS public.describe(VARCHAR(63), VARCHAR(63));
-DROP FUNCTION IF EXISTS public.listTables(VARCHAR(63));
-
---remove membership of students, instructors, and db managers
--- TBD
 
 --REVOKE permissions on the current database from each ClassDB role
 DO
@@ -63,9 +49,6 @@ BEGIN
 END
 $$;
 
---Reset the message level, as there are some info and notice messages we want
--- to show up afterward
-RESET client_min_messages;
 
 --Dynamically create a query to reassign all user schemas owned by classdb to
 -- be owned by themselves, instead of ClassDB
@@ -111,14 +94,26 @@ DROP OWNED BY ClassDB_Instructor;
 DROP OWNED BY ClassDB_DBManager;
 DROP OWNED BY ClassDB_Student;
 
---Suppress NOTICE messages again, only for the DROP SCHEMA IF EXISTS statement
+
+--Suppress NOTICE messages for this script only, this will not apply to functions
+-- defined within. This hides messages that are unimportant, but possibly confusing
 SET LOCAL client_min_messages TO WARNING;
+
+--event triggers
+DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
+DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
+
+--Drop the metaFunctions from public, if they exist
+DROP FUNCTION IF EXISTS public.describe(VARCHAR(63), VARCHAR(63));
+DROP FUNCTION IF EXISTS public.listTables(VARCHAR(63));
 
 --Delete the entire classdb schema in the current database
 -- no need to drop individual objects created in that schema
 DROP SCHEMA IF EXISTS ClassDB CASCADE;
 
+--We now want to show our NOTICES, so switch display level back to default
 RESET client_min_messages;
+
 
 --create a list of things users have to do on their own
 -- commenting out the RAISE NOTICE statements because they cause syntax error
