@@ -10,7 +10,7 @@ PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 -------------------------------------------------------------------------------------
 
 Tests are run in the following order:
-createUserTest()
+createDropUserTest()
 createStudentTest()
 createInstructorTest()
 createDBManagerTest()
@@ -31,45 +31,45 @@ as a superuser and run testPrepareClassDBCleanup.sql
 
 Students:
 
-UserName: testStudent0
-Password: testStudent0
+UserName: teststu0
+Password: testStu0
 
-UserName: testStudent1
-Password: 101
+UserName: teststu1
+Password: testStu1
 
-UserName: testStudent2
+UserName: teststu2
 Password: testpass
 
-UserName: testStudent3
+UserName: teststu3
 Password: testpass2
 
 
 Instructors:
 
-UserName: testInstructor0
-Password: testInstructor0
+UserName: testins0
+Password: testins0
 
-UserName: testInstructor1
+UserName: testins1
 Password: testpass4
 
 Multi-role users:
 
-UserName: testStuInst0
+UserName: teststudbm0
 Password: testpass3
 
-UserName: testStuInst1
+UserName: teststuinst1
 Password: testpass5
 
 
 DBManagers:
 
-UserName: testDBManager0
-Password: testDBManager0
+UserName: testdbm0
+Password: testDBM0
 
-UserName: testDBManager1
+UserName: testdbm1
 Password: testpass6
 
-UserName: testInstManage0
+UserName: testinsmg0
 Password: testpass7
 
 
@@ -82,23 +82,22 @@ SELECT * FROM classdb.Instructor;
 The results should appear as so:
 
 SELECT * FROM classdb.Student;
-   username   |   studentname    | schoolid | lastactivity
---------------+------------------+----------+--------------
- testStudent0 | Yvette Alexander |          |
- testStudent1 | Edwin Morrison   | 101      |
- testStudent2 | Ramon Harrington | 102      |
- testStudent3 | Cathy Young      |          |
- testStuInst0 | Edwin Morrison   | 102      |
- testStuInst1 | Rosalie Flowers  | 106      |
+  username   |   studentname    | schoolid | lastddlactivity | lastddloperation | lastddlobject | ddlcount | lastconnection | connectioncount
+-------------+------------------+----------+-----------------+------------------+---------------+----------+----------------+-----------------
+ teststu0    | Yvette Alexander |          |                 |                  |               |        0 |                |               0
+ teststu1    | Edwin Morrison   | 101      |                 |                  |               |        0 |                |               0
+ teststu2    | Ramon Harrington | 102      |                 |                  |               |        0 |                |               0
+ teststu3    | Cathy Young      |          |                 |                  |               |        0 |                |               0
+ teststudbm0 | Edwin Morrison   |          |                 |                  |               |        0 |                |               0
+ teststuins1 | Rosalie Flowers  | 106      |                 |                  |               |        0 |                |               0
 (6 rows)
 
 
 SELECT * FROM classdb.Instructor;
-    username     | instructorname
------------------+-----------------
- testStuInst0    | Edwin Morrison
- testInstructor0 | Dave Paul
- testInstructor1 | Dianna Wilson
- testStuInst1    | Rosalie Flowers
- testInstManage0 | Shawn Nash
-(5 rows)
+  username   | instructorname
+-------------+-----------------
+ testins0    | Dave Paul
+ testins1    | Dianna Wilson
+ teststuins1 | Rosalie Flowers
+ testinsmg0  | Shawn Nash
+(4 rows)

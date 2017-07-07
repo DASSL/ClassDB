@@ -26,260 +26,259 @@ BEGIN
 END
 $$;
 
-CREATE OR REPlACE FUNCTION classdb.createUserTest() RETURNS TEXT AS
+CREATE OR REPLACE FUNCTION classdb.createDropUserTest() RETURNS TEXT AS
 $$
 BEGIN
-   --Test createUser
-   PERFORM classdb.createUser('testUser0', 'password');
-   PERFORM classdb.createUser('lowercaseuser', 'password');
+   PERFORM classdb.createUser('testlc', 'password');
+   PERFORM classdb.createUser('testUC', 'password');
+   PERFORM classdb.createUser('"testQUC"', 'password');
 
-   -- These users should not be able to connect to the database, and since passwords are
-   --  encrypted, there is not a straightfoward way to test the passwords set. However,
-   --  login abilities and passwords can be tested though the creation of User and user
-   --  roles in the following functions.
+   --Check that all 3 roles exist
+   IF NOT (classdb.isRoleDefined('testlc') AND classdb.isRoleDefined('testUC')
+      AND classdb.isRoleDefined('"testQUC"')) THEN
+      RETURN 'FAIL: Code 1';
+   END IF;
 
-   --If the above lines created the roles correctly, the following 4 lines should
-   -- not result in an exception.
-   PERFORM classdb.dropUser('testUser0');
-   PERFORM classdb.dropUser('lowercaseuser');
+   --Check that all 3 schemas were created
+   IF (SELECT COUNT(*) FROM information_schema.schemata
+       WHERE schema_name IN('testlc', 'testuc', 'testQUC')) != 3 THEN
+      RETURN 'FAIL: Code 2';
+   END IF;
+
+   PERFORM classdb.dropUser('testlc');
+   PERFORM classdb.dropUser('testUC');
+   PERFORM classdb.dropUser('"testQUC"');
+
+   --Check that all 3 roles no longer exist
+   IF classdb.isRoleDefined('testlc') OR classdb.isRoleDefined('testUC')
+      OR classdb.isRoleDefined('"testQUC"') THEN
+      RETURN 'FAIL: Code 3';
+   END IF;
+
+   --Check that all 3 schemas no longer exist
+   IF (SELECT COUNT(*) FROM information_schema.schemata
+       WHERE schema_name IN('testlc', 'testuc', 'testQUC')) != 0 THEN
+      RETURN 'FAIL: Code 4';
+   END IF;
+
    RETURN 'PASS';
-END
+END;
 $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION classdb.createStudentTest() RETURNS TEXT AS
 $$
-DECLARE
-   rowCount INTEGER;
 BEGIN
-   --UserName fallback: Password should be set to username
-   PERFORM classdb.createStudent('testStudent0', 'Yvette Alexander');
-   --SchoolID fallback: Password should be set to ID (101)
-   PERFORM classdb.createStudent('testStudent1', 'Edwin Morrison', '101');
-   --initialPassword used: Password should be set to 'testpass'
-   PERFORM classdb.createStudent('testStudent2', 'Ramon Harrington', '102', 'testpass');
-   --initialPassword with no schoolID: Password should be set to 'testPass2'
-   PERFORM classdb.createStudent('testStudent3', 'Cathy Young', NULL, 'testpass2');
-   --Multi-role: Should not result in an exception or error (NOTICE is expected),
-   -- password should not change
-   PERFORM classdb.createInstructor('testStuInst0', 'Edwin Morrison', 'testpass3');
-   PERFORM classdb.createStudent('testStuInst0', 'Edwin Morrison', '102', 'notPass');
+   --Minimal test: Password should be set to username
+   PERFORM classdb.createStudent('testStu0', 'Yvette Alexander');
+   --SchoolID given: Password should still be set to username, ID should be stored
+   PERFORM classdb.createStudent('testStu1', 'Edwin Morrison', '101');
+   --initialPassword given: Password should be set to 'testpass'
+   PERFORM classdb.createStudent('testStu2', 'Ramon Harrington', '102', 'testpass');
+   --initialPassword given with no schoolID
+   PERFORM classdb.createStudent('testStu3', 'Cathy Young', NULL, 'testpass2');
 
-   --Test existance of all schemas
-   PERFORM * FROM information_schema.schemata WHERE schema_name IN ('testStudent0',
-      'testStudent1', 'testStudent2', 'testStudent3', 'testStuInst0');
-   GET DIAGNOSTICS rowCount = ROW_COUNT;
-   IF rowCount != 5 THEN
+   --Multi-role: NOTICE is expected password should not change
+   PERFORM classdb.createStudent('testStuDBM0', 'Edwin Morrison', NULL, 'notPass');
+   PERFORM classdb.createDBManager('testStuDBM0', 'testpass3');
+
+   --Test existence of all schemas
+   IF (SELECT COUNT(*) FROM information_schema.schemata
+       WHERE schema_name IN ('teststu0', 'teststu1', 'teststu2', 'teststu3',
+                             'teststudbm0')) != 5 THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
-   --Test role membership
-   IF pg_has_role('testStudent0', 'classdb_student', 'member') AND
-      pg_has_role('testStudent1', 'classdb_student', 'member') AND
-      pg_has_role('testStudent2', 'classdb_student', 'member') AND
-      pg_has_role('testStudent3', 'classdb_student', 'member') AND
-      pg_has_role('testStuInst0', 'classdb_student', 'member') AND
-      pg_has_role('testStuInst0', 'classdb_instructor', 'member') THEN
+   --Test role membership (and existence)
+   IF pg_has_role('teststu0', 'classdb_student', 'member') AND
+      pg_has_role('teststu1', 'classdb_student', 'member') AND
+      pg_has_role('teststu2', 'classdb_student', 'member') AND
+      pg_has_role('teststu3', 'classdb_student', 'member') AND
+      pg_has_role('teststudbm0', 'classdb_student', 'member') AND
+      pg_has_role('teststudbm0', 'classdb_dbmanager', 'member') THEN
       RETURN 'PENDING - see testPrepareClassDBREADME.txt';
    ELSE
       RETURN 'FAIL: Code 2';
    END IF;
-END
+END;
 $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION classdb.createInstructorTest() RETURNS TEXT AS
 $$
-DECLARE
-   rowCount INTEGER;
 BEGIN
-   --UserName fallback: Password should be set to userName
-   PERFORM classdb.createInstructor('testInstructor0', 'Dave Paul');
-   --initialPassword used: Password should be set to 'testpass4'
-   PERFORM classdb.createInstructor('testInstructor1', 'Dianna Wilson', 'testpass4');
-   --Multi-role: Should not result in an exception or error (NOTICE is expected),
-   -- password should not change
-   PERFORM classdb.createStudent('testStuInst1', 'Rosalie Flowers', '106', 'testpass5');
-   PERFORM classdb.createInstructor('testStuInst1', 'Rosalie Flowers');
+   --Minimal test: Password should be set to username
+   PERFORM classdb.createInstructor('testIns0', 'Dave Paul');
+   --initialPassword given: Password should be set to 'testpass4'
+   PERFORM classdb.createInstructor('testIns1', 'Dianna Wilson', 'testpass4');
 
-   --Test existance of all schemas
-   PERFORM * FROM information_schema.schemata WHERE schema_name IN ('testInstructor0',
-      'testInstructor1', 'testStuInst1');
-   GET DIAGNOSTICS rowCount = ROW_COUNT;
-   IF rowCount != 3 THEN
+   --Multi-role: NOTICE is expected, password should not change
+   PERFORM classdb.createInstructor('testStuIns1', 'Rosalie Flowers');
+   PERFORM classdb.createStudent('testStuIns1', 'Rosalie Flowers', '106', 'testpass5');
+
+
+   --Test existence of all schemas
+   IF (SELECT COUNT(*) FROM information_schema.schemata
+       WHERE schema_name IN ('testins0', 'testins1',
+                             'teststuins1')) != 3 THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
-   IF pg_has_role('testInstructor0', 'classdb_instructor', 'member') AND
-      pg_has_role('testInstructor1', 'classdb_instructor', 'member') THEN
+   --Check role membership (and existence)
+   IF pg_has_role('testins0', 'classdb_instructor', 'member') AND
+      pg_has_role('testins1', 'classdb_instructor', 'member') THEN
       RETURN 'PENDING - see testPrepareClassDBREADME.txt';
    ELSE
       RETURN 'FAIL: Code 2';
    END IF;
-END
+END;
 $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION classdb.createDBManagerTest() RETURNS TEXT AS
 $$
-DECLARE
-   rowCount INTEGER;
 BEGIN
-   --UserName fallback: Password should be set to userName
-   PERFORM classdb.createDBmanager('testDBManager0', 'Colin Cooper');
+   --Minimal test: Password should be set to username
+   PERFORM classdb.createDBmanager('testDBM0');
    --initialPassword used: Password should be set to 'testpass6'
-   PERFORM classdb.createDBManager('testDBManager1', 'Dianna Wilson', 'testpass6');
-   --Multi-role: Should not result in an exception or error (NOTICE is expected),
-   -- password should not change
-   PERFORM classdb.createDBManager('testInstManage0', 'Shawn Nash', 'testpass7');
-   PERFORM classdb.createInstructor('testInstManage0', 'Shawn Nash');
+   PERFORM classdb.createDBManager('testDBM1', 'testpass6');
 
-   --Test existance of all schemas
-   PERFORM * FROM information_schema.schemata WHERE schema_name IN ('testDBManager0',
-      'testDBManager1', 'testInstManage0');
-   GET DIAGNOSTICS rowCount = ROW_COUNT;
-   IF rowCount != 3 THEN
+   --Multi-role: NOTICE is expected, password should not change
+   PERFORM classdb.createDBManager('testInsMg0', 'testpass7');
+   PERFORM classdb.createInstructor('testInsMg0', 'Shawn Nash');
+
+   --Test existence of all schemas
+   IF (SELECT COUNT(*) FROM information_schema.schemata
+       WHERE schema_name IN ('testdbm0', 'testdbm1', 'testinsmg0')) != 3 THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
-   IF pg_has_role('testDBManager0', 'classdb_dbmanager', 'member') AND
-      pg_has_role('testDBManager1', 'classdb_dbmanager', 'member') THEN
+   --Check role membership (and existence)
+   IF pg_has_role('testdbm0', 'classdb_dbmanager', 'member') AND
+      pg_has_role('testdbm1', 'classdb_dbmanager', 'member') THEN
       RETURN 'PENDING - see testPrepareClassDBREADME.txt';
    ELSE
       RETURN 'FAIL: Code 2';
    END IF;
-END
+END;
 $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION classdb.dropStudentTest() RETURNS TEXT AS
 $$
-DECLARE
-   valueExists BOOLEAN;
 BEGIN
    --"Normal" case, Regular student: Role and schema should be dropped
-   PERFORM classdb.createStudent('testStudent4', 'Ramon Harrington', '102', 'testpass');
-   PERFORM classdb.dropStudent('testStudent4');
-   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testStudent4' INTO valueExists;
-   IF valueExists THEN
+   PERFORM classdb.createStudent('testStu4', 'Ramon Harrington', '102', 'testpass');
+   PERFORM classdb.dropStudent('testStu4');
+
+   --Check for existence of role
+   IF classdb.isRoleDefined('testStu4') THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testStudent4'
-   INTO valueExists;
-   IF valueExists THEN
+
+   --Check for existence of schema
+   IF EXISTS(SELECT * FROM information_schema.schemata WHERE schema_name = 'teststu4') THEN
       RETURN 'FAIL: Code 2';
    END IF;
 
-   --Multi-role case, user is a member of both Student and Instructor roles: Schema and Role
-   -- should still exist
-   PERFORM classdb.createStudent('testStuInst2', 'Roland Baker');
-   PERFORM classdb.createInstructor('testStuInst2', 'Roland Baker');
-   PERFORM classdb.dropStudent('testStuInst2');
+   --Multi-role case: schema and role should still exist after dropStudent
+   PERFORM classdb.createStudent('testStuIns2', 'Roland Baker');
+   PERFORM classdb.createInstructor('testStuIns2', 'Roland Baker');
+   PERFORM classdb.dropStudent('testStuIns2');
 
-   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testStuInst2' INTO valueExists;
-   IF valueExists THEN
-      SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testStuInst2'
-      INTO valueExists;
-      IF valueExists THEN
-         PERFORM classdb.dropInstructor('testStuInst2');
+   IF classdb.isRoleDefined('testStuIns2') THEN
+      IF EXISTS(SELECT * FROM information_schema.schemata WHERE schema_name = 'teststuins2') THEN
+         PERFORM classdb.dropInstructor('testStuIns2');
       ELSE
          RETURN 'FAIL: Code 4';
       END IF;
    ELSE
       RETURN 'FAIL: Code 3';
    END IF;
+
    RETURN 'PASS';
-END
+END;
 $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION classdb.dropInstructorTest() RETURNS TEXT AS
 $$
-DECLARE
-   valueExists BOOLEAN;
 BEGIN
    --"Normal" case, Regular Instructor: Role and schema should be dropped
-   PERFORM classdb.createInstructor('testInstructor2', 'Wayne Bates', 'testpass');
-   PERFORM classdb.dropInstructor('testInstructor2');
-   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testInstructor2' INTO valueExists;
-   IF valueExists THEN
+   PERFORM classdb.createInstructor('testIns2', 'Wayne Bates', 'testpass');
+   PERFORM classdb.dropInstructor('testIns2');
+
+   --Check for existence of role
+   IF classdb.isRoleDefined('testIns2') THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testInstructor2'
-   INTO valueExists;
-   IF valueExists THEN
+
+   --Check for existence of schema
+   IF EXISTS(SELECT * FROM information_schema.schemata WHERE schema_name = 'testins2') THEN
       RETURN 'FAIL: Code 2';
    END IF;
 
-   --Multi-role case, user is a member of both Student and Instructor roles: Schema
-   -- and Role should still exist
-   PERFORM classdb.createInstructor('testStuInst3', 'Julius Patton');
-   PERFORM classdb.createStudent('testStuInst3', 'Julius Paton');
-   PERFORM classdb.dropInstructor('testStuInst3');
+   --Multi-role case: schema and role should still exist after dropInstructor
+   PERFORM classdb.createInstructor('testStuIns3', 'Julius Patton');
+   PERFORM classdb.createStudent('testStuIns3', 'Julius Paton');
+   PERFORM classdb.dropInstructor('testStuIns3');
 
-   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testStuInst3' INTO valueExists;
-   IF valueExists THEN
-      SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testStuInst3'
-      INTO valueExists;
-      IF valueExists THEN
-         PERFORM classdb.dropStudent('testStuInst3');
+   IF classdb.isRoleDefined('testStuIns3') THEN
+      IF EXISTS(SELECT * FROM information_schema.schemata WHERE schema_name = 'teststuins3') THEN
+         PERFORM classdb.dropStudent('testStuIns3');
       ELSE
          RETURN 'FAIL: Code 4';
       END IF;
    ELSE
       RETURN 'FAIL: Code 3';
    END IF;
+
    RETURN 'PASS';
-END
+END;
 $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION classdb.dropDBManagerTest() RETURNS TEXT AS
 $$
-DECLARE
-   valueExists BOOLEAN;
 BEGIN
    --"Normal" case, Regular DBManager: Role and schema should be dropped
-   PERFORM classdb.createDBManager('testDBManager2', 'Tom Bryan', 'testpass');
-   PERFORM classdb.dropDBManager('testDBManager2');
+   PERFORM classdb.createDBManager('testDBM2', 'testpass');
+   PERFORM classdb.dropDBManager('testDBM2');
 
-   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testDBManager2' INTO valueExists;
-   IF valueExists THEN
+   --Check for existence of role
+   IF classdb.isRoleDefined('testDBM2') THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testDBMangager2'
-   INTO valueExists;
-   IF valueExists THEN
+
+   --Check for existence of schema
+   IF EXISTS(SELECT * FROM information_schema.schemata WHERE schema_name = 'testdbm2') THEN
       RETURN 'FAIL: Code 2';
    END IF;
 
-   --Multi-role case, user is a member of both Student and Instructor roles: Schema
-   -- and Role should still exist
-   PERFORM classdb.createDBManager('testInstManage2', 'Alice West');
-   PERFORM classdb.createInstructor('testInstManage2', 'Alice West');
-   PERFORM classdb.dropDBManager('testInstManage2');
+   --Multi-role case: schema and role should still exist after dropDBManager
+   PERFORM classdb.createDBManager('testInsMg2');
+   PERFORM classdb.createInstructor('testInsMg2', 'Alice West');
+   PERFORM classdb.dropDBManager('testInsMg2');
 
-   SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'testInstManage2' INTO valueExists;
-   IF valueExists THEN
-      SELECT 1 FROM information_schema.schemata WHERE schema_name = 'testInstManage2'
-      INTO valueExists;
-      IF valueExists THEN
-         PERFORM classdb.dropInstructor('testInstManage2');
+   IF classdb.isRoleDefined('testInsMg2') THEN
+      IF EXISTS(SELECT * FROM information_schema.schemata WHERE schema_name = 'testinsmg2') THEN
+         PERFORM classdb.dropInstructor('testInsMg2');
       ELSE
          RETURN 'FAIL: Code 4';
       END IF;
    ELSE
       RETURN 'FAIL: Code 3';
    END IF;
+
    RETURN 'PASS';
-END
+END;
 $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION classdb.prepareClassDBTest() RETURNS VOID AS
 $$
 BEGIN
-   RAISE INFO '%   createUserTest()', classdb.createUserTest();
+   RAISE INFO '%   createUserTest()', classdb.createDropUserTest();
    RAISE INFO '%   createStudentTest()', classdb.createStudentTest();
    RAISE INFO '%   createInstructorTest()', classdb.createInstructorTest();
    RAISE INFO '%   createDBManagerTest()', classdb.createDBManagerTest();
