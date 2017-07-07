@@ -1,4 +1,4 @@
---prepareClassServer.sql - ClassDB
+--prepareServer.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
@@ -11,6 +11,9 @@
 
 
 --This script should be run as a user with CREATEROLE privileges
+
+--This script should be run once on the server to which ClassDB is to be added
+-- it should be the first script to run in the ClassDB installation process
 
 --This script creates app-specific roles: ClassDB, Student, Instructor, DBManager
 

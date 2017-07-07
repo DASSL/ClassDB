@@ -1,4 +1,4 @@
---metaFunctions.sql - ClassDB
+--addCatalogMgmt.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
@@ -12,7 +12,8 @@
 --This script should be run as either a superuser or a user with write access
 -- to the PUBLIC schema
 
---This script should be run after prepareClassDB.sql
+--This script should be run in every database to which ClassDB is to be added
+-- it should be run after running addHelpers.sql
 
 --This script creates two publicly accessible functions, intended for students
 -- These functions provide an easy way for students to DESCRIBE a tables

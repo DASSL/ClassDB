@@ -1,4 +1,4 @@
---addHelperFunctions.sql - ClassDB
+--addHelpers.sql - ClassDB
 
 --Sean Murthy
 --Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
@@ -12,10 +12,8 @@
 
 --This script requires the current user to be a superuser
 
---This script should be run after running prepareClassServer.sql
-
---This script should be the first to run in every database to which ClassDB is
--- is to be added
+--This script should be run in every database to which ClassDB is to be added
+-- it should be run after running initializeDB.sql
 
 --This script creates some helper functions for ClassDB operations
 -- makes ClassDB role the owner of all functions so only that role can drop or
@@ -87,7 +85,7 @@ CREATE OR REPLACE FUNCTION
    RETURNS BOOLEAN AS
 $$
 BEGIN
-   IF EXISTS (SELECT * FROM pg_catalog.pg_roles 
+   IF EXISTS (SELECT * FROM pg_catalog.pg_roles
               WHERE rolname = classdb.foldPgID($1)) THEN
       RETURN TRUE;
    ELSE
