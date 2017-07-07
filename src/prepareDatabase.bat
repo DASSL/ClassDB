@@ -16,10 +16,16 @@ REM USAGE: prepareDatabase.bat [place required psql options here]
 REM The switches provided are directly passed to psql, so you can use any necessary
 REM psql switches
 
+SET error="\set ON_ERROR_STOP on"
+SET scriptFiles="-f initalizeDB.sql -f addHelpers.sql -f prepareClassDB.sql"
 
+psql %1 %2 %3 %4 %5 %6 %7 %8 %9 -c %error% %scriptFiles%
 
-psql %1 %2 %3 %4 %5 %6 %7 %8 %9
-
-
+IF %return%==0 (
+   ECHO "ClassDB installed successfuly."
+)
+IF ELSE (
+   ECHO "There was an error during execution. Please check the script out for more details."
+)
 
 pause
