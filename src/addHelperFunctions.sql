@@ -57,6 +57,26 @@ BEGIN
 END
 $$;
 
+--Define a function to replicate PostgreSQL's folding behavior for SQL IDs
+-- If identifier is quoted, then the same value is returned with quotes removed
+-- If it is not, then identifier is returned, but made lowercase
+CREATE OR REPLACE FUNCTION
+   classdb.foldPgID(identifier VARCHAR(65))
+   RETURNS VARCHAR(63) AS
+$$
+SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
+                 SUBSTRING($1 from LENGTH($1) for 1) = '"'
+            THEN
+                 SUBSTRING($1 from 2 for LENGTH($1) - 2)
+            ELSE
+                 LOWER($1)
+       END;
+$$ LANGUAGE sql;
+
+ALTER FUNCTION
+   classdb.foldPgID(identifier VARCHAR(65))
+   OWNER TO ClassDB;
+
 
 --Define a function to test if a role is "defined"
 -- a role is defined if a pg_catalog.pg_roles row exists for the supplied name
@@ -66,10 +86,11 @@ CREATE OR REPLACE FUNCTION
    RETURNS BOOLEAN AS
 $$
 BEGIN
-   IF EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname = $1) THEN
+   IF EXISTS (SELECT * FROM pg_catalog.pg_roles 
+              WHERE rolname = classdb.foldPgID($1)) THEN
       RETURN TRUE;
    ELSE
-      return FALSE;
+      RETURN FALSE;
    END IF;
 END;
 $$ LANGUAGE plpgsql;
@@ -87,7 +108,7 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
    IF EXISTS (SELECT * FROM pg_catalog.pg_roles
-              WHERE rolname = $1 AND rolsuper = TRUE
+              WHERE rolname = classdb.foldPgID($1) AND rolsuper = TRUE
              ) THEN
       RETURN TRUE;
    ELSE
@@ -110,7 +131,7 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
    IF EXISTS (SELECT * FROM pg_catalog.pg_roles
-              WHERE rolname = $1 AND rolcreaterole = TRUE
+              WHERE rolname = classdb.foldPgID($1) AND rolcreaterole = TRUE
              ) THEN
       RETURN TRUE;
    ELSE
@@ -132,7 +153,7 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
    IF EXISTS (SELECT * FROM pg_catalog.pg_roles
-              WHERE rolname = $1 AND rolcreatedb = TRUE
+              WHERE rolname = classdb.foldPgID($1) AND rolcreatedb = TRUE
              ) THEN
       RETURN TRUE;
    ELSE
@@ -154,7 +175,7 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
    IF EXISTS (SELECT * FROM pg_catalog.pg_roles
-              WHERE rolname = $1 AND rolcanlogin = TRUE
+              WHERE rolname = classdb.foldPgID($1) AND rolcanlogin = TRUE
              ) THEN
       RETURN TRUE;
    ELSE
@@ -165,26 +186,6 @@ $$ LANGUAGE plpgsql;
 
 ALTER FUNCTION
    classdb.canLogin(roleName VARCHAR(63))
-   OWNER TO ClassDB;
-
---Define a function to replicate PostgreSQL's folding behavior for SQL IDs
--- If identifier is quoted, then the same value is returned with quotes removed
--- If it is not, then identifier is returned, but made lowercase
-CREATE OR REPLACE FUNCTION
-   classdb.foldPgID(identifier VARCHAR(65))
-   RETURNS VARCHAR(63) AS
-$$
-SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
-                 SUBSTRING($1 from LENGTH($1) for 1) = '"'
-            THEN
-                 SUBSTRING($1 from 2 for LENGTH($1) - 2)
-            ELSE
-                 LOWER($1)
-       END;
-$$ LANGUAGE sql;
-
-ALTER FUNCTION
-   classdb.foldPgID(identifier VARCHAR(65))
    OWNER TO ClassDB;
 
 

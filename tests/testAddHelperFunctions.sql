@@ -47,6 +47,35 @@ END
 $$;
 
 
+--Define a temportary function to test the foldPgID() function
+CREATE OR REPLACE FUNCTION pg_temp.testFoldPgID() RETURNS TEXT AS
+$$
+BEGIN
+   IF classdb.foldPgID('test') <> 'test' THEN
+      RETURN 'FAIL: Code 1';
+   END IF;
+
+   IF classdb.foldPgID('Test') <> 'test' THEN
+      RETURN 'FAIL: Code 2';
+   END IF;
+
+   IF classdb.foldPgID('"test"') <> 'test' THEN
+      RETURN 'FAIL: Code 3';
+   END IF;
+
+   IF classdb.foldPgID('"Test"') <> 'Test' THEN
+      RETURN 'FAIL: Code 4';
+   END IF;
+
+   IF classdb.foldPgID('""Test""') <> '"Test"' THEN
+      RETURN 'FAIL: Code 5';
+   END IF;
+
+   RETURN 'PASS';
+END;
+$$ LANGUAGE plpgsql;
+
+
 --Define a temporary function to test capabilities of a given role name
 CREATE OR REPLACE FUNCTION pg_temp.testRoleCapabilities(roleName VARCHAR(63))
 RETURNS TEXT AS
@@ -96,37 +125,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION pg_temp.testFoldPgID() RETURNS TEXT AS
-$$
-BEGIN
-   IF classdb.foldPgID('test') <> 'test' THEN
-      RETURN 'FAIL: Code 1';
-   END IF;
-
-   IF classdb.foldPgID('Test') <> 'test' THEN
-      RETURN 'FAIL: Code 2';
-   END IF;
-
-   IF classdb.foldPgID('"test"') <> 'test' THEN
-      RETURN 'FAIL: Code 3';
-   END IF;
-
-   IF classdb.foldPgID('"Test"') <> 'Test' THEN
-      RETURN 'FAIL: Code 4';
-   END IF;
-
-   IF classdb.foldPgID('""Test""') <> '"Test"' THEN
-      RETURN 'FAIL: Code 5';
-   END IF;
-
-   RETURN 'PASS';
-END;
-$$ LANGUAGE plpgsql;
-
-
 CREATE OR REPLACE FUNCTION pg_temp.testHelperFunctions() RETURNS VOID AS
 $$
 BEGIN
+   --test foldPgID
+   RAISE INFO '%   foldPgID()', pg_temp.testFoldPgID();
 
    --test with current user (should be a superuser)
    RAISE INFO '%   current_user',
@@ -148,10 +151,6 @@ BEGIN
    RAISE INFO '%   testUser2_NoLogin',
       pg_temp.testRoleCapabilities('testUser2_NoLogin');
    DROP USER testUser2_NoLogin;
-
-   --test foldPgID
-   RAISE INFO '%   foldPgID()', pg_temp.testFoldPgID();
-   
 END;
 $$  LANGUAGE plpgsql;
 
