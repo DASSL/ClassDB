@@ -56,7 +56,7 @@ DELETE FROM classdb.Instructor WHERE userName = 'testinsmg0';
 
 
 DROP FUNCTION classdb.prepareClassDBTest();
-DROP FUNCTION classdb.createDropUserTest();
+DROP FUNCTION classdb.createUserTest();
 DROP FUNCTION classdb.createInstructorTest();
 DROP FUNCTION classdb.createDBManagerTest();
 DROP FUNCTION classdb.dropStudentTest();

@@ -10,7 +10,7 @@ PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 --------------------------------------------------------------------------------
 
 Tests are run in the following order:
-createDropUserTest()
+createUserTest()
 createStudentTest()
 createInstructorTest()
 createDBManagerTest()

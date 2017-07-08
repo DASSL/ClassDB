@@ -42,7 +42,7 @@ END
 $$;
 
 
-CREATE OR REPLACE FUNCTION classdb.createDropUserTest() RETURNS TEXT AS
+CREATE OR REPLACE FUNCTION classdb.createUserTest() RETURNS TEXT AS
 $$
 BEGIN
    PERFORM classdb.createUser('testlc', 'password');
@@ -61,9 +61,13 @@ BEGIN
       RETURN 'FAIL: Code 2';
    END IF;
 
-   PERFORM classdb.dropUser('testlc');
-   PERFORM classdb.dropUser('testUC');
-   PERFORM classdb.dropUser('"testQUC"');
+   --Remove users that were created
+   DROP SCHEMA testlc;
+   DROP ROLE testlc;
+   DROP SCHEMA testUC;
+   DROP ROLE testUC;
+   DROP SCHEMA "testQUC";
+   DROP ROLE "testQUC";
 
    --Check that all 3 roles no longer exist
    IF classdb.isRoleDefined('testlc') OR classdb.isRoleDefined('testUC')
@@ -304,7 +308,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION classdb.prepareClassDBTest() RETURNS VOID AS
 $$
 BEGIN
-   RAISE INFO '%   createUserTest()', classdb.createDropUserTest();
+   RAISE INFO '%   createUserTest()', classdb.createUserTest();
    RAISE INFO '%   createStudentTest()', classdb.createStudentTest();
    RAISE INFO '%   createInstructorTest()', classdb.createInstructorTest();
    RAISE INFO '%   createDBManagerTest()', classdb.createDBManagerTest();
