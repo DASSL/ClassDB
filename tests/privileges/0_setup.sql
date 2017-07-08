@@ -16,4 +16,4 @@ SELECT classdb.createInstructor('ins0', 'NoName');
 
 SELECT classdb.createStudent('stu0', 'NoName');
 
-SELECT classdb.createDBManager('dbm0', 'NoName');
+SELECT classdb.createDBManager('dbm0');

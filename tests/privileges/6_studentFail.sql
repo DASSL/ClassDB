@@ -14,13 +14,13 @@
 --TODO: Tests Pending
 
 --Not CUD on public schema
-INSERT INTO public.testInsTab VALUES ('Hello student');
+INSERT INTO public.testInsPub VALUES ('Hello student');
 
-UPDATE public.testInsTab
+UPDATE public.testInsPub
 SET col1 = 'Hello'
 WHERE TRUE;
 
-DELETE FROM public.testInstTab;
+DELETE FROM public.testInsPub;
 
 
 --Not execute any classdb functions
@@ -42,6 +42,6 @@ SELECT classdb.dropDBManager('testman');
 SELECT classdb.dropAllStudents();
 
 
---Not read Student or Instructor tables (non-access to class schema should also prevent this)
+--Not read Student or Instructor tables (non-access to classdb schema should also prevent this)
 SELECT * FROM classdb.Student;
 SELECT * FROM classdb.Instructor;

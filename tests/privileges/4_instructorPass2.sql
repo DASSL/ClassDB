@@ -11,11 +11,11 @@
 
 
 --Read the $user schema of a student (should return one row)
-SELECT * FROM stu0.testStuTab;
+SELECT * FROM stu0.testStuUsr;
 
 -- Execute meta functions
 SELECT listTables();
 SELECT listTables('stu0');
 
-SELECT describe('stupubtest', 'public');
-SELECT describe('insstutest', 'stu0');
+SELECT describe('testInsPub', 'public');
+SELECT describe('testStuUsr', 'stu0');

@@ -45,7 +45,7 @@ DROP TABLE test;
 
 
 --Read on tables in the public schema created by Instructor (should return 1 row)
-SELECT * FROM testInsTab;
+SELECT * FROM testInsPub;
 
 
 --Create table in $user schema to test read privileges for Instructors and non-

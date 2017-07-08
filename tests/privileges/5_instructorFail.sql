@@ -51,15 +51,13 @@ DROP FUNCTION IF EXISTS classdb.createStudent(studentUserName VARCHAR(63),
                         initialPwd VARCHAR(128));
 DROP FUNCTION IF EXISTS classdb.createInstructor(instructorUserName VARCHAR(63),
                         instructorName VARCHAR(100), initialPwd VARCHAR(128));
-DROP FUNCTION IF EXISTS classdb.createDBManager(managerUserName VARCHAR(63), managerName VARCHAR(100),
+DROP FUNCTION IF EXISTS classdb.createDBManager(managerUserName VARCHAR(63),
                         initialPwd VARCHAR(128));
 DROP FUNCTION IF EXISTS classdb.dropStudent(userName VARCHAR(63));
 DROP FUNCTION IF EXISTS classdb.dropAllStudents();
 DROP FUNCTION IF EXISTS classdb.dropInstructor(userName VARCHAR(63));
 DROP FUNCTION IF EXISTS classdb.dropDBManager(userName VARCHAR(63));
 DROP FUNCTION IF EXISTS classdb.dropUser(userName VARCHAR(63));
-DROP FUNCTION IF EXISTS classdb.changeUserPassword(userName VARCHAR(63), 
-                                                   password VARCHAR(128));
 DROP FUNCTION IF EXISTS classdb.resetUserPassword(userName VARCHAR(63));
 DROP FUNCTION IF EXISTS classdb.listUserConnections(VARCHAR(63));
 DROP FUNCTION IF EXISTS classdb.killUserConnections(VARCHAR(63));
