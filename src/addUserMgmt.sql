@@ -170,9 +170,9 @@ CREATE TABLE IF NOT EXISTS classdb.Instructor
 ALTER TABLE classdb.Instructor OWNER TO ClassDB;
 
 --Limit operations on rows and columns
-REVOKE ALL PRIVILEGES ON classdb.Student FROM PUBLIC;
+REVOKE ALL PRIVILEGES ON classdb.Instructor FROM PUBLIC;
 
-GRANT SELECT ON classdb.Student
+GRANT SELECT ON classdb.Instructor
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 GRANT UPDATE (instructorName) ON classdb.Instructor
