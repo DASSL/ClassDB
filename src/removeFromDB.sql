@@ -41,10 +41,10 @@ $$;
 DO
 $$
 BEGIN
-   IF EXISTS(SELECT routine_name
+   IF (SELECT COUNT(routine_name)
              FROM INFORMATION_SCHEMA.ROUTINES
-             WHERE routine_name = 'listorphans'
-             AND specific_schema = 'classdb') THEN
+             WHERE routine_name IN ('listorphans', 'listownedobjects')
+             AND specific_schema = 'classdb') = 2 THEN
 
       IF EXISTS(SELECT * FROM classdb.listOrphans()) THEN
          RAISE EXCEPTION 'Orphan objects which belonged to Instructors or DBManagers still exist. '
