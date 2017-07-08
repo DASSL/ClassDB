@@ -322,7 +322,9 @@ BEGIN
                ) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
-         EXECUTE format('DROP SCHEMA %s CASCADE', $1);
+         EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA public'
+                 ||' REVOKE SELECT ON TABLES FROM PUBLIC;', $1);
+		 EXECUTE format('DROP SCHEMA %s CASCADE', $1);
          EXECUTE format('DROP ROLE %s', $1);
       END IF;
    ELSE
