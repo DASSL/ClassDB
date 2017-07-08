@@ -312,18 +312,26 @@ BEGIN
    THEN
       EXECUTE format('REVOKE ClassDB_Instructor FROM %s', $1);
       DELETE FROM classdb.Instructor S WHERE S.userName = classdb.foldPgID($1);
+      EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA public'
+              ||' REVOKE SELECT ON TABLES FROM PUBLIC;', $1);
+
       IF EXISTS(SELECT * FROM pg_catalog.pg_roles
                 WHERE pg_catalog.pg_has_role(classdb.foldPgID($1), oid, 'member') AND
                       rolname != classdb.foldPgID($1)
                ) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
-         EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA public'
-                 ||' REVOKE SELECT ON TABLES FROM PUBLIC;', $1);
          EXECUTE format('DROP SCHEMA %s CASCADE', $1);
-         --Give ownership of any 'orphan objects' that exist outside of this user's
-         -- schema to instructor
-         EXECUTE format('REASSIGN OWNED BY %s TO classdb_instructor', $1);
+
+         IF EXISTS(SELECT * FROM classdb.listOwnedObjects($1)) THEN
+            --Give ownership of any 'orphan objects' that exist outside of this user's
+            -- schema to instructor
+            EXECUTE format('REASSIGN OWNED BY %s TO classdb_instructor', $1);
+            RAISE NOTICE 'Objects belonging to this user exist outside their schema. '
+                         'They have been reassigned to ClassDB_Instructor, and can '
+                         'be viewed by executing classdb.listOrphans().';
+         END IF;
+
          EXECUTE format('DROP ROLE %s', $1);
       END IF;
    ELSE
@@ -359,9 +367,16 @@ BEGIN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
          EXECUTE format('DROP SCHEMA %s CASCADE', $1);
-         --Give ownership of any 'orphan objects' that exist outside of this user's
-         -- schema to dbmanager
-         EXECUTE format('REASSIGN OWNED BY %s TO classdb_dbmanager', $1);
+
+         IF EXISTS(SELECT * FROM classdb.listOwnedObjects($1)) THEN
+            --Give ownership of any 'orphan objects' that exist outside of this user's
+            -- schema to dbmanager
+            EXECUTE format('REASSIGN OWNED BY %s TO classdb_dbmanager', $1);
+            RAISE NOTICE 'Objects belonging to this user exist outside their schema. '
+                         'They have been reassigned to ClassDB_DBManager, and can '
+                         'be viewed by executing classdb.listOrphans().';
+         END IF;
+
          EXECUTE format('DROP ROLE %s', $1);
       END IF;
    ELSE

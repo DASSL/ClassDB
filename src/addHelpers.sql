@@ -187,21 +187,17 @@ ALTER FUNCTION
    classdb.canLogin(roleName VARCHAR(63))
    OWNER TO ClassDB;
 
-
---Define a function to list all 'orphan' objects owned by ClassDB_Instructor and
--- ClassDB_DBManager. This will list all objects that were owned by a dropped instructor
--- or dbmanager outside of their schema, which were then reassigned.  This query_start
+--Define a function to list all  objects owned by some role.  This query
 -- uses pg_class, which lists all objects Postgres considers relations, such as
 -- tables, views, and type.  We UNION with pg_proc, which contains a list of all functions.
 -- The Postgres views are used because they contain the owner of each object, which
--- we need in this case
-CREATE OR REPLACE FUNCTION classdb.listOrphans()
+CREATE OR REPLACE FUNCTION classdb.listOwnedObjects(userName VARCHAR(63) DEFAULT current_user)
 RETURNS TABLE
 (
    owner VARCHAR(63),
    objectName VARCHAR(63),
    objectSchema VARCHAR(63),
-   objectTyupe VARCHAR(20) --These are constant strings, max needed length is <20
+   objectType VARCHAR(20) --These are constant strings, max needed length is <20
 ) AS
 $$
    SELECT r.rolname::VARCHAR(63), c.relname::VARCHAR(63), n.nspname::VARCHAR(63),
@@ -219,13 +215,42 @@ $$
    FROM pg_class c --Join pg_roles and pg_namespace to get the names of the role and schema
    JOIN pg_roles r ON r.oid = c.relowner
    JOIN pg_namespace n ON n.oid = c.relnamespace
-   WHERE r.rolname IN('classdb_instructor', 'classdb_dbmanager')
+   WHERE r.rolname = $1
    UNION ALL
    SELECT r.rolname::VARCHAR(63), p.proname::VARCHAR(63), n.nspname::VARCHAR(63), 'Function'
    FROM pg_proc p
    JOIN pg_roles r ON r.oid = p.proowner
    JOIN pg_namespace n ON n.oid = p.pronamespace
-   WHERE r.rolname IN('classdb_instructor', 'classdb_dbmanager');
+   WHERE r.rolname = $1;
+$$ LANGUAGE sql;
+
+ALTER FUNCTION
+   classdb.listOwnedObjects(userName VARCHAR(63))
+   OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   classdb.listOwnedObjects(userName VARCHAR(63))
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION
+   classdb.listOwnedObjects(userName VARCHAR(63))
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+--Define a function to list all 'orphan' objects owned by ClassDB_Instructor and
+-- ClassDB_DBManager. This will list all objects that were owned by a dropped instructor
+-- or dbmanager outside of their schema, which were then reassigned.
+CREATE OR REPLACE FUNCTION classdb.listOrphans()
+RETURNS TABLE
+(
+   owner VARCHAR(63),
+   objectName VARCHAR(63),
+   objectSchema VARCHAR(63),
+   objectType VARCHAR(20) --These are constant strings, max needed length is <20
+) AS
+$$
+   SELECT * FROM classdb.listOwnedObjects('classdb_instructor')
+   UNION ALL
+   SELECT * FROM classdb.listOwnedObjects('classdb_dbmanager');
 $$ LANGUAGE sql;
 
 ALTER FUNCTION
