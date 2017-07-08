@@ -88,6 +88,8 @@ BEGIN
 END
 $$;
 
+--Check if there are any orphan objects from dropped instructors/DBManagers
+-- that will prevent those roles from being dropped
 DO
 $$
 BEGIN
@@ -97,12 +99,14 @@ BEGIN
                       'from the database. Execute classdb.listOrphans() to get a list of these '
                       'objects.';
    END IF;
-   --Drop all remaining ClassDB objects/permissions in this database.
-   DROP OWNED BY ClassDB_Instructor;
-   DROP OWNED BY ClassDB_DBManager;
-   DROP OWNED BY ClassDB_Student;
 END
 $$;
+
+
+--Drop all remaining ClassDB objects/permissions in this database.
+DROP OWNED BY ClassDB_Instructor;
+DROP OWNED BY ClassDB_DBManager;
+DROP OWNED BY ClassDB_Student;
 
 
 --Suppress NOTICE messages for this script only, this will not apply to functions
