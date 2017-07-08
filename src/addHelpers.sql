@@ -188,6 +188,59 @@ ALTER FUNCTION
    OWNER TO ClassDB;
 
 
+--Define a function to list all 'orphan' objects owned by ClassDB_Instructor and
+-- ClassDB_DBManager. This will list all objects that were owned by a dropped instructor
+-- or dbmanager outside of their schema, which were then reassigned.  This query_start
+-- uses pg_class, which lists all objects Postgres considers relations, such as
+-- tables, views, and type.  We UNION with pg_proc, which contains a list of all functions.
+-- The Postgres views are used because they contain the owner of each object, which
+-- we need in this case
+CREATE OR REPLACE FUNCTION classdb.listOrphans()
+RETURNS TABLE
+(
+   owner VARCHAR(63),
+   objectName VARCHAR(63),
+   objectSchema VARCHAR(63),
+   objectTyupe VARCHAR(20) --These are constant strings, max needed length is <20
+) AS
+$$
+   SELECT r.rolname::VARCHAR(63), c.relname::VARCHAR(63), n.nspname::VARCHAR(63),
+   CASE --Output the full name of each relation type from the char code
+      WHEN c.relkind = 'r' THEN 'Table'
+      WHEN c.relkind = 'i' THEN 'Index'
+      WHEN c.relkind = 's' THEN 'Sequence'
+      WHEN c.relkind = 'v' THEN 'View'
+      WHEN c.relkind = 'm' THEN 'Materialized View'
+      WHEN c.relkind = 'c' THEN 'Type'
+      WHEN c.relkind = 't' THEN 'TOAST'
+      WHEN c.relkind = 'f' THEN 'Foreign Table'
+      ELSE NULL
+   END objectType
+   FROM pg_class c
+   JOIN pg_roles r ON r.oid = c.relowner
+   JOIN pg_namespace n ON n.oid = c.relnamespace
+   WHERE r.rolname IN('classdb_instructor', 'classdb_dbmanager')
+   UNION ALL
+   SELECT r.rolname::VARCHAR(63), p.proname::VARCHAR(63), n.nspname::VARCHAR(63), 'Function'
+   FROM pg_proc p
+   JOIN pg_roles r ON r.oid = p.proowner
+   JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE r.rolname IN('classdb_instructor', 'classdb_dbmanager');
+$$ LANGUAGE sql;
+
+ALTER FUNCTION
+   classdb.listOrphans()
+   OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   classdb.listOrphans()
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION
+   classdb.listOrphans()
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+
 --Define a function to retrieve specific capabilities a user has
 -- use this function to get status of different capabilities in one call
 
