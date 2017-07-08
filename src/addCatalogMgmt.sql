@@ -43,18 +43,18 @@ CREATE FUNCTION public.listTables(schemaName VARCHAR(63) DEFAULT current_user)
 AS $$
    --foldedPgSchema replicates PostgreSQLs folding behvaior. This code is currently
    -- duplicated to avoid the use of foldPgID since it is in the classdb schema.
-   WITH foldedPgSchema AS (
+   WITH foldedPgSchema(foldedSchemaName) AS (
       SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
                   SUBSTRING($1 from LENGTH($1) for 1) = '"'
              THEN
                   SUBSTRING($1 from 2 for LENGTH($1) - 2)
              ELSE
                   LOWER($1)
-      END AS id
+      END
    )
    SELECT table_name, table_type
-   FROM INFORMATION_SCHEMA.TABLES, foldedPgSchema
-   WHERE table_schema = foldedPgSchema.id;
+   FROM INFORMATION_SCHEMA.TABLES i JOIN foldedpgSchema fs ON
+      i.table_schema = fs.foldedSchemaName;
 $$
 LANGUAGE sql;
 
@@ -78,27 +78,27 @@ AS $$
    --foldedPgTable and foldedPgSchema replicate PostgreSQLs folding behvaior. 
    -- This code is currently duplicated to avoid the use of foldPgID since it is
    -- in the classdb schema.
-   WITH foldedPgTable AS (
+   WITH foldedPgTable(foldedTableName) AS (
       SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
                   SUBSTRING($1 from LENGTH($1) for 1) = '"'
              THEN
                   SUBSTRING($1 from 2 for LENGTH($1) - 2)
              ELSE
                   LOWER($1)
-      END AS id
-   ), foldedPgSchema AS (
+      END
+   ), foldedPgSchema(foldedSchemaName) AS (
       SELECT CASE WHEN SUBSTRING($2 from 1 for 1) = '"' AND
                   SUBSTRING($2 from LENGTH($2) for 1) = '"'
              THEN
                   SUBSTRING($2 from 2 for LENGTH($2) - 2)
              ELSE
                   LOWER($2)
-      END AS id
+      END
    )
    SELECT table_name, column_name, data_type, character_maximum_length
-   FROM INFORMATION_SCHEMA.COLUMNS, foldedPgTable, foldedPgSchema
-   WHERE table_name = foldedPgTable.id
-   AND table_schema = foldedpgSchema.id;
+   FROM INFORMATION_SCHEMA.COLUMNS i JOIN foldedPgTable ft ON 
+      table_name = ft.foldedTableName JOIN foldedPgSchema fs ON
+      table_schema = fs.foldedSchemaName;
 $$
 LANGUAGE sql;
 
