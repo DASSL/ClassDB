@@ -290,7 +290,7 @@ DROP FUNCTION IF EXISTS classdb.dropAllStudents();
 CREATE FUNCTION classdb.dropAllStudents() RETURNS VOID AS
 $$
 BEGIN
-   SELECT classdb.dropStudent(S.userName) FROM classdb.Student S;
+   PERFORM classdb.dropStudent(S.userName) FROM classdb.Student S;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
