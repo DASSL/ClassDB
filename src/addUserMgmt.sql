@@ -192,6 +192,9 @@ $$
 BEGIN
    PERFORM classdb.createUser(instructorUserName, initialPwd);
    EXECUTE format('GRANT ClassDB_Instructor TO %s', $1);
+   EXECUTE format('GRANT %s TO ClassDB', $1);
+   EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA public GRANT SELECT'
+                   || ' ON TABLES TO PUBLIC', $1);
    INSERT INTO classdb.Instructor VALUES(classdb.foldPgID($1), $2)
           ON CONFLICT (username) DO UPDATE SET instructorName = $2;
 
