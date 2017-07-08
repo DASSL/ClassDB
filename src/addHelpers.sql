@@ -216,7 +216,7 @@ $$
       WHEN c.relkind = 'f' THEN 'Foreign Table'
       ELSE NULL
    END objectType
-   FROM pg_class c
+   FROM pg_class c --Join pg_roles and pg_namespace to get the names of the role and schema
    JOIN pg_roles r ON r.oid = c.relowner
    JOIN pg_namespace n ON n.oid = c.relnamespace
    WHERE r.rolname IN('classdb_instructor', 'classdb_dbmanager')
