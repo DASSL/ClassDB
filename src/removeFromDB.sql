@@ -28,11 +28,30 @@ START TRANSACTION;
 DO
 $$
 BEGIN
-   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
-                  WHERE rolname = current_user AND rolsuper = TRUE
-                 ) THEN
+   IF NOT  (SELECT classdb.isSuperUser()) THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
                       ' superuser privileges';
+   END IF;
+END
+$$;
+
+
+--Check if there are any orphan objects from dropped instructors/DBManagers
+-- that will prevent those roles from being dropped
+DO
+$$
+BEGIN
+   IF EXISTS(SELECT routine_name
+             FROM INFORMATION_SCHEMA.ROUTINES
+             WHERE routine_name = 'listorphans'
+             AND specific_schema = 'classdb') THEN
+
+      IF EXISTS(SELECT * FROM classdb.listOrphans()) THEN
+         RAISE EXCEPTION 'Orphan objects which belonged to Instructors or DBManagers still exist. '
+                         'These must be reassigned or dropped before ClassDB can be removed '
+                         'from the database. Execute classdb.listOrphans() to get a list of these '
+                         'objects.';
+      END IF;
    END IF;
 END
 $$;
@@ -85,20 +104,6 @@ BEGIN
       ELSE
          RAISE INFO 'No schemas are owned by ClassDB - skipping reassignment';
       END IF;
-END
-$$;
-
---Check if there are any orphan objects from dropped instructors/DBManagers
--- that will prevent those roles from being dropped
-DO
-$$
-BEGIN
-   IF EXISTS(SELECT * FROM classdb.listOrphans()) THEN
-      RAISE EXCEPTION 'Orphan objects which belonged to Instructors or DBManagers still exist. '
-                      'These must be reassigned or dropped before ClassDB can be removed '
-                      'from the database. Execute classdb.listOrphans() to get a list of these '
-                      'objects.';
-   END IF;
 END
 $$;
 
