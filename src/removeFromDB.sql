@@ -57,6 +57,11 @@ END
 $$;
 
 
+--Suppress NOTICE messages for this script only, this will not apply to functions
+-- defined within. This hides messages that are unimportant, but possibly confusing
+SET LOCAL client_min_messages TO WARNING;
+
+
 --REVOKE permissions on the current database from each ClassDB role
 DO
 $$
@@ -112,11 +117,6 @@ $$;
 DROP OWNED BY ClassDB_Instructor;
 DROP OWNED BY ClassDB_DBManager;
 DROP OWNED BY ClassDB_Student;
-
-
---Suppress NOTICE messages for this script only, this will not apply to functions
--- defined within. This hides messages that are unimportant, but possibly confusing
-SET LOCAL client_min_messages TO WARNING;
 
 --event triggers
 DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
