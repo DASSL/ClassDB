@@ -25,7 +25,7 @@ In order to properly test the login capabilities and password for the users that
 were created, the users have to be manually tested by connecting to the DBMS 
 through a client, using the following usernames and passwords. Keep in mind that
 usernames and passwords are CASE SENSITIVE. After testing, login as a superuser,
-run the final two queries, and then run testPrepareClassDBCleanup.sql
+run the final two queries, and then run testAddUserMgmtCleanup.sql
 
 
 Students:
