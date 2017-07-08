@@ -88,11 +88,21 @@ BEGIN
 END
 $$;
 
-
---Drop all remaining ClassDB objects/permissions in this database.
-DROP OWNED BY ClassDB_Instructor;
-DROP OWNED BY ClassDB_DBManager;
-DROP OWNED BY ClassDB_Student;
+DO
+$$
+BEGIN
+   IF EXISTS(SELECT * FROM classdb.listOrphans()) THEN
+      RAISE EXCEPTION 'Orphan objects which belonged to Instructors or DBManagers still exist. '
+                      'These must be reassigned or dropped before ClassDB can be removed '
+                      'from the database. Execute classdb.listOrphans() to get a list of these '
+                      'objects.';
+   END IF;
+   --Drop all remaining ClassDB objects/permissions in this database.
+   DROP OWNED BY ClassDB_Instructor;
+   DROP OWNED BY ClassDB_DBManager;
+   DROP OWNED BY ClassDB_Student;
+END
+$$;
 
 
 --Suppress NOTICE messages for this script only, this will not apply to functions
