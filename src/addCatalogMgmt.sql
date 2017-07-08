@@ -41,9 +41,20 @@ CREATE FUNCTION public.listTables(schemaName VARCHAR(63) DEFAULT current_user)
    "Type" INFORMATION_SCHEMA.CHARACTER_DATA
 )
 AS $$
+   --foldedPgSchema replicates PostgreSQLs folding behvaior. This code is currently
+   -- duplicated to avoid the use of foldPgID since it is in the classdb schema.
+   WITH foldedPgSchema AS (
+      SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
+                  SUBSTRING($1 from LENGTH($1) for 1) = '"'
+             THEN
+                  SUBSTRING($1 from 2 for LENGTH($1) - 2)
+             ELSE
+                  LOWER($1)
+      END AS id
+   )
    SELECT table_name, table_type
-   FROM INFORMATION_SCHEMA.TABLES
-   WHERE table_schema = classdb.foldPgID($1);
+   FROM INFORMATION_SCHEMA.TABLES, foldedPgSchema
+   WHERE table_schema = foldedPgSchema.id;
 $$
 LANGUAGE sql;
 
@@ -64,10 +75,30 @@ RETURNS TABLE
    "Maximum Length" INFORMATION_SCHEMA.CARDINAL_NUMBER
 )
 AS $$
+   --foldedPgTable and foldedPgSchema replicate PostgreSQLs folding behvaior. 
+   -- This code is currently duplicated to avoid the use of foldPgID since it is
+   -- in the classdb schema.
+   WITH foldedPgTable AS (
+      SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
+                  SUBSTRING($1 from LENGTH($1) for 1) = '"'
+             THEN
+                  SUBSTRING($1 from 2 for LENGTH($1) - 2)
+             ELSE
+                  LOWER($1)
+      END AS id
+   ), foldedPgSchema AS (
+      SELECT CASE WHEN SUBSTRING($2 from 1 for 1) = '"' AND
+                  SUBSTRING($2 from LENGTH($2) for 1) = '"'
+             THEN
+                  SUBSTRING($2 from 2 for LENGTH($2) - 2)
+             ELSE
+                  LOWER($2)
+      END AS id
+   )
    SELECT table_name, column_name, data_type, character_maximum_length
-   FROM INFORMATION_SCHEMA.COLUMNS
-   WHERE table_name = classdb.foldPgID($1)
-   AND table_schema = classdb.foldPgID($2);
+   FROM INFORMATION_SCHEMA.COLUMNS, foldedPgTable, foldedPgSchema
+   WHERE table_name = foldedPgTable.id
+   AND table_schema = foldedpgSchema.id;
 $$
 LANGUAGE sql;
 
