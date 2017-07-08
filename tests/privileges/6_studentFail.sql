@@ -11,7 +11,10 @@
 
 
 --Not read tables in other users' schemas
---TODO: Tests Pending
+SELECT * FROM ins0.testInsUsr;
+SELECT * FROM stu0.testStuUsr;
+SELECT * FROM dbm0.testDbmUsr;
+
 
 --Not CUD on public schema
 INSERT INTO public.testInsPub VALUES ('Hello student');

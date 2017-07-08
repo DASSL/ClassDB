@@ -13,7 +13,10 @@
 --Create Instructor, Student, and DBManager to login for testing purposes.
 -- The password for these users will be the same as their username
 SELECT classdb.createInstructor('ins0', 'NoName');
+SELECT classdb.createInstructor('ins1', 'NoName');
 
 SELECT classdb.createStudent('stu0', 'NoName');
+SELECT classdb.createStudent('stu1', 'NoName');
 
 SELECT classdb.createDBManager('dbm0');
+SELECT classdb.createDBManager('dbm1');

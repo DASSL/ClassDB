@@ -40,7 +40,7 @@ SET connectioncount = 10
 WHERE userName = 'stu0';
 
 --Not read other instructor or dbmanager tables
---TODO: Some of these tests are pending
+SELECT * FROM ins0.testInsUsr;
 SELECT * FROM dbm0.testDbmUsr;
 
 

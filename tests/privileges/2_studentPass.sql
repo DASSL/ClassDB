@@ -49,7 +49,7 @@ SELECT * FROM testInsPub;
 
 
 --Create table in $user schema to test read privileges for Instructors and non-
--- access for DBManagers
+-- access for DBManagers and other students
 DROP TABLE IF EXISTS testStuUsr;
 CREATE TABLE testStuUsr
 (

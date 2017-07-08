@@ -41,12 +41,12 @@ WHERE userName = 'stu0';
 
 
 --Not read Student's $user schemas
-SELECT * FROM stu0.insStuTest;
+SELECT * FROM stu0.testStuUsr;
 
 
 --Not read other instructors or dbmanagers tables
---TODO: Some of these tests are pending
 SELECT * FROM ins0.testInsUsr;
+SELECT * FROM dbm0.testDbmUsr;
 
 
 --Not drop classdb functions (also covers ALTER and REPLACE)

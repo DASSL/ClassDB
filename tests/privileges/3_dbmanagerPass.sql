@@ -30,8 +30,8 @@ SELECT classdb.dropDBManager('testman');
 
 --SELECT classdb.dropAllStudents();
 
---CRUD on tables created by the DBManager. This table should be placed in their own schema
--- and be accessed without needing to be fully schema qualified
+--CRUD on tables created by the DBManager. This table should be placed in their 
+-- own schema and be accessed without needing to be fully schema qualified
 
 --Create without schema qualification
 CREATE TABLE test

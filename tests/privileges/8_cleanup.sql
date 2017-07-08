@@ -9,7 +9,10 @@
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
-
+DROP OWNED BY ins0;
 SELECT classdb.dropInstructor('ins0');
+SELECT classdb.dropInstructor('ins1');
 SELECT classdb.dropStudent('stu0');
+SELECT classdb.dropStudent('stu1');
 SELECT classdb.dropDBManager('dbm0');
+SELECT classdb.dropDBManager('dbm1');
