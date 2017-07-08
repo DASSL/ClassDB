@@ -14,7 +14,7 @@
 -- not all changes can be undone
 -- this script lists the changes an appropriate user has to perform separately
 
---This script must be run AFTER running removeClassDBFromDB.sql on all databases
+--This script must be run AFTER running removeFromDB.sql on all databases
 -- where ClassDB is installed
 
 --This script will NOT drop user roles
@@ -45,7 +45,7 @@ $$;
 SET LOCAL client_min_messages TO WARNING;
 
 --Drop app-specific roles
--- need to make sure that removeClassDBFromDB is complete
+-- need to make sure that removeFromDB.sql is complete
 DROP ROLE IF EXISTS ClassDB_Instructor;
 DROP ROLE IF EXISTS ClassDB_DBManager;
 DROP ROLE IF EXISTS ClassDB_Student;

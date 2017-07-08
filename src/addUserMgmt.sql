@@ -170,9 +170,9 @@ CREATE TABLE IF NOT EXISTS classdb.Instructor
 ALTER TABLE classdb.Instructor OWNER TO ClassDB;
 
 --Limit operations on rows and columns
-REVOKE ALL PRIVILEGES ON classdb.Student FROM PUBLIC;
+REVOKE ALL PRIVILEGES ON classdb.Instructor FROM PUBLIC;
 
-GRANT SELECT ON classdb.Student
+GRANT SELECT ON classdb.Instructor
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 GRANT UPDATE (instructorName) ON classdb.Instructor
@@ -192,6 +192,9 @@ $$
 BEGIN
    PERFORM classdb.createUser(instructorUserName, initialPwd);
    EXECUTE format('GRANT ClassDB_Instructor TO %s', $1);
+   EXECUTE format('GRANT %s TO ClassDB', $1);
+   EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA public GRANT SELECT'
+                   || ' ON TABLES TO PUBLIC', $1);
    INSERT INTO classdb.Instructor VALUES(classdb.foldPgID($1), $2)
           ON CONFLICT (username) DO UPDATE SET instructorName = $2;
 
@@ -287,7 +290,7 @@ DROP FUNCTION IF EXISTS classdb.dropAllStudents();
 CREATE FUNCTION classdb.dropAllStudents() RETURNS VOID AS
 $$
 BEGIN
-   SELECT classdb.dropStudent(S.userName) FROM classdb.Student S;
+   PERFORM classdb.dropStudent(S.userName) FROM classdb.Student S;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
@@ -319,6 +322,8 @@ BEGIN
                ) THEN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
+         EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA public'
+                 ||' REVOKE SELECT ON TABLES FROM PUBLIC;', $1);
          EXECUTE format('DROP SCHEMA %s CASCADE', $1);
          EXECUTE format('DROP ROLE %s', $1);
       END IF;
