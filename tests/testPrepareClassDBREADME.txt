@@ -7,7 +7,7 @@ https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
--------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 Tests are run in the following order:
 createDropUserTest()
@@ -18,15 +18,14 @@ dropStudentTest()
 dropInstructorTest()
 dropDBManagerTest()
 
-
 ---
 PENDING Tests:
 
-In order to properly test the login capabilities and password for the Student
-and Instructor roles created, these have to be manually tested by logging in
-to the DBMS using the following usernames and passwords. Keep in mind that
-usernames and passwords are CASE SENSITIVE. After testing, please log back in
-as a superuser and run testPrepareClassDBCleanup.sql
+In order to properly test the login capabilities and password for the users that 
+were created, the users have to be manually tested by connecting to the DBMS 
+through a client, using the following usernames and passwords. Keep in mind that
+usernames and passwords are CASE SENSITIVE. After testing, login as a superuser,
+run the final two queries, and then run testPrepareClassDBCleanup.sql
 
 
 Students:
@@ -43,11 +42,10 @@ Password: testpass
 UserName: teststu3
 Password: testpass2
 
-
 Instructors:
 
 UserName: testins0
-Password: testins0
+Password: testIns0
 
 UserName: testins1
 Password: testpass4
@@ -57,9 +55,11 @@ Multi-role users:
 UserName: teststudbm0
 Password: testpass3
 
-UserName: teststuinst1
+UserName: teststuins1
 Password: testpass5
 
+UserName: testinsmg0
+Password: testpass7
 
 DBManagers:
 
@@ -69,11 +69,8 @@ Password: testDBM0
 UserName: testdbm1
 Password: testpass6
 
-UserName: testinsmg0
-Password: testpass7
 
-
-Run the following two queries:
+Log back in as a superuser and run the following two queries:
 
 SELECT * FROM classdb.Student;
 

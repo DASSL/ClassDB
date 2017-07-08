@@ -95,9 +95,9 @@ BEGIN
    PERFORM classdb.createStudent('testStu3', 'Cathy Young', NULL, 'testpass2');
 
    --Multi-role: NOTICE is suppressed; password should not change
-   PERFORM classdb.createStudent('testStuDBM0', 'Edwin Morrison', NULL, 'notPass');
+   PERFORM classdb.createStudent('testStuDBM0', 'Edwin Morrison', NULL, 'testpass3');
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM classdb.createDBManager('testStuDBM0', 'testpass3');
+   PERFORM classdb.createDBManager('testStuDBM0', 'notPass');
    RESET client_min_messages;
 
    --Test existence of all schemas
@@ -131,11 +131,10 @@ BEGIN
    PERFORM classdb.createInstructor('testIns1', 'Dianna Wilson', 'testpass4');
 
    --Multi-role: NOTICE is suppressed; password should not change
-   PERFORM classdb.createInstructor('testStuIns1', 'Rosalie Flowers');
+   PERFORM classdb.createInstructor('testStuIns1', 'Rosalie Flowers', 'testpass5');
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM classdb.createStudent('testStuIns1', 'Rosalie Flowers', '106', 'testpass5');
+   PERFORM classdb.createStudent('testStuIns1', 'Rosalie Flowers', '106', 'notPass');
    RESET client_min_messages;
-
 
    --Test existence of all schemas
    IF NOT(pg_temp.isSchemaDefined('testIns0') AND pg_temp.isSchemaDefined('testIns1')
@@ -213,10 +212,10 @@ BEGIN
       IF pg_temp.isSchemaDefined('testStuIns2') THEN
          PERFORM classdb.dropInstructor('testStuIns2');
       ELSE
-         RETURN 'FAIL: Code 4';
+         RETURN 'FAIL: Code 4'; --schema was not defined
       END IF;
    ELSE
-      RETURN 'FAIL: Code 3';
+      RETURN 'FAIL: Code 3'; --role was not defined
    END IF;
 
    RETURN 'PASS';
@@ -252,10 +251,10 @@ BEGIN
       IF pg_temp.isSchemaDefined('testStuIns3') THEN
          PERFORM classdb.dropStudent('testStuIns3');
       ELSE
-         RETURN 'FAIL: Code 4';
+         RETURN 'FAIL: Code 4'; --schema was not defined
       END IF;
    ELSE
-      RETURN 'FAIL: Code 3';
+      RETURN 'FAIL: Code 3'; --role was not defined
    END IF;
 
    RETURN 'PASS';
@@ -291,10 +290,10 @@ BEGIN
       IF pg_temp.isSchemaDefined('testInsMg2') THEN
          PERFORM classdb.dropInstructor('testInsMg2');
       ELSE
-         RETURN 'FAIL: Code 4';
+         RETURN 'FAIL: Code 4'; --schema was not defined
       END IF;
    ELSE
-      RETURN 'FAIL: Code 3';
+      RETURN 'FAIL: Code 3'; --role was not defined
    END IF;
 
    RETURN 'PASS';
