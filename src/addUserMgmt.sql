@@ -361,7 +361,7 @@ BEGIN
          EXECUTE format('DROP SCHEMA %s CASCADE', $1);
          --Give ownership of any 'orphan objects' that exist outside of this user's
          -- schema to dbmanager
-         EXECUTE format('REASSIGN OWNED BY %s TO classdb_instructor', $1);
+         EXECUTE format('REASSIGN OWNED BY %s TO classdb_dbmanager', $1);
          EXECUTE format('DROP ROLE %s', $1);
       END IF;
    ELSE
