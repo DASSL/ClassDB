@@ -324,7 +324,7 @@ BEGIN
       ELSE
          EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA public'
                  ||' REVOKE SELECT ON TABLES FROM PUBLIC;', $1);
-		 EXECUTE format('DROP SCHEMA %s CASCADE', $1);
+         EXECUTE format('DROP SCHEMA %s CASCADE', $1);
          EXECUTE format('DROP ROLE %s', $1);
       END IF;
    ELSE
