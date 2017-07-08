@@ -44,6 +44,10 @@ SELECT * FROM ins0.testInsUsr;
 SELECT * FROM dbm0.testDbmUsr;
 
 
+--Not excute createUser function
+SELECT classdb.createUser('testusr', 'password');
+
+
 --Not drop classdb functions (also covers ALTER and REPLACE)
 DROP FUNCTION IF EXISTS classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128));
 DROP FUNCTION IF EXISTS classdb.createStudent(studentUserName VARCHAR(63),

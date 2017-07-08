@@ -13,8 +13,6 @@
 --Execute appropriate ClassDB functions (this is not inteded to test correctness of the
 -- each function).
 
-SELECT classdb.createUser('testuser', 'password');
-SELECT classdb.dropUser('testuser');
 
 SELECT classdb.createStudent('teststu', 'noname');
 SELECT classdb.resetUserPassword('teststu');
@@ -27,8 +25,6 @@ SELECT classdb.dropInstructor('testins');
 
 SELECT classdb.createDBManager('testman', 'noname');
 SELECT classdb.dropDBManager('testman');
-
---SELECT classdb.dropAllStudents();
 
 
 --CRUD on tables created by the instructor. This table should be placed in their own schema
