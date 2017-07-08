@@ -74,10 +74,6 @@ REVOKE ALL ON FUNCTION
    classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128))
    FROM PUBLIC;
 
---Allow only instructors and db managers to execute the function
-GRANT EXECUTE ON FUNCTION
-   classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128))
-   TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 --Define a table to track student users: each student gets their own login role
@@ -409,8 +405,6 @@ $$ LANGUAGE plpgsql
 --Change function ownership and set execution permissions
 ALTER FUNCTION classdb.dropUser(userName VARCHAR(63)) OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION classdb.dropUser(userName VARCHAR(63)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(63))
-   TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 --Define a function to reset a user's password to a default value
