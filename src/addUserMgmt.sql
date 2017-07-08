@@ -321,6 +321,9 @@ BEGIN
          EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA public'
                  ||' REVOKE SELECT ON TABLES FROM PUBLIC;', $1);
          EXECUTE format('DROP SCHEMA %s CASCADE', $1);
+         --Give ownership of any 'orphan objects' that exist outside of this user's
+         -- schema to instructor
+         EXECUTE format('REASSIGN OWNED BY %s TO classdb_instructor', $1);
          EXECUTE format('DROP ROLE %s', $1);
       END IF;
    ELSE
@@ -356,6 +359,9 @@ BEGIN
          RAISE NOTICE 'User "%" remains a member of one or more additional roles', $1;
       ELSE
          EXECUTE format('DROP SCHEMA %s CASCADE', $1);
+         --Give ownership of any 'orphan objects' that exist outside of this user's
+         -- schema to dbmanager
+         EXECUTE format('REASSIGN OWNED BY %s TO classdb_instructor', $1);
          EXECUTE format('DROP ROLE %s', $1);
       END IF;
    ELSE
