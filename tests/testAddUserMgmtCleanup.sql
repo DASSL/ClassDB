@@ -27,10 +27,12 @@ DROP ROLE testStu3;
 DELETE FROM classdb.Student WHERE userName = 'teststu3';
 
 DROP SCHEMA testIns0;
+DROP OWNED BY testIns0;
 DROP ROLE testIns0;
 DELETE FROM classdb.Instructor WHERE userName = 'testins0';
 
 DROP SCHEMA testIns1;
+DROP OWNED BY testIns1;
 DROP ROLE testIns1;
 DELETE FROM classdb.Instructor WHERE userName = 'testins1';
 
@@ -40,6 +42,7 @@ DELETE FROM classdb.Student WHERE userName = 'teststudbm0';
 DELETE FROM classdb.Instructor WHERE userName = 'teststudbm0';
 
 DROP SCHEMA testStuIns1;
+DROP OWNED BY testStuIns1;
 DROP ROLE testStuIns1;
 DELETE FROM classdb.Student WHERE userName = 'teststuins1';
 DELETE FROM classdb.Instructor WHERE userName = 'teststuins1';
@@ -51,12 +54,13 @@ DROP SCHEMA testDBM1;
 DROP ROLE testDBM1;
 
 DROP SCHEMA testInsMg0;
+DROP OWNED BY testInsMg0;
 DROP ROLE testInsMg0;
 DELETE FROM classdb.Instructor WHERE userName = 'testinsmg0';
 
 
 DROP FUNCTION classdb.prepareClassDBTest();
-DROP FUNCTION classdb.createDropUserTest();
+DROP FUNCTION classdb.createUserTest();
 DROP FUNCTION classdb.createInstructorTest();
 DROP FUNCTION classdb.createDBManagerTest();
 DROP FUNCTION classdb.dropStudentTest();
