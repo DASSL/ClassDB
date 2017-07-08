@@ -74,10 +74,6 @@ REVOKE ALL ON FUNCTION
    classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128))
    FROM PUBLIC;
 
---Allow only instructors and db managers to execute the function
-GRANT EXECUTE ON FUNCTION
-   classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128))
-   TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 --Define a table to track student users: each student gets their own login role
@@ -375,42 +371,6 @@ REVOKE ALL ON FUNCTION classdb.dropDBManager(userName VARCHAR(63)) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION classdb.dropDBManager(userName VARCHAR(63))
    TO ClassDB_Instructor, ClassDB_DBManager;
 
-
-DROP FUNCTION IF EXISTS classdb.dropUser(userName VARCHAR(63));
---The following procedure drops a user regardless of their role memberships.
--- This will also drop the user's schema and the objects contained within, if
--- the schema exists. Currently, it also drops the value from the Student table
--- if the user was a member of the Student role, and from the Instructor table if
--- they were an instructor.
-CREATE FUNCTION classdb.dropUser(userName VARCHAR(63)) RETURNS VOID AS
-$$
-BEGIN
-   IF classdb.isRoleDefined($1)
-      THEN
-      IF pg_catalog.pg_has_role(classdb.foldPgID($1), 'classdb_student', 'member')
-         THEN
-         DELETE FROM classdb.Student WHERE userName = classdb.foldPgID($1);
-      END IF;
-
-      IF pg_catalog.pg_has_role(classdb.foldPgID($1), 'classdb_instructor', 'member')
-         THEN
-         DELETE FROM classdb.Instructor WHERE userName = classdb.foldPgID($1);
-      END IF;
-
-      EXECUTE format('DROP SCHEMA %s CASCADE', $1);
-      EXECUTE format('DROP ROLE %s', $1);
-   ELSE
-      RAISE NOTICE 'User "%" is not a registered user', $1;
-   END IF;
-END;
-$$ LANGUAGE plpgsql
-   SECURITY DEFINER;
-
---Change function ownership and set execution permissions
-ALTER FUNCTION classdb.dropUser(userName VARCHAR(63)) OWNER TO ClassDB;
-REVOKE ALL ON FUNCTION classdb.dropUser(userName VARCHAR(63)) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION classdb.dropUser(userName VARCHAR(63))
-   TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 --Define a function to reset a user's password to a default value
