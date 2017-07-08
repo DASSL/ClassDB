@@ -66,7 +66,6 @@ DROP FUNCTION IF EXISTS classdb.dropStudent(userName VARCHAR(63));
 DROP FUNCTION IF EXISTS classdb.dropAllStudents();
 DROP FUNCTION IF EXISTS classdb.dropInstructor(userName VARCHAR(63));
 DROP FUNCTION IF EXISTS classdb.dropDBManager(userName VARCHAR(63));
-DROP FUNCTION IF EXISTS classdb.dropUser(userName VARCHAR(63));
 DROP FUNCTION IF EXISTS classdb.resetUserPassword(userName VARCHAR(63));
 DROP FUNCTION IF EXISTS classdb.listUserConnections(VARCHAR(63));
 DROP FUNCTION IF EXISTS classdb.killUserConnections(VARCHAR(63));
