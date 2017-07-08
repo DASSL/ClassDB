@@ -329,7 +329,7 @@ BEGIN
             EXECUTE format('REASSIGN OWNED BY %s TO classdb_instructor', $1);
             RAISE NOTICE 'Objects belonging to this user exist outside their schema. '
                          'They have been reassigned to ClassDB_Instructor, and can '
-                         'be viewed by executing classdb.listOrphans().';
+                         'be viewed by executing classdb.listOrphans(''Instructor'').';
          END IF;
 
          EXECUTE format('DROP ROLE %s', $1);
@@ -374,7 +374,7 @@ BEGIN
             EXECUTE format('REASSIGN OWNED BY %s TO classdb_dbmanager', $1);
             RAISE NOTICE 'Objects belonging to this user exist outside their schema. '
                          'They have been reassigned to ClassDB_DBManager, and can '
-                         'be viewed by executing classdb.listOrphans().';
+                         'be viewed by executing classdb.listOrphans(''DBManager'').';
          END IF;
 
          EXECUTE format('DROP ROLE %s', $1);

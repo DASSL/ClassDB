@@ -28,7 +28,9 @@ START TRANSACTION;
 DO
 $$
 BEGIN
-   IF NOT  (SELECT classdb.isSuperUser()) THEN
+   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
+                  WHERE rolname = current_user AND rolsuper = TRUE
+                 ) THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
                       ' superuser privileges';
    END IF;

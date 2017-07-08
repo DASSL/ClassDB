@@ -191,16 +191,15 @@ ALTER FUNCTION
 -- uses pg_class, which lists all objects Postgres considers relations, such as
 -- tables, views, and type.  We UNION with pg_proc, which contains a list of all functions.
 -- The Postgres views are used because they contain the owner of each object, which
-CREATE OR REPLACE FUNCTION classdb.listOwnedObjects(userName VARCHAR(63) DEFAULT current_user)
+CREATE OR REPLACE FUNCTION classdb.listOwnedObjects(roleName VARCHAR(63) DEFAULT current_user)
 RETURNS TABLE
 (
-   owner VARCHAR(63),
-   objectName VARCHAR(63),
-   objectSchema VARCHAR(63),
-   objectType VARCHAR(20) --These are constant strings, max needed length is <20
+   object VARCHAR(63),
+   schema VARCHAR(63),
+   kind VARCHAR(20) --These are constant strings, max needed length is <20
 ) AS
 $$
-   SELECT r.rolname::VARCHAR(63), c.relname::VARCHAR(63), n.nspname::VARCHAR(63),
+   SELECT c.relname::VARCHAR(63), n.nspname::VARCHAR(63),
    CASE --Output the full name of each relation type from the char code
       WHEN c.relkind = 'r' THEN 'Table'
       WHEN c.relkind = 'i' THEN 'Index'
@@ -217,7 +216,7 @@ $$
    JOIN pg_namespace n ON n.oid = c.relnamespace
    WHERE r.rolname = $1
    UNION ALL
-   SELECT r.rolname::VARCHAR(63), p.proname::VARCHAR(63), n.nspname::VARCHAR(63), 'Function'
+   SELECT p.proname::VARCHAR(63), n.nspname::VARCHAR(63), 'Function'
    FROM pg_proc p
    JOIN pg_roles r ON r.oid = p.proowner
    JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -238,19 +237,32 @@ GRANT EXECUTE ON FUNCTION
 
 --Define a function to list all 'orphan' objects owned by ClassDB_Instructor and
 -- ClassDB_DBManager. This will list all objects that were owned by a dropped instructor
--- or dbmanager outside of their schema, which were then reassigned.
-CREATE OR REPLACE FUNCTION classdb.listOrphans()
+-- or dbmanager outside of their schema, which were then reassigned. By default, it
+-- will list all objects from both roles. If a parameter starting with i or I is passed,
+-- it will list only Instructor objects, If a Parameter starting with d or D is passed,
+-- it will list only DBManager objects.
+CREATE OR REPLACE FUNCTION classdb.listOrphanObjects(classDBRole VARCHAR(63) DEFAULT NULL)
 RETURNS TABLE
 (
    owner VARCHAR(63),
-   objectName VARCHAR(63),
-   objectSchema VARCHAR(63),
-   objectType VARCHAR(20) --These are constant strings, max needed length is <20
+   object VARCHAR(63),
+   schema VARCHAR(63),
+   kind VARCHAR(20) --These are constant strings, max needed length is <20
 ) AS
 $$
-   SELECT * FROM classdb.listOwnedObjects('classdb_instructor')
-   UNION ALL
-   SELECT * FROM classdb.listOwnedObjects('classdb_dbmanager');
+   IF $1 ILIKE 'i%' THEN
+      SELECT 'ClassDB_Instructor', object, schema, kind
+      FROM classdb.listOwnedObjects('classdb_instructor');
+   ELSIF $1 ILIKE 'd%' THEN
+      SELECT 'ClassDB_DBManager', object, schema, kind
+      FROM classdb.listOwnedObjects('classdb_dbmanager');
+   ELSE
+      SELECT 'ClassDB_Instructor', object, schema, kind
+      FROM classdb.listOwnedObjects('classdb_instructor')
+      UNION ALL
+      SELECT 'ClassDB_DBManager', object, schema, kind
+      FROM classdb.listOwnedObjects('classdb_dbmanager');
+   END IF;
 $$ LANGUAGE sql;
 
 ALTER FUNCTION
