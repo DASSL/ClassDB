@@ -187,6 +187,101 @@ ALTER FUNCTION
    classdb.canLogin(roleName VARCHAR(63))
    OWNER TO ClassDB;
 
+--Define a function to list all  objects owned by some role.  This query
+-- uses pg_class, which lists all objects Postgres considers relations, such as
+-- tables, views, and type.  We UNION with pg_proc, which contains a list of all functions.
+-- The Postgres views are used because they contain the owner of each object, which
+CREATE OR REPLACE FUNCTION classdb.listOwnedObjects(roleName VARCHAR(63) DEFAULT current_user)
+RETURNS TABLE
+(
+   object VARCHAR(63),
+   schema VARCHAR(63),
+   kind VARCHAR(20) --These are constant strings, max needed length is <20
+) AS
+$$
+   SELECT c.relname::VARCHAR(63), n.nspname::VARCHAR(63),
+   CASE --Output the full name of each relation type from the char code
+      WHEN c.relkind = 'r' THEN 'Table'
+      WHEN c.relkind = 'i' THEN 'Index'
+      WHEN c.relkind = 's' THEN 'Sequence'
+      WHEN c.relkind = 'v' THEN 'View'
+      WHEN c.relkind = 'm' THEN 'Materialized View'
+      WHEN c.relkind = 'c' THEN 'Type'
+      WHEN c.relkind = 't' THEN 'TOAST'
+      WHEN c.relkind = 'f' THEN 'Foreign Table'
+      ELSE NULL
+   END
+   FROM pg_class c --Join pg_roles and pg_namespace to get the names of the role and schema
+   JOIN pg_roles r ON r.oid = c.relowner
+   JOIN pg_namespace n ON n.oid = c.relnamespace
+   WHERE r.rolname = $1
+   UNION ALL
+   SELECT p.proname::VARCHAR(63), n.nspname::VARCHAR(63), 'Function'
+   FROM pg_proc p
+   JOIN pg_roles r ON r.oid = p.proowner
+   JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE r.rolname = $1;
+$$ LANGUAGE sql;
+
+ALTER FUNCTION
+   classdb.listOwnedObjects(VARCHAR(63))
+   OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   classdb.listOwnedObjects(VARCHAR(63))
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION
+   classdb.listOwnedObjects(VARCHAR(63))
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+--Define a function to list all 'orphan' objects owned by ClassDB_Instructor and
+-- ClassDB_DBManager. This will list all objects that were owned by a dropped instructor
+-- or dbmanager outside of their schema, which were then reassigned. By default, it
+-- will list all objects from both roles. If a parameter starting with i or I is passed,
+-- it will list only Instructor objects, If a Parameter starting with d or D is passed,
+-- it will list only DBManager objects.
+CREATE OR REPLACE FUNCTION classdb.listOrphanObjects(classDBRole VARCHAR(63) DEFAULT NULL)
+RETURNS TABLE
+(
+   owner VARCHAR(63),
+   object VARCHAR(63),
+   schema VARCHAR(63),
+   kind VARCHAR(20) --These are constant strings, max needed length is <20
+) AS
+$$
+BEGIN
+   IF $1 ILIKE 'i%' THEN
+      RETURN QUERY
+      SELECT 'ClassDB_Instructor'::VARCHAR(63), loo.object, loo.schema, loo.kind
+      FROM classdb.listOwnedObjects('classdb_instructor') loo;
+   ELSIF $1 ILIKE 'd%' THEN
+      RETURN QUERY
+      SELECT 'ClassDB_DBManager'::VARCHAR(63), loo.object, loo.schema, loo.kind
+      FROM classdb.listOwnedObjects('classdb_dbmanager') loo;
+   ELSE
+      RETURN QUERY
+      SELECT 'ClassDB_Instructor'::VARCHAR(63), loo.object, loo.schema, loo.kind
+      FROM classdb.listOwnedObjects('classdb_instructor') loo
+      UNION ALL
+      SELECT 'ClassDB_DBManager'::VARCHAR(63), loo.object, loo.schema, loo.kind
+      FROM classdb.listOwnedObjects('classdb_dbmanager') loo;
+   END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+ALTER FUNCTION
+   classdb.listOwnedObjects(VARCHAR(63))
+   OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   classdb.listOwnedObjects(VARCHAR(63))
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION
+   classdb.listOwnedObjects(VARCHAR(63))
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
 
 --Define a function to retrieve specific capabilities a user has
 -- use this function to get status of different capabilities in one call

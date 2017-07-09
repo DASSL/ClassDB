@@ -38,6 +38,32 @@ END
 $$;
 
 
+--Check if there are any orphan objects from dropped instructors/DBManagers
+-- that will prevent those roles from being dropped
+DO
+$$
+BEGIN
+   IF (SELECT COUNT(routine_name)
+             FROM INFORMATION_SCHEMA.ROUTINES
+             WHERE routine_name IN ('listorphans', 'listownedobjects')
+             AND specific_schema = 'classdb') = 2 THEN
+
+      IF EXISTS(SELECT * FROM classdb.listOrphans()) THEN
+         RAISE EXCEPTION 'Orphan objects which belonged to Instructors or DBManagers still exist. '
+                         'These must be reassigned or dropped before ClassDB can be removed '
+                         'from the database. Execute classdb.listOrphans() to get a list of these '
+                         'objects.';
+      END IF;
+   END IF;
+END
+$$;
+
+
+--Suppress NOTICE messages for this script only, this will not apply to functions
+-- defined within. This hides messages that are unimportant, but possibly confusing
+SET LOCAL client_min_messages TO WARNING;
+
+
 --REVOKE permissions on the current database from each ClassDB role
 DO
 $$
@@ -93,11 +119,6 @@ $$;
 DROP OWNED BY ClassDB_Instructor;
 DROP OWNED BY ClassDB_DBManager;
 DROP OWNED BY ClassDB_Student;
-
-
---Suppress NOTICE messages for this script only, this will not apply to functions
--- defined within. This hides messages that are unimportant, but possibly confusing
-SET LOCAL client_min_messages TO WARNING;
 
 --event triggers
 DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
