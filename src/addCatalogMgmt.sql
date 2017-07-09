@@ -28,15 +28,15 @@ BEGIN TRANSACTION;
 SET LOCAL client_min_messages TO WARNING;
 
 
-DROP FUNCTION IF EXISTS public.listTables(VARCHAR(63));
 --Returns a list of tables and views in the specified schema
 --Defaults to current_user, as each student (the intended users of this function)
 --will primarily use a schema named <current_user>
-
+DROP FUNCTION IF EXISTS public.listTables(VARCHAR(63));
 CREATE FUNCTION public.listTables(schemaName VARCHAR(63) DEFAULT current_user)
    RETURNS TABLE
 (  --Since these functions access the INFORMATION_SCHEMA, we use the standard
    --info schema types for the return table
+   "Schema" INFORMATION_SCHEMA.SQL_IDENTIFIER,
    "Name" INFORMATION_SCHEMA.SQL_IDENTIFIER,
    "Type" INFORMATION_SCHEMA.CHARACTER_DATA
 )
@@ -52,7 +52,7 @@ AS $$
                   LOWER($1)
       END
    )
-   SELECT table_name, table_type
+   SELECT table_schema, table_name, table_type
    FROM INFORMATION_SCHEMA.TABLES i JOIN foldedpgSchema fs ON
       i.table_schema = fs.foldedSchemaName;
 $$
@@ -62,20 +62,17 @@ ALTER FUNCTION public.listTables(VARCHAR(63)) OWNER TO ClassDB;
 GRANT EXECUTE ON FUNCTION public.listTables(VARCHAR(63)) TO PUBLIC;
 
 
-DROP FUNCTION IF EXISTS public.describe(VARCHAR(63), VARCHAR(63));
---Returns a list of columns in the specified table or view in the specified schema
---schemaName also defaults to current_user, for the same reasons as above
-CREATE FUNCTION public.describe(tableName VARCHAR(63),
-   schemaName VARCHAR(63) DEFAULT current_user)
+--Returns a list of columns in the specified table or view in the current schema
+DROP FUNCTION IF EXISTS public.describe(VARCHAR(63));
+CREATE FUNCTION public.describe(tableName VARCHAR(63))
 RETURNS TABLE
 (
-   "Table Name" INFORMATION_SCHEMA.SQL_IDENTIFIER,
-   "Column Name" INFORMATION_SCHEMA.SQL_IDENTIFIER,
-   "Data Type" INFORMATION_SCHEMA.CHARACTER_DATA,
-   "Maximum Length" INFORMATION_SCHEMA.CARDINAL_NUMBER
+   "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
+   "Type" VARCHAR(100) --Use VARCHAR since we are going to modify the
+                       -- data returned from INFO_SCHEMA
 )
 AS $$
-   --foldedPgTable and foldedPgSchema replicate PostgreSQLs folding behvaior. 
+   --foldedPgTable and foldedPgSchema replicate PostgreSQLs folding behvaior.
    -- This code is currently duplicated to avoid the use of foldPgID since it is
    -- in the classdb schema.
    WITH foldedPgTable(foldedTableName) AS (
@@ -86,7 +83,30 @@ AS $$
              ELSE
                   LOWER($1)
       END
-   ), foldedPgSchema(foldedSchemaName) AS (
+   )
+   SELECT column_name, data_type || COALESCE('(' || character_maximum_length || ')', '')
+   FROM INFORMATION_SCHEMA.COLUMNS i
+   JOIN foldedPgTable ft ON table_name = ft.foldedTableName
+   WHERE table_schema = current_user;
+$$
+LANGUAGE sql;
+
+
+--Returns a list of columns in the specified table or view in the specified schema
+-- This overide allows a schema name to be specified
+DROP FUNCTION IF EXISTS public.describe(VARCHAR(63), VARCHAR(63));
+CREATE FUNCTION public.describe(schemaName VARCHAR(63), tableName VARCHAR(63))
+RETURNS TABLE
+(
+   "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
+   "Type" VARCHAR(100) --Use VARCHAR since we are going to modify the
+                       -- data returned from INFO_SCHEMA
+)
+AS $$
+   --foldedPgTable and foldedPgSchema replicate PostgreSQLs folding behvaior.
+   -- This code is currently duplicated to avoid the use of foldPgID since it is
+   -- in the classdb schema.
+   WITH foldedPgTable(foldedTableName) AS (
       SELECT CASE WHEN SUBSTRING($2 from 1 for 1) = '"' AND
                   SUBSTRING($2 from LENGTH($2) for 1) = '"'
              THEN
@@ -94,9 +114,17 @@ AS $$
              ELSE
                   LOWER($2)
       END
-   )
-   SELECT table_name, column_name, data_type, character_maximum_length
-   FROM INFORMATION_SCHEMA.COLUMNS i JOIN foldedPgTable ft ON 
+   ), foldedPgSchema(foldedSchemaName) AS (
+      SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
+                  SUBSTRING($1 from LENGTH($1) for 1) = '"'
+             THEN
+                  SUBSTRING($1 from 2 for LENGTH($1) - 2)
+             ELSE
+                  LOWER($1)
+      END
+   ) --This formats the output to look similar to psql's \d
+   SELECT column_name, data_type || COALESCE('(' || character_maximum_length || ')', '')
+   FROM INFORMATION_SCHEMA.COLUMNS i JOIN foldedPgTable ft ON
       table_name = ft.foldedTableName JOIN foldedPgSchema fs ON
       table_schema = fs.foldedSchemaName;
 $$
