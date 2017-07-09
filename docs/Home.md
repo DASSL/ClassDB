@@ -1,37 +1,28 @@
-# Table of Contents
+# ClassDB
 
-* [Index (this page)](Home)
-* [Introduction](Introduction)
-* [Setup](Setup)
-  * [Requirements](Setup#prerequisites)
-  * [Required components](Scripts#required-scripts)
-  * [Optional components](Scripts#optional-scripts)
-  * [Verification](Setup#verifying-installation)
-  * [Removal](Setup#removal)
-* [Roles](Roles)
-* [Schemas](Schemas)
-* [Scripts](Scripts)
-* [Common tasks](Common-Tasks)
-  * [Adding users](Adding-Users)
-  * [Removing users](Removing-Users)
-  * [Viewing users](Viewing-Registered-Users)
-  * [Changing and resetting passwords](Changing-Passwords)
-  * [Setting connection limits and query timeout](Student-Limitations)
-  * [Listing and describing tables](Listing-and-Describing-Tables)
-  * [Monitoring user activity](User-Logging)
-  * [Managing user connections](Managing-User-Connections)
-  * [Managing log files](Managing-Log-Files)
-* [Troubleshooting](Troubleshooting)
-* [Release notes](https://github.com/DASSL/ClassDB/releases)
-* [File list](File-List)
+ClassDB is an open-source database application to help instructors provide students an environment to experiment with relational data. With ClassDB, each student gets their own space (think _schema_) with all rights to that space. The instructor is able to read from any student's space, but no student has access to another student's space. Further, the instructor can create additional common spaces with selected rights for students.
+
+Instructors can use ClassDB to accept class assignments and term projects in both introductory courses on data management and upper-level courses where students program against a database.
+
+ClassDB was developed at the Data Science & Systems Lab ([DASSL](http://sites.wcsu.edu/murthys/research/dassl/), read _dazzle_) at the Western Connecticut State University ([WCSU](http://wcsu.edu/)) by [Sean Murthy](http://sites.wcsu.edu/murthys/), [Andrew Figueroa](https://github.com/afig) and [Steven Rollo](https://github.com/srrollo).
+
+## Documentation
+
+The documentation for the [latest release](https://github.com/DASSL/ClassDB/releases/latest) of ClassDB is on this site:
+* [Table of contents](toc)
+* [Quick Start](Introduction#quick-start)
 * [Credits](Credits)
 
----
+The documentation for the version in development is on the [ClassDB Wiki](https://github.com/DASSL/ClassDB/wiki).
 
-Andrew Figueroa, Steven Rollo, Sean Murthy  
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+## Contributing
 
-(C) 2017- DASSL. ALL RIGHTS RESERVED.  
-Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
+Contributions and ideas are welcome. Mail a summary of your thought to `murthys at wcsu dot edu`. Please mention "ClassDB" in the subject line.
+
+## Legal Stuff
+
+(C) 2017- DASSL. ALL RIGHTS RESERVED.
+
+ClassDB is distributed under [Creative Commons License BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
