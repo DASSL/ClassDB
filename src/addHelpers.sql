@@ -210,7 +210,7 @@ $$
       WHEN c.relkind = 't' THEN 'TOAST'
       WHEN c.relkind = 'f' THEN 'Foreign Table'
       ELSE NULL
-   END objectType
+   END
    FROM pg_class c --Join pg_roles and pg_namespace to get the names of the role and schema
    JOIN pg_roles r ON r.oid = c.relowner
    JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -224,15 +224,15 @@ $$
 $$ LANGUAGE sql;
 
 ALTER FUNCTION
-   classdb.listOwnedObjects(userName VARCHAR(63))
+   classdb.listOwnedObjects(VARCHAR(63))
    OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION
-   classdb.listOwnedObjects(userName VARCHAR(63))
+   classdb.listOwnedObjects(VARCHAR(63))
    FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION
-   classdb.listOwnedObjects(userName VARCHAR(63))
+   classdb.listOwnedObjects(VARCHAR(63))
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 --Define a function to list all 'orphan' objects owned by ClassDB_Instructor and
@@ -250,31 +250,36 @@ RETURNS TABLE
    kind VARCHAR(20) --These are constant strings, max needed length is <20
 ) AS
 $$
+BEGIN
    IF $1 ILIKE 'i%' THEN
-      SELECT 'ClassDB_Instructor', object, schema, kind
-      FROM classdb.listOwnedObjects('classdb_instructor');
+      RETURN QUERY
+      SELECT 'ClassDB_Instructor'::VARCHAR(63), loo.object, loo.schema, loo.kind
+      FROM classdb.listOwnedObjects('classdb_instructor') loo;
    ELSIF $1 ILIKE 'd%' THEN
-      SELECT 'ClassDB_DBManager', object, schema, kind
-      FROM classdb.listOwnedObjects('classdb_dbmanager');
+      RETURN QUERY
+      SELECT 'ClassDB_DBManager'::VARCHAR(63), loo.object, loo.schema, loo.kind
+      FROM classdb.listOwnedObjects('classdb_dbmanager') loo;
    ELSE
-      SELECT 'ClassDB_Instructor', object, schema, kind
-      FROM classdb.listOwnedObjects('classdb_instructor')
+      RETURN QUERY
+      SELECT 'ClassDB_Instructor'::VARCHAR(63), loo.object, loo.schema, loo.kind
+      FROM classdb.listOwnedObjects('classdb_instructor') loo
       UNION ALL
-      SELECT 'ClassDB_DBManager', object, schema, kind
-      FROM classdb.listOwnedObjects('classdb_dbmanager');
+      SELECT 'ClassDB_DBManager'::VARCHAR(63), loo.object, loo.schema, loo.kind
+      FROM classdb.listOwnedObjects('classdb_dbmanager') loo;
    END IF;
-$$ LANGUAGE sql;
+END;
+$$ LANGUAGE plpgsql;
 
 ALTER FUNCTION
-   classdb.listOrphans()
+   classdb.listOwnedObjects(VARCHAR(63))
    OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION
-   classdb.listOrphans()
+   classdb.listOwnedObjects(VARCHAR(63))
    FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION
-   classdb.listOrphans()
+   classdb.listOwnedObjects(VARCHAR(63))
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
