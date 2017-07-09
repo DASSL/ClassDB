@@ -5,9 +5,9 @@ ClassDB is an open-source database application to help instructors provide stude
 Instructors can use ClassDB to accept class assignments and term projects in both introductory courses on data management and upper-level courses where students program against a database.
 
 The [ClassDB web site](https://dassl.github.io/ClassDB/) has up-to-date documentation. Here are links to selected pages:
-* [[Table of contents|toc]]
-* [[Introduction|web/introduction]]
-* [[Quick Start|introduction#quick-start]]
+* Table of contents
+* [Introduction](web/introduction.html)
+* Quick Start
 
 ## Contributing
 
