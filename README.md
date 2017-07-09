@@ -9,7 +9,7 @@ ClassDB runs in an instance of PostgreSQL (Postgres). It has been primarily test
 
 ## Quick Start
 
-The [ClassDB web site](https://dassl.github.io/ClassDB/) has the complete documentation, but at a high-level, ClassDB is installed in just three steps (see examples below):
+The [ClassDB web site](https://dassl.github.io/ClassDB/) has the complete documentation, but at a high-level, ClassDB is installed in just three steps:
 1. Add ClassDB to database server: run `prepareServer.sql` as a superuser
 2. Create the database to be managed using ClassDB: see example below
 3. Add ClassDB to the database: run `prepareDB.psql` as superuser
