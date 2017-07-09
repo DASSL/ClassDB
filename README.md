@@ -6,7 +6,7 @@ Instructors can use ClassDB to accept class assignments and term projects in bot
 
 The [ClassDB web site](https://dassl.github.io/ClassDB/) has up-to-date documentation. Here are links to selected pages:
 * [[Table of contents|toc]]
-* [[Introduction|introduction]]
+* [[Introduction|web/introduction]]
 * [[Quick Start|introduction#quick-start]]
 
 ## Contributing
