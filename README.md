@@ -4,29 +4,20 @@ ClassDB is an open-source database application to help instructors provide stude
 
 Instructors can use ClassDB to accept class assignments and term projects in both introductory courses on data management and upper-level courses where students program against a database.
 
-## Requirements
-ClassDB runs in an instance of PostgreSQL (Postgres). It has been primarily tested with [Postgres 9.6.3](https://www.postgresql.org/docs/9.6/static/index.html) on Windows 10 and Ubuntu Server 16.04, but it should run in any Postgres instance as long as the instance is "fully owned".
+ClassDB was developed at the Data Science & Systems Lab ([DASSL](http://sites.wcsu.edu/murthys/research/dassl/), read _dazzle_) at the Western Connecticut State University ([WCSU](http://wcsu.edu/)) by [Sean Murthy](http://sites.wcsu.edu/murthys/), [Andrew Figueroa](https://github.com/afig) and [Steven Rollo](https://github.com/srrollo).
 
-## Quick Start
+## Documentation
 
-The [ClassDB web site](https://dassl.github.io/ClassDB/) has the complete documentation, but at a high-level, ClassDB is installed in just three steps:
-1. Add ClassDB to database server: run `prepareServer.sql` as a superuser
-2. Create the database to be managed using ClassDB: see example below
-3. Add ClassDB to the database: run `prepareDB.psql` as superuser
+The documentation for the [latest release](https://github.com/DASSL/ClassDB/releases/latest) is on the [ClassDB web site](https://dassl.github.io/ClassDB/).
+* [Table of contents](https://dassl.github.io/ClassDB/Table-of-Contents)
+* [Quick Start](https://dassl.github.io/ClassDB/Introduction#quick-start)
+* [Credits](https://dassl.github.io/ClassDB/Credits)
 
-ClassDB may be added to any number of servers, and to any number of databases in a server: perform Step 1 once for each server which contains the database(s) to be managed; perform Steps 2 and 3 for each database to be managed.
-
-After installation is complete, all tasks are performed by simply invoking ClassDB functions in the context of the appropriate database.
+The documentation for the version in development is on the [ClassDB Wiki](https://github.com/DASSL/ClassDB/wiki).
 
 ## Contributing
 
-Contributions and ideas are welcome. Mail a summary of your thought to `murthys at wcsu dot edu`. Please include "ClassDB" in the subject line.
-
-## Credits
-
-ClassDB was developed at the Data Science & Systems Lab (DASSL, read _dazzle_) at the Western Connecticut State University (WCSU).
-
-ClassDB was conceived and designed by [Sean Murthy](http://sites.wcsu.edu/murthys/), a member of the Computer Science faculty at WCSU. A large portion of ClassDB was implemented by [Andrew Figueroa](https://github.com/afig) and [Steven Rollo](https://github.com/srrollo), undergraduate students at WCSU.
+Contributions and ideas are welcome. Mail a summary of your thought to `murthys at wcsu dot edu`. Please mention "ClassDB" in the subject line.
 
 ## Legal Stuff
 
