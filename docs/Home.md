@@ -8,12 +8,12 @@ ClassDB was developed at the Data Science & Systems Lab ([DASSL](http://sites.wc
 
 ## Documentation
 
-The documentation for the [latest release](https://github.com/DASSL/ClassDB/releases/latest) is on the [ClassDB web site](https://dassl.github.io/ClassDB/):
-* [Table of contents](https://dassl.github.io/ClassDB/Table-of-Contents)
-* [Quick Start](https://dassl.github.io/ClassDB/Introduction#quick-start)
-* [Credits](https://dassl.github.io/ClassDB/Credits)
+The documentation for the version of ClassDB in development is on this Wiki:
+* [Table of contents](Table-of-Contents)
+* [Quick Start](Introduction#quick-start)
+* [Credits](Credits)
 
-The documentation for the version in development is on the [ClassDB Wiki](https://github.com/DASSL/ClassDB/wiki).
+The documentation for the [latest release](https://github.com/DASSL/ClassDB/releases/latest) is on the [ClassDB web site](https://dassl.github.io/ClassDB/).
 
 ## Contributing
 
