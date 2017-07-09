@@ -1,6 +1,5 @@
 # Table of Contents
 
-* [Table of Contents(this page)](toc)
 * [Introduction](Introduction)
 * [Setup](Setup)
   * [Requirements](Setup#prerequisites)
