@@ -23,8 +23,7 @@ Development of ClassDB is aided by the generous licensing policies of [GitHub](h
 
 <a href="https://github.com"><img src="https://img.shields.io/badge/Project%20hosting%20and%20mangagement%20by-GitHub-brightgreen.svg"/></a>
 <a href="https://zenhub.com"><img src="https://raw.githubusercontent.com/ZenHubIO/support/master/zenhub-badge.png"/></a>
-
-<a href="https://postgresql.org"><img src="https://www.postgresql.org/files/community/propaganda/88x31_2.gif"/></a>
+<a href="https://postgresql.org"><img src="https://www.postgresql.org/files/community/propaganda/80x16_3.gif"/></a>
 
 
 ## Legal Stuff
