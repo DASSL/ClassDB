@@ -12,7 +12,7 @@ ClassDB is an open-source database application to help instructors provide stude
 
 Instructors can use ClassDB to accept class assignments and term projects in both introductory courses on data management and upper-level courses where students program against a database.
 
-ClassDB was developed at the Data Science & Systems Lab ([DASSL](Credits), read _dazzle_) at the Western Connecticut State University (WCSU). It is distributed under [Creative Commons License BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+ClassDB is developed at the Data Science & Systems Lab ([DASSL](Credits), read _dazzle_) at the Western Connecticut State University (WCSU). It is distributed under [Creative Commons License BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 ## Goals
 ClassDB is developed with the following goals:
