@@ -19,6 +19,8 @@ The documentation for the version in development is on the [ClassDB Wiki](https:
 
 Contributions and ideas are welcome. Mail a summary of your thought to `murthys at wcsu dot edu`. Please mention "ClassDB" in the subject line.
 
+Development of ClassDB is aided by the generous licensing policies of [GitHub](https://github.com), [ZenHub](https://zenhub.com), and [PostgreSQL](https://postgresql.org).
+
 <a href="https://github.com"><img src="https://img.shields.io/badge/Project%20hosting%20and%20mangagement%20by-GitHub-brightgreen.svg"/></a>
 <a href="https://zenhub.com"><img src="https://raw.githubusercontent.com/ZenHubIO/support/master/zenhub-badge.png"/></a>
 
