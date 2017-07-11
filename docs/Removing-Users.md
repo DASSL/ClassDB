@@ -1,4 +1,9 @@
+[ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
+
+---
 # Removing Users
+
+_Authors: Andrew Figueroa, Steven Rollo_
 
 Users can be removed by calling the appropriate ClassDB function for the type of user being removed. Dropping a user will drop their `$user` schema and the objects contained within, remove them from the server, and unregister them from the classdb.Instructor or classdb.Student tables if appropriate. It is not possible to remove the role that is currently being used. To remove the last ClassDB user (which will be an Instructor or DBManager), it is necessary to call the appropriate drop function from the role that ran the setup script or a superuser.
 
@@ -57,10 +62,3 @@ SELECT classdb.dropDBManager('martine');
 Removing a DBManager will also drop their `$user` schema.
 
 ***
-Andrew Figueroa, Steven Rollo
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
-
-(C) 2017- DASSL. ALL RIGHTS RESERVED.  
-Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.

@@ -1,4 +1,10 @@
+[ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
+
+---
 # ClassDB Setup
+
+_Author: Steven Rollo_
+
 This document explains how to install and configure ClassDB in an existing PostgreSQL (Postgres) instance. It also details each ClassDB component and explains how to install them. For the install guide only, skip to the "Component Installation" section.
 
 ## Prerequisites
@@ -96,10 +102,3 @@ Additionally, there is a case where this script may fail. If an Instructor or DB
 `removeFromServer.sql` removes the server level components of ClassDB. This drops the ClassDB roles from the server. `removeFromDB.sql` must be run in every database ClassDB was installed in before `removeFromServer.sql` can be run. Once run, ClassDB will have been completely removed from the instance.
 
 ---
-Steven Rollo  
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
-
-(C) 2017- DASSL. ALL RIGHTS RESERVED.  
-Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.

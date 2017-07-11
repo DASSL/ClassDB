@@ -1,4 +1,9 @@
+[ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
+
+---
 # Viewing currently registered users
+
+_Author: Andrew Figueroa_
 
 The `classdb.Instructor` and `classdb.Student` tables hold entries for the currently registered Instructor and Students, respectively. Only users from the current ClassDB database are displayed. Any Instructor or DBManager is able to read the values from these tables. They can also modify the givenName for any Instructor or Student, and modify the schoolID for any student.
 
@@ -18,10 +23,3 @@ FROM classdb.Student;
 The `classdb.Student` table also contains logging information if the logging capabilities of ClassDB have been enabled. See [User Logging](User-Logging) for more information
 
 ***
-Andrew Figueroa  
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
-
-(C) 2017- DASSL. ALL RIGHTS RESERVED.  
-Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.

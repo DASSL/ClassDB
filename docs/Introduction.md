@@ -1,4 +1,10 @@
+[ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
+
+---
 # Introduction to ClassDB
+
+_Author: Sean Murthy_
+
 This document provides a high-level introduction to ClassDB.
 
 ## Overview
@@ -6,7 +12,7 @@ ClassDB is an open-source database application to help instructors provide stude
 
 Instructors can use ClassDB to accept class assignments and term projects in both introductory courses on data management and upper-level courses where students program against a database.
 
-ClassDB was developed at the Data Science & Systems Lab ([DASSL](Credits), read _dazzle_) at the Western Connecticut State University (WCSU). It is distributed under [Creative Commons License BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+ClassDB is developed at the Data Science & Systems Lab ([DASSL](Credits), read _dazzle_) at the Western Connecticut State University (WCSU). It is distributed under [Creative Commons License BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 ## Goals
 ClassDB is developed with the following goals:
@@ -34,7 +40,7 @@ Other than the obvious benefit of using a tool to easily create sandboxes for st
 ClassDB runs in an instance of PostgreSQL (Postgres). It has been primarily tested with [Postgres 9.6.3](https://www.postgresql.org/docs/9.6/static/index.html) on Windows 10 and Ubuntu Server 16.04, but it should run in any Postgres instance as long as the instance is ["fully owned"](Setup).
 
 ## Quick Start
-The [installation document](Setup) provides the details, but at a high-level, ClassDB is installed in just three steps (see examples below): 
+The [installation document](Setup) provides the details, but at a high-level, ClassDB is installed in just three steps (see examples below):
 1. Add ClassDB to database server: run `prepareServer.sql` as a superuser
 2. Create the database to be managed using ClassDB: see example below
 3. Add ClassDB to the database: run `prepareDB.psql` as superuser
@@ -88,11 +94,3 @@ An expanded version of the function `createStudent` is available to store more d
 SELECT classdb.resetUserPassword('dbmsUsername');
 ```
 ---
-
-Sean Murthy  
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
-
-(C) 2017- DASSL. ALL RIGHTS RESERVED.  
-Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.

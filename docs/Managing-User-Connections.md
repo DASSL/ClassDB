@@ -1,4 +1,10 @@
+[ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
+
+---
 # Managing User Connections
+
+_Author: Steven Rollo_
+
 While working with ClassDB, you may encounter situations where students are unable to log in because they have reached their connection limit. This document explains how to find and, if necessary, terminate stray connections.
 
 ## Listing User Connections
@@ -14,6 +20,7 @@ TABLE
    lastQueryStartTime TIMESTAMPTZ
 )
 ```
+
 | Column | `pg_stat_activity` Equivalent | Description |
 | ------ | --------------------------------- | ----------- |
 | `userName VARCHAR(63)` | `usename name` | User Name of user that established the connection |
@@ -54,10 +61,3 @@ FROM classdb.listUserConnections('<username>');
 If you wish to kill all of a student's connections, you can simply execute `classdb.killUserConnections(VARCHAR(63))`.  However, if you have identified specific connections to kill, you can use `classdb.listUserConnections(VARCHAR(63))` to get their pids, then use `classdb.killConnection(INT)` to terminate them individually.
 
 ---
-Steven Rollo  
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
-
-(C) 2017- DASSL. ALL RIGHTS RESERVED.  
-Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.

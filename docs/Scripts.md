@@ -1,4 +1,10 @@
+[ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
+
+---
 # Scripts
+
+_Author: Steven Rollo_
+
 This documents the scripts included in ClassDB. A description of each script, what permissions it requires, and when to use it are provided.
 
 ## Required Scripts
@@ -96,10 +102,3 @@ The following scripts are used to remove ClassDB components from a database or i
 `removeFromServer.sql` removes all ClassDB server level components. This includes all the ClassDB roles. `removeFromDB.sql` must be run on all database ClassDB is installed on before `removeFromServer.sql` can be used.
 
 ---
-Steven Rollo  
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
-
-(C) 2017- DASSL. ALL RIGHTS RESERVED.
-Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.

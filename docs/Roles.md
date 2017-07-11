@@ -1,4 +1,9 @@
+[ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
+
+---
 # ClassDB Roles
+
+_Author: Andrew Figueroa_
 
 ClassDB creates and uses the following [database roles](https://www.postgresql.org/docs/9.6/static/database-roles.html) in the PostgreSQL (Postgres) instance where it is installed:
 
@@ -83,10 +88,3 @@ Having "all" privileges on an object does not include ownership. This means that
 
 
 ***
-Andrew Figueroa  
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
-
-(C) 2017- DASSL. ALL RIGHTS RESERVED.  
-Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.

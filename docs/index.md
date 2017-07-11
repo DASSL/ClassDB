@@ -4,7 +4,7 @@ ClassDB is an open-source database application to help instructors provide stude
 
 Instructors can use ClassDB to accept class assignments and term projects in both introductory courses on data management and upper-level courses where students program against a database.
 
-ClassDB was developed at the Data Science & Systems Lab ([DASSL](http://sites.wcsu.edu/murthys/research/dassl/), read _dazzle_) at the Western Connecticut State University ([WCSU](http://wcsu.edu/)) by [Sean Murthy](http://sites.wcsu.edu/murthys/), [Andrew Figueroa](https://github.com/afig), and [Steven Rollo](https://github.com/srrollo).
+ClassDB is developed at the Data Science & Systems Lab ([DASSL](http://sites.wcsu.edu/murthys/research/dassl/), read _dazzle_) at the Western Connecticut State University ([WCSU](http://wcsu.edu/)) by [Sean Murthy](http://sites.wcsu.edu/murthys/), [Andrew Figueroa](https://github.com/afig), and [Steven Rollo](https://github.com/srrollo).
 
 ## Documentation
 
@@ -17,7 +17,7 @@ The documentation for the version in development is on the [ClassDB Wiki](https:
 
 ## Contributing
 
-Contributions and ideas are welcome. Mail a summary of your thought to `murthys at wcsu dot edu`. Please mention "ClassDB" in the subject line.
+Contributions and ideas are welcome. Mail a summary of your thoughts to `murthys at wcsu dot edu`. Please mention "ClassDB" in the subject line.
 
 ## Legal Stuff
 

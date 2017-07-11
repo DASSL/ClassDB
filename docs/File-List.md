@@ -1,4 +1,10 @@
+[ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
+
+---
 # File List
+
+_Author: Steven Rollo_
+
 This document lists the files located in the ClassDB repository. Each section lists the files in the corresponding folder.
 
 ## Root (./)
@@ -7,13 +13,13 @@ Contains the README and LICENSE files, as well as each ClassDB sub-folder.
 - README.md
 
 ## examples (./examples)
-Contains script files for the shelter example schema. More information can be found on the [[Scripts]] page.
+Contains script files for the shelter example schema. More information can be found on the [Scripts](Scripts) page.
 - createShelterSchema.sql
 - dropShelterSchema.sql
 - populateShelterSchema.sql
 
 ## src (./src)
-Contains the source code for ClassDB. All files need to install ClassDB are in this folder. More information can be found on the [[Scripts]] page.
+Contains the source code for ClassDB. All files need to install ClassDB are in this folder. More information can be found on the [Scripts](Scripts) page.
 - addCatalogMgmt.sql
 - addConnectionMgmt.sql
 - addDDLMonitors.sql
@@ -48,10 +54,3 @@ This folder contains a sequence of scripts to test the functionality of ClassDB'
 - testPrivilegesREADME.txt
 
 ---
-Steven Rollo  
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
-
-(C) 2017- DASSL. ALL RIGHTS RESERVED.
-Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.

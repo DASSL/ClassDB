@@ -1,4 +1,9 @@
+[ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
+
+---
 # Schemas
+
+_Author: Andrew Figueroa_
 
 Every user in an instance of ClassDB receives their own [schema](https://www.postgresql.org/docs/9.6/static/ddl-schemas.html "PostgreSQL.org - Schemas"), where they can perform operations on database objects that they have created. This schema is created with the same name as the user's database username. This "personal" schema is referred to as the `$user` schema.
 
@@ -37,11 +42,3 @@ FROM public.Employee;
 Likewise, if an Instructor wishes to create a table in the public schema, then a fully qualified name must also be used. Otherwise, it will be created in their `$user` schema.
 
 ***
-Andrew Figueroa  
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
-
-(C) 2017- DASSL. ALL RIGHTS RESERVED.  
-Licensed to others under CC 4.0 BY-SA-NC:  
-https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
