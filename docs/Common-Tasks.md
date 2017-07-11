@@ -1,4 +1,9 @@
+[ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
+
+---
 # Common Tasks
+
+_Author: Andrew Figueroa_
 
 The following is a list of common tasks that occur while using or managing an instance of ClassDB. A brief description for each task is provided, along with a link to a page about the respective task.
 
@@ -15,10 +20,3 @@ The following is a list of common tasks that occur while using or managing an in
 * [Managing log files](Managing-Log-Files) - Manage the log files that are created by Postgres
 
 ***
-Andrew Figueroa  
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
-
-(C) 2017- DASSL. ALL RIGHTS RESERVED.  
-Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.

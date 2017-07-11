@@ -1,4 +1,9 @@
+[ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
+
+---
 # Limitations on Student Users
+
+_Author: Andrew Figueroa_
 
 In order to reduce the impact that any one student has on a server that is running an instance of ClassDB, students may have a limit on the number of connections they have open, and on the amount of time that a query can run. These limitations are enabled by default, but can be changed or disabled if desired. Currently, these values are set in `addUserMgmt.sql`, in the `createStudent()` function.
 
@@ -32,12 +37,3 @@ EXECUTE format('ALTER ROLE %s SET statement_timeout = 2000', $1);
 More information on the `statement_timeout` setting can be found in [Postgres' documentation](https://www.postgresql.org/docs/9.6/static/runtime-config-client.html).
 
 ***
-
-Andrew Figueroa  
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
-
-(C) 2017- DASSL. ALL RIGHTS RESERVED.  
-Licensed to others under CC 4.0 BY-SA-NC:  
-https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.

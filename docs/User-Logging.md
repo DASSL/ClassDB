@@ -1,4 +1,10 @@
+[ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
+
+---
 # User Logging
+
+_Authors: Steven Rollo, Sean Murthy_
+
 The ClassDB user logging system, created with `enableServerLogging.sql`, `addDDLMonitors.sql`, and `addLogMgmt.sql`, records the level of activity of each student user. Two specific metrics are recorded, DDL statements executed, and connections made to the DBMS. The systems for logging each metric are independent, and do not need to be installed together. This document will demonstrate how to work with both logging components.
 
 ## DDL Statement Logging
@@ -43,10 +49,3 @@ FROM classdb.student;
 ```
 
 ---
-Steven Rollo, Sean Murthy  
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
-
-(C) 2017- DASSL. ALL RIGHTS RESERVED.  
-Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.

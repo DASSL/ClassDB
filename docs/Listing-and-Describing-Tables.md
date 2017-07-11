@@ -1,4 +1,10 @@
+[ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
+
+---
 # Listing and Describing Tables
+
+_Author: Steven Rollo_
+
 A common activity for both students and instructors is listing all tables in a schema, and describing individual columns in a table. This document will explain how to use the ClassDB meta functions for this purpose. These functions provide a simple way to perform these operations, and are intended to be used by students. This document will also demonstrate other ways to perform these operations, such as querying the `INFORMATION_SCHEMA`.
 
 ## Listing Tables
@@ -62,10 +68,3 @@ AND table_schema = 'shelter';
 The psql `\d` command describes one table. This command provides much more information than the previous two queries, although it is limited to use in the psql client.
 
 ---
-Steven Rollo  
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
-
-(C) 2017- DASSL. ALL RIGHTS RESERVED.  
-Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.

@@ -1,4 +1,10 @@
+[ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
+
+---
 # Managing Log Files
+
+_Author: Steven Rollo_
+
 ClassDB's connection logging facilities rely on the external Postgres server log files. This document explains how ClassDB configures Postgres' logging system and how to monitor log file usage. This information most relevant to ClassDB deployments using the connection logging facility.  
 
 ## ClassDB Log File Configuration
@@ -48,10 +54,3 @@ FROM classdb.student;
 Another method to reduce log size is to reduce the amount of information stored. For example, setting `log_error_verbosity` to `TERSE` will disable the logging of full statements on errors. This can greatly reduce the amount of data logged. For more information about logging configuration, see the [Postgres error reporting and logging documentation.](https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html)
 
 ---
-Steven Rollo  
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
-
-(C) 2017- DASSL. ALL RIGHTS RESERVED.  
-Licensed to others under CC 4.0 BY-SA-NC: https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
