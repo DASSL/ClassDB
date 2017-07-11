@@ -19,6 +19,12 @@ The documentation for the version in development is on the [ClassDB Wiki](https:
 
 Contributions and ideas are welcome. Mail a summary of your thought to `murthys at wcsu dot edu`. Please mention "ClassDB" in the subject line.
 
+<a href="https://github.com"><img src="https://img.shields.io/badge/Project%20hosting%20and%20mangagement%20by-GitHub-brightgreen.svg"/></a>
+<a href="https://zenhub.com"><img src="https://raw.githubusercontent.com/ZenHubIO/support/master/zenhub-badge.png"/></a>
+
+<a href="https://postgresql.org"><img src="https://www.postgresql.org/files/community/propaganda/80x16_3.gif"/></a>
+
+
 ## Legal Stuff
 
 (C) 2017- DASSL. ALL RIGHTS RESERVED.
@@ -26,3 +32,5 @@ Contributions and ideas are welcome. Mail a summary of your thought to `murthys 
 ClassDB is distributed under [Creative Commons License BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+
+<a href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png"/></a>
