@@ -1,3 +1,8 @@
+<a href="https://postgresql.org"><img src="https://img.shields.io/badge/Powered%20by-PostgreSQL-blue.svg"/></a>
+<a href="https://github.com"><img src="https://img.shields.io/badge/Hosted%20by-GitHub-brightgreen.svg"/></a>
+<a href="https://zenhub.com"><img src="https://raw.githubusercontent.com/ZenHubIO/support/master/zenhub-badge.png"/></a>
+<a href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg"/></a>
+
 # ClassDB
 
 ClassDB is an open-source database application to help instructors provide students an environment to experiment with relational data. With ClassDB, each student gets their own space (think _schema_) with all rights to that space. The instructor is able to read from any student's space, but no student has access to another student's space. Further, the instructor can create additional common spaces with selected rights for students.
@@ -19,13 +24,6 @@ The documentation for the version in development is on the [ClassDB Wiki](https:
 
 Contributions and ideas are welcome. Mail a summary of your thought to `murthys at wcsu dot edu`. Please mention "ClassDB" in the subject line.
 
-Development of ClassDB is aided by the generous licensing policies of [GitHub](https://github.com), [ZenHub](https://zenhub.com), and [PostgreSQL](https://postgresql.org).
-
-<a href="https://github.com"><img src="https://img.shields.io/badge/Project%20hosting%20and%20mangagement%20by-GitHub-brightgreen.svg"/></a>
-<a href="https://zenhub.com"><img src="https://raw.githubusercontent.com/ZenHubIO/support/master/zenhub-badge.png"/></a>
-<a href="https://postgresql.org"><img src="https://img.shields.io/badge/Powered%20by-PostgreSQL-blue.svg"/></a>
-
-
 ## Legal Stuff
 
 (C) 2017- DASSL. ALL RIGHTS RESERVED.
@@ -33,5 +31,3 @@ Development of ClassDB is aided by the generous licensing policies of [GitHub](h
 ClassDB is distributed under [Creative Commons License BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
-
-<a href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png"/></a>
