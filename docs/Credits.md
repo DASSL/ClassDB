@@ -5,7 +5,7 @@
 
 _Author: Sean Murthy_
 
-ClassDB is developed at the Data Science & Systems Lab ([DASSL](http://sites.wcsu.edu/murthys/research/dassl/), read _dazzle_) at the Western Connecticut State University ([WCSU](http://wcsu.edu/)).
+ClassDB is developed at the Data Science & Systems Lab ([DASSL](https://dassl.github.io), read _dazzle_) at the Western Connecticut State University ([WCSU](http://wcsu.edu/)).
 
 ClassDB was conceived by and is designed by [Sean Murthy](http://sites.wcsu.edu/murthys/), a member of the Computer Science faculty at WCSU. A large portion of ClassDB is implemented by [Andrew Figueroa](https://github.com/afig) and [Steven Rollo](https://github.com/srrollo), undergraduate students at WCSU.
 
