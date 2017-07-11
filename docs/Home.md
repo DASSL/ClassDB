@@ -17,7 +17,7 @@ The documentation for the version in development is on the [ClassDB Wiki](https:
 
 ## Contributing
 
-Contributions and ideas are welcome. Mail a summary of your thought to `murthys at wcsu dot edu`. Please mention "ClassDB" in the subject line.
+Contributions and ideas are welcome. Mail a summary of your thoughts to `murthys at wcsu dot edu`. Please mention "ClassDB" in the subject line.
 
 ## Legal Stuff
 
