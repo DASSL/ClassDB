@@ -1,4 +1,4 @@
-testBannerRosterREADME.md - ClassDB
+README.md - ClassDB
 
 Sean Murthy   
 Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
