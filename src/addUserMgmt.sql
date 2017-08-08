@@ -36,11 +36,11 @@ $$;
 SET LOCAL client_min_messages TO WARNING;
 
 
-DROP FUNCTION IF EXISTS classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128));
 --Define a function to create a user with the name and password supplied
 -- set user name as the initial password if pwd supplied is NULL
 -- also create a user-specific schema and give them all rights on their schema
 -- exceptions: a user/schema already exists w/ same name as the user name supplied
+DROP FUNCTION IF EXISTS classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128));
 CREATE FUNCTION
    classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128)) RETURNS VOID AS
 $$
@@ -106,14 +106,14 @@ GRANT UPDATE (studentName, schoolID) ON classdb.Student
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.createStudent(studentUserName VARCHAR(63),
-                        studentName VARCHAR(100), schoolID VARCHAR(20),
-                        initialPwd VARCHAR(128));
 --Define a function to register a student user and associate w/ group role Student
 -- schoolID and initialPwd are optional
 -- give Instructors read access to the student-specific schema
 -- limit number of concurrent connections and set time-out period for each query
 -- record the user name in the Student table
+DROP FUNCTION IF EXISTS classdb.createStudent(studentUserName VARCHAR(63),
+                        studentName VARCHAR(100), schoolID VARCHAR(20),
+                        initialPwd VARCHAR(128));
 CREATE FUNCTION
    classdb.createStudent(studentUserName VARCHAR(63), studentName VARCHAR(100),
                          schoolID VARCHAR(20) DEFAULT NULL,
@@ -175,11 +175,11 @@ GRANT UPDATE (instructorName) ON classdb.Instructor
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.createInstructor(instructorUserName VARCHAR(63),
-                        instructorName VARCHAR(100), initialPwd VARCHAR(128));
 --Define a function to register an instructor user and associate w/ Instructor role
 -- initial password is optional
 -- record the user name in the Instructor table
+DROP FUNCTION IF EXISTS classdb.createInstructor(instructorUserName VARCHAR(63),
+                        instructorName VARCHAR(100), initialPwd VARCHAR(128));
 CREATE FUNCTION
    classdb.createInstructor(instructorUserName VARCHAR(63),
                             instructorName VARCHAR(100),
@@ -215,10 +215,10 @@ GRANT EXECUTE ON FUNCTION
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.createDBManager(managerUserName VARCHAR(63),
-                        initialPwd VARCHAR(128));
 --Define a function to register a user in the DBManager role
 -- initial password is optional
+DROP FUNCTION IF EXISTS classdb.createDBManager(managerUserName VARCHAR(63),
+                        initialPwd VARCHAR(128));
 CREATE FUNCTION
    classdb.createDBManager(managerUserName VARCHAR(63),
                            initialPwd VARCHAR(128) DEFAULT NULL) RETURNS VOID AS
@@ -244,10 +244,10 @@ GRANT EXECUTE ON FUNCTION
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.dropStudent(userName VARCHAR(63));
 --Define a function to revoke Student role from a user
 -- remove the entry for user from table classdb.Student
 -- remove user's schema and contained objects if Student role was user's only role
+DROP FUNCTION IF EXISTS classdb.dropStudent(userName VARCHAR(63));
 CREATE FUNCTION classdb.dropStudent(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
@@ -280,9 +280,9 @@ GRANT EXECUTE ON FUNCTION classdb.dropStudent(userName VARCHAR(63))
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.dropAllStudents();
 --Define a function to drop all students presently registered
 -- simply call function dropStudent for each row in classdb.Student
+DROP FUNCTION IF EXISTS classdb.dropAllStudents();
 CREATE FUNCTION classdb.dropAllStudents() RETURNS VOID AS
 $$
 BEGIN
@@ -298,12 +298,12 @@ GRANT EXECUTE ON FUNCTION classdb.dropAllStudents()
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.dropInstructor(userName VARCHAR(63));
 --The folowing procedure revokes the Instructor role from an Instructor, along
 -- with their entry in the classdb.Instructor table. If the Instructor role was
 -- the only role that the instructor was a member of, the instructor's schema,
 -- and the objects contained within, are removed along with the the role
 -- representing the instructor.
+DROP FUNCTION IF EXISTS classdb.dropInstructor(userName VARCHAR(63));
 CREATE FUNCTION classdb.dropInstructor(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
@@ -348,11 +348,11 @@ GRANT EXECUTE ON FUNCTION classdb.dropInstructor(userName VARCHAR(63))
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.dropDBManager(userName VARCHAR(63));
 --The folowing procedure revokes the DBManager role from a DBManager. If the
 -- DBManager role was the only role that they were a member of, the manager's
 -- schema, and the objects contained within, are removed along with the the role
 -- representing the DBManager.
+DROP FUNCTION IF EXISTS classdb.dropDBManager(userName VARCHAR(63));
 CREATE FUNCTION classdb.dropDBManager(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN

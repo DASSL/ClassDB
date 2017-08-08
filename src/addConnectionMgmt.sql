@@ -36,10 +36,8 @@ $$;
 SET LOCAL client_min_messages TO WARNING;
 
 
---Need to drop the function prior to the return type
-DROP FUNCTION IF EXISTS classdb.listUserConnections(VARCHAR(63));
-
 --List all connections for a specific user. Gets information from pg_stat_activity
+DROP FUNCTION IF EXISTS classdb.listUserConnections(VARCHAR(63));
 CREATE FUNCTION classdb.listUserConnections(userName VARCHAR(63))
    RETURNS TABLE
 (
@@ -69,9 +67,9 @@ GRANT EXECUTE ON FUNCTION
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.killConnection(INT);
 --Kills a specific connection given a pid INT4
 -- pg_terminate_backend takes pid as INT4
+DROP FUNCTION IF EXISTS classdb.killConnection(INT);
 CREATE FUNCTION classdb.killConnection(pid INT)
 RETURNS BOOLEAN AS $$
    SELECT pg_terminate_backend($1);
@@ -90,8 +88,8 @@ GRANT EXECUTE ON FUNCTION
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
-DROP FUNCTION IF EXISTS classdb.killUserConnections(VARCHAR(63));
 --Kills all open connections for a specific user
+DROP FUNCTION IF EXISTS classdb.killUserConnections(VARCHAR(63));
 CREATE FUNCTION classdb.killUserConnections(userName VARCHAR(63))
 RETURNS TABLE
 (
