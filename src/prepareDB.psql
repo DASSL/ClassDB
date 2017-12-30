@@ -24,3 +24,4 @@
 \i addHelpers.sql
 \i addConnectionMgmt.sql
 \i addUserMgmt.sql
+\i addFrequentViews.sql
