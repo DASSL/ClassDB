@@ -1,7 +1,7 @@
 --addFrequentViews.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab (DASSL), dassl.gihut.io
+--Data Science & Systems Lab (DASSL), dassl.github.io
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -22,6 +22,84 @@
 -- though students cannot directly access the schema.
 -- These views pull data from both the ClassDB student table and info schema.
 
+--Make sure the current user has sufficient privilege to run this script
+-- privileges required: superuser
+DO
+$$
+BEGIN
+   IF NOT ClassDB.isSuperUser() THEN
+      RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
+                        ' superuser privileges';
+   END IF;
+END
+$$;
+
+DROP FUNCTION IF EXISTS ClassDB.getUserActivitySummary(targetUserName VARCHAR(63));
+CREATE FUNCTION ClassDB.getUserActivitySummary(targetUserName VARCHAR(63) DEFAULT session_user)
+RETURNS TABLE
+(
+   UserName VARCHAR(63), LastDDLActivity TIMESTAMP, LastDDLOperation VARCHAR(64),
+   LastDDLObject VARCHAR(256), DDLCount INT, LastConnection TIMESTAMP, ConnectionCount INT
+) AS
+$$
+   SELECT username, lastddlactivity, lastddloperation, lastddlobject, ddlcount,
+          lastconnection, connectioncount
+   FROM classdb.StudentActivityAll
+   WHERE username = targetUserName;
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.getUserActivitySummary()
+   FROM PUBLIC;
+
+ALTER FUNCTION
+   ClassDB.getUserActivitySummary()
+   OWNER TO ClassDB;
+
+GRANT EXECUTE ON FUNCTION
+   ClassDB.getUserActivitySummary()
+TO ClassDB_Instructor;
+
+
+--This function lists the most recent activity of the executing user. This view is accessible
+-- by both students and instructors, which requires that it be placed in the public schema.
+-- Additionally, it is implemented as a function so that students are able to indirectly
+-- access ClassDB.student.
+DROP FUNCTION IF EXISTS public.getMyActivitySummary();
+CREATE FUNCTION public.getMyActivitySummary()
+RETURNS TABLE
+(
+   LastDDLActivity TIMESTAMP, LastDDLOperation VARCHAR(64), LastDDLObject VARCHAR(256),
+   DDLCount INT, LastConnection TIMESTAMP, ConnectionCount INT
+) AS
+$$
+   SELECT lastddlactivity, lastddloperation, lastddlobject, ddlcount,
+          lastconnection, connectioncount
+   FROM ClassDB.getUserActivitySummary();
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION
+   public.getMyActivitySummary()
+   FROM PUBLIC;
+
+ALTER FUNCTION
+   public.getMyActivitySummary()
+   OWNER TO ClassDB;
+
+GRANT EXECUTE ON FUNCTION
+   public.getMyActivitySummary()
+TO ClassDB_Instructor, ClassDB_DBManager, ClassDB_Student;
+
+
+DROP VIEW IF EXISTS Public.MyActivitySummary;
+CREATE VIEW Public.MyActivitySummary AS
+(
+   SELECT lastddlactivity, lastddloperation, lastddlobject, ddlcount, lastconnection,
+          connectioncount
+   FROM Public.getMyActivitySummary();
+);
 
 --This view shows the activity of all students in the student table. This view
 -- is only usable by instructors
@@ -106,31 +184,3 @@ ALTER VIEW ClassDB.StudentTableCount
 
 GRANT SELECT ON ClassDB.StudentTableCount
   TO ClassDB_Instructor;
-
---This view lists the most recent activity of the executing user. This view is accessible
--- by both students and instructors, which requires that it be placed in the public schema.
--- Additionally, it is implemented as a function so that students are able to indirectly
--- access ClassDB.student.
-CREATE OR REPLACE FUNCTION public.MyActivity()
-RETURNS TABLE (userName VARCHAR(63), lastDDLActivity TIMESTAMP, lstDDLOperation VARCHAR(64),
-     lastDDLObject VARCHAR(256), DDLCount INT, lastConnection TIMESTAMP, connectionCount INT) AS
-$$
-     SELECT username, lastddlactivity, lastddloperation, lastddlobject, ddlcount,
-            lastconnection, connectioncount
-     FROM classdb.StudentActivityAll
-     WHERE username = session_user;
-$$
-LANGUAGE sql
-SECURITY DEFINER;
-
-REVOKE ALL ON FUNCTION
-   public.myActivity()
-   FROM PUBLIC;
-
-ALTER FUNCTION
-   public.myActivity()
-   OWNER TO ClassDB;
-
-GRANT EXECUTE ON FUNCTION
-   public.myActivity()
-TO ClassDB_Instructor, ClassDB_DBManager, ClassDB_Student;
