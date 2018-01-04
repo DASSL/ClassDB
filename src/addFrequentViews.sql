@@ -36,7 +36,7 @@ $$;
 
 --TEMPORARY
 DROP FUNCTION IF EXISTS ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR);
-CREATE FUNCTION ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR DEFAULT NULL,
+CREATE FUNCTION ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR DEFAULT TO_CHAR(CURRENT_TIMESTAMP, 'TZ'),
                                        fromTimeZone VARCHAR DEFAULT 'UTC')
 RETURNS TIMESTAMP AS
 $$
