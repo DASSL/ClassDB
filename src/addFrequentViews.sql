@@ -29,10 +29,22 @@ $$
 BEGIN
    IF NOT ClassDB.isSuperUser() THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
-                        ' superuser privileges';
+                      ' superuser privileges';
    END IF;
 END
 $$;
+
+--TEMPORARY
+DROP FUNCTION IF EXISTS ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone);
+CREATE FUNCTION ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR DEFAULT NULL,
+                                       fromTimeZone VARCHAR DEFAULT 'UTC')
+RETURNS TIMESTAMP AS
+$$
+   SELECT (ts AT TIME ZONE COALESCE(fromTimeZone, 'UTC')) AT TIME ZONE
+      COALESCE(toTimeZone, TO_CHAR(CURRENT_TIMESTAMP, 'TZ'));
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
 
 DROP FUNCTION IF EXISTS ClassDB.getUserActivitySummary(targetUserName VARCHAR(63));
 CREATE FUNCTION ClassDB.getUserActivitySummary(targetUserName VARCHAR(63) DEFAULT session_user)
@@ -42,8 +54,8 @@ RETURNS TABLE
    LastDDLObject VARCHAR(256), DDLCount INT, LastConnection TIMESTAMP, ConnectionCount INT
 ) AS
 $$
-   SELECT username, lastddlactivity, lastddloperation, lastddlobject, ddlcount,
-          lastconnection, connectioncount
+   SELECT username, ClassDB.ChangeTimeZone(lastddlactivity) LastDDLActivity, lastddloperation, lastddlobject, ddlcount,
+          ClassDB.ChangeTimeZone(lastconnection) LastConnection, connectioncount
    FROM classdb.StudentActivityAll
    WHERE username = targetUserName;
 $$ LANGUAGE sql
