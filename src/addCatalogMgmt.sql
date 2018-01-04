@@ -1,7 +1,7 @@
 --addCatalogMgmt.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+--Data Science & Systems Lab (DASSL), https://dassl.github.io/
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -28,11 +28,9 @@ BEGIN TRANSACTION;
 SET LOCAL client_min_messages TO WARNING;
 
 
---Returns a list of tables and views in the specified schema
---Defaults to current_user, as each student (the intended users of this function)
---will primarily use a schema named <current_user>
-DROP FUNCTION IF EXISTS public.listTables(VARCHAR(63));
-CREATE FUNCTION public.listTables(schemaName VARCHAR(63) DEFAULT current_user)
+--Returns a list of tables and views in the current user's schema
+DROP FUNCTION IF EXISTS public.listTables();
+CREATE FUNCTION public.listTables()
    RETURNS TABLE
 (  --Since these functions access the INFORMATION_SCHEMA, we use the standard
    --info schema types for the return table
@@ -41,25 +39,19 @@ CREATE FUNCTION public.listTables(schemaName VARCHAR(63) DEFAULT current_user)
    "Type" INFORMATION_SCHEMA.CHARACTER_DATA
 )
 AS $$
-   --foldedPgSchema replicates PostgreSQLs folding behvaior. This code is currently
-   -- duplicated to avoid the use of foldPgID since it is in the classdb schema.
-   WITH foldedPgSchema(foldedSchemaName) AS (
-      SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
-                  SUBSTRING($1 from LENGTH($1) for 1) = '"'
-             THEN
-                  SUBSTRING($1 from 2 for LENGTH($1) - 2)
-             ELSE
-                  LOWER($1)
-      END
-   )
    SELECT table_schema, table_name, table_type
-   FROM INFORMATION_SCHEMA.TABLES i JOIN foldedpgSchema fs ON
-      i.table_schema = fs.foldedSchemaName;
-$$
-LANGUAGE sql;
+   FROM INFORMATION_SCHEMA.TABLES
+   WHERE table_schema = session_user;
+$$ LANGUAGE sql
+   SECURITY DEFINER;
 
-ALTER FUNCTION public.listTables(VARCHAR(63)) OWNER TO ClassDB;
-GRANT EXECUTE ON FUNCTION public.listTables(VARCHAR(63)) TO PUBLIC;
+ALTER FUNCTION
+   public.listTables()
+   OWNER TO ClassDB;
+
+GRANT EXECUTE ON FUNCTION
+   public.listTables()
+   TO PUBLIC;
 
 
 --Returns a list of columns in the specified table or view in the current schema
@@ -72,24 +64,19 @@ RETURNS TABLE
                        -- data returned from INFO_SCHEMA
 )
 AS $$
-   --foldedPgTable and foldedPgSchema replicate PostgreSQLs folding behvaior.
-   -- This code is currently duplicated to avoid the use of foldPgID since it is
-   -- in the classdb schema.
-   WITH foldedPgTable(foldedTableName) AS (
-      SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
-                  SUBSTRING($1 from LENGTH($1) for 1) = '"'
-             THEN
-                  SUBSTRING($1 from 2 for LENGTH($1) - 2)
-             ELSE
-                  LOWER($1)
-      END
-   )
    SELECT column_name, data_type || COALESCE('(' || character_maximum_length || ')', '')
    FROM INFORMATION_SCHEMA.COLUMNS i
-   JOIN foldedPgTable ft ON table_name = ft.foldedTableName
-   WHERE table_schema = current_user;
-$$
-LANGUAGE sql;
+   WHERE table_schema = session_user AND table_name = ClassDB.FoldPgID($1);
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
+ALTER FUNCTION
+   public.describe(VARCHAR(63))
+   OWNER TO ClassDB;
+
+GRANT EXECUTE ON FUNCTION
+   public.describe(VARCHAR(63))
+   TO PUBLIC;
 
 
 --Returns a list of columns in the specified table or view in the specified schema
