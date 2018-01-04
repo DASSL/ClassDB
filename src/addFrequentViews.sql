@@ -34,29 +34,6 @@ BEGIN
 END
 $$;
 
---TEMPORARY
-DROP FUNCTION IF EXISTS ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR);
-CREATE FUNCTION ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR DEFAULT TO_CHAR(CURRENT_TIMESTAMP, 'TZ'),
-                                       fromTimeZone VARCHAR DEFAULT 'UTC')
-RETURNS TIMESTAMP AS
-$$
-   SELECT (ts AT TIME ZONE COALESCE(fromTimeZone, 'UTC')) AT TIME ZONE
-      COALESCE(toTimeZone, TO_CHAR(CURRENT_TIMESTAMP, 'TZ'));
-$$ LANGUAGE sql
-   SECURITY DEFINER;
-
-REVOKE ALL ON FUNCTION
-   ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
-   FROM PUBLIC;
-
-ALTER FUNCTION
-   ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
-   OWNER TO ClassDB;
---Not sure if we need this
---GRANT EXECUTE ON FUNCTION
---   ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
---TO ClassDB_Instructor;
-
 DROP FUNCTION IF EXISTS ClassDB.getUserActivitySummary(targetUserName VARCHAR(63));
 CREATE FUNCTION ClassDB.getUserActivitySummary(targetUserName VARCHAR(63) DEFAULT session_user)
 RETURNS TABLE
