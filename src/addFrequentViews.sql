@@ -35,7 +35,7 @@ END
 $$;
 
 --TEMPORARY
-DROP FUNCTION IF EXISTS ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone);
+DROP FUNCTION IF EXISTS ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR);
 CREATE FUNCTION ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR DEFAULT NULL,
                                        fromTimeZone VARCHAR DEFAULT 'UTC')
 RETURNS TIMESTAMP AS
@@ -45,6 +45,17 @@ $$
 $$ LANGUAGE sql
    SECURITY DEFINER;
 
+REVOKE ALL ON FUNCTION
+   ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
+   FROM PUBLIC;
+
+ALTER FUNCTION
+   ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
+   OWNER TO ClassDB;
+--Not sure if we need this
+--GRANT EXECUTE ON FUNCTION
+--   ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
+--TO ClassDB_Instructor;
 
 DROP FUNCTION IF EXISTS ClassDB.getUserActivitySummary(targetUserName VARCHAR(63));
 CREATE FUNCTION ClassDB.getUserActivitySummary(targetUserName VARCHAR(63) DEFAULT session_user)
@@ -62,15 +73,15 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION
-   ClassDB.getUserActivitySummary()
+   ClassDB.getUserActivitySummary(targetUserName VARCHAR(63))
    FROM PUBLIC;
 
 ALTER FUNCTION
-   ClassDB.getUserActivitySummary()
+   ClassDB.getUserActivitySummary(targetUserName VARCHAR(63))
    OWNER TO ClassDB;
 
 GRANT EXECUTE ON FUNCTION
-   ClassDB.getUserActivitySummary()
+   ClassDB.getUserActivitySummary(targetUserName VARCHAR(63))
 TO ClassDB_Instructor;
 
 
@@ -78,6 +89,7 @@ TO ClassDB_Instructor;
 -- by both students and instructors, which requires that it be placed in the public schema.
 -- Additionally, it is implemented as a function so that students are able to indirectly
 -- access ClassDB.student.
+DROP VIEW IF EXISTS Public.MyActivitySummary; --Have to drop first since it selects from getMyActivitySummary
 DROP FUNCTION IF EXISTS public.getMyActivitySummary();
 CREATE FUNCTION public.getMyActivitySummary()
 RETURNS TABLE
@@ -104,13 +116,11 @@ GRANT EXECUTE ON FUNCTION
    public.getMyActivitySummary()
 TO ClassDB_Instructor, ClassDB_DBManager, ClassDB_Student;
 
-
-DROP VIEW IF EXISTS Public.MyActivitySummary;
 CREATE VIEW Public.MyActivitySummary AS
 (
    SELECT lastddlactivity, lastddloperation, lastddlobject, ddlcount, lastconnection,
           connectioncount
-   FROM Public.getMyActivitySummary();
+   FROM Public.getMyActivitySummary()
 );
 
 --This view shows the activity of all students in the student table. This view
