@@ -1,7 +1,8 @@
 --addHelpers.sql - ClassDB
 
---Sean Murthy
---Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+--Sean Murthy, Andrew Figueroa, Steven Rollo
+--Data Science & Systems Lab (DASSL)
+--https://dassl.github.io/
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -60,54 +61,95 @@ $$;
 -- If identifier is quoted, then the same value is returned with quotes removed
 -- If it is not, then identifier is returned, but made lowercase
 CREATE OR REPLACE FUNCTION
-   classdb.foldPgID(identifier VARCHAR(65))
+   ClassDB.foldPgID(identifier VARCHAR(65))
    RETURNS VARCHAR(63) AS
 $$
-SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
-                 SUBSTRING($1 from LENGTH($1) for 1) = '"'
+   SELECT
+      CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
+                SUBSTRING($1 from LENGTH($1) for 1) = '"'
             THEN
-                 SUBSTRING($1 from 2 for LENGTH($1) - 2)
+               SUBSTRING($1 from 2 for LENGTH($1) - 2)
             ELSE
-                 LOWER($1)
-       END;
+               LOWER($1)
+      END;
 $$ LANGUAGE sql;
 
-ALTER FUNCTION
-   classdb.foldPgID(identifier VARCHAR(65))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.foldPgID(VARCHAR(65)) OWNER TO ClassDB;
 
 
---Define a function to test if a role is "defined"
--- a role is defined if a pg_catalog.pg_roles row exists for the supplied name
--- use this function to test if a string represents the name of a server role
-CREATE OR REPLACE FUNCTION
-   classdb.isRoleDefined(roleName VARCHAR(63))
+--Define a function to test if a role name is a ClassDB role name
+-- tests if the name supplied is one of the following:
+---- 'classdb_student', 'classdb_instructor', 'classdb_manager'
+CREATE OR REPLACE FUNCTION ClassDB.isClassDBRoleName(roleName VARCHAR(63))
    RETURNS BOOLEAN AS
 $$
-BEGIN
-   IF EXISTS (SELECT * FROM pg_catalog.pg_roles
-              WHERE rolname = classdb.foldPgID($1)) THEN
-      RETURN TRUE;
-   ELSE
-      RETURN FALSE;
-   END IF;
-END;
-$$ LANGUAGE plpgsql;
+   SELECT ClassDB.foldPgID($1)
+          IN ('classdb_student', 'classdb_instructor', 'classdb_manager');
+$$ LANGUAGE sql;
 
-ALTER FUNCTION
-   classdb.isRoleDefined(roleName VARCHAR(63))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.isClassDBRoleName(VARCHAR(63)) OWNER TO ClassDB;
+
+
+--Define a function to test if a role is "defined" in the DBMS
+-- a role is defined if a pg_catalog.pg_roles row exists for the supplied name
+-- use this function to test if a string represents the name of a server role
+CREATE OR REPLACE FUNCTION ClassDB.isServerRoleDefined(roleName VARCHAR(63))
+   RETURNS BOOLEAN AS
+$$
+   SELECT EXISTS (SELECT * FROM pg_catalog.pg_roles
+                  WHERE rolname = ClassDB.foldPgID($1)
+                 );
+$$ LANGUAGE sql;
+
+ALTER FUNCTION ClassDB.isServerRoleDefined(VARCHAR(63)) OWNER TO ClassDB;
+
+
+--Define a function to test if a user is a member of a role
+-- parameter userName can name any server role, yet it is called "userName" for
+-- consistency with Postgres function pg_catalog.pg_has_role (see Postgres docs)
+CREATE OR REPLACE FUNCTION
+   ClassDB.isMember(userName VARCHAR(63), roleName VARCHAR(63))
+   RETURNS BOOLEAN AS
+$$
+   SELECT
+      EXISTS
+      (
+         SELECT * FROM pg_catalog.pg_roles
+         WHERE pg_catalog.pg_has_role(ClassDB.foldPgID($1), oid, 'member')
+               AND rolname = ClassDB.foldPgID($2)
+      );
+$$ LANGUAGE sql;
+
+ALTER FUNCTION ClassDB.isMember(VARCHAR(63), VARCHAR(63)) OWNER TO ClassDB;
+
+
+--Define a function to test if a user is a member of a ClassDB role
+CREATE OR REPLACE FUNCTION ClassDB.hasClassDBRole(userName VARCHAR(63))
+   RETURNS BOOLEAN AS
+$$
+   SELECT
+      EXISTS
+      (
+         SELECT * FROM pg_catalog.pg_roles
+         WHERE pg_catalog.pg_has_role(ClassDB.foldPgID($1), oid, 'member')
+               AND
+               rolname IN
+               ('classdb_student', 'classdb_instructor', 'classdb_manager')
+      );
+$$ LANGUAGE sql;
+
+ALTER FUNCTION ClassDB.hasClassDBRole(VARCHAR(63)) OWNER TO ClassDB;
 
 
 --Define a function to test if a user is a superuser
 -- test current user if no user name is supplied
 CREATE OR REPLACE FUNCTION
-   classdb.isSuperUser(roleName VARCHAR(63) DEFAULT current_user)
+   ClassDB.isSuperUser(roleName VARCHAR(63) DEFAULT current_user)
    RETURNS BOOLEAN AS
 $$
 BEGIN
    IF EXISTS (SELECT * FROM pg_catalog.pg_roles
-              WHERE rolname = classdb.foldPgID($1) AND rolsuper = TRUE
+              WHERE rolname = ClassDB.foldPgID($1) AND rolsuper = TRUE
              ) THEN
       RETURN TRUE;
    ELSE
@@ -117,20 +159,18 @@ END;
 $$ LANGUAGE plpgsql;
 
 --Make ClassDB the function owner so only that role can drop/replace the function
-ALTER FUNCTION
-   classdb.isSuperUser(roleName VARCHAR(63))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.isSuperUser(VARCHAR(63)) OWNER TO ClassDB;
 
 
 --Define a function to test if a user has CREATEROLE privilege
 -- test current user if no user name is supplied
 CREATE OR REPLACE FUNCTION
-   classdb.hasCreateRole(roleName VARCHAR(63) DEFAULT current_user)
+   ClassDB.hasCreateRole(roleName VARCHAR(63) DEFAULT current_user)
    RETURNS BOOLEAN AS
 $$
 BEGIN
    IF EXISTS (SELECT * FROM pg_catalog.pg_roles
-              WHERE rolname = classdb.foldPgID($1) AND rolcreaterole = TRUE
+              WHERE rolname = ClassDB.foldPgID($1) AND rolcreaterole = TRUE
              ) THEN
       RETURN TRUE;
    ELSE
@@ -139,20 +179,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-ALTER FUNCTION
-   classdb.hasCreateRole(roleName VARCHAR(63))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.hasCreateRole(VARCHAR(63)) OWNER TO ClassDB;
 
 
 --Define a function to test if a user has CREATEDB privilege
 -- test current user if no user name is supplied
 CREATE OR REPLACE FUNCTION
-   classdb.canCreateDatabase(roleName VARCHAR(63) DEFAULT current_user)
+   ClassDB.canCreateDatabase(roleName VARCHAR(63) DEFAULT current_user)
    RETURNS BOOLEAN AS
 $$
 BEGIN
    IF EXISTS (SELECT * FROM pg_catalog.pg_roles
-              WHERE rolname = classdb.foldPgID($1) AND rolcreatedb = TRUE
+              WHERE rolname = ClassDB.foldPgID($1) AND rolcreatedb = TRUE
              ) THEN
       RETURN TRUE;
    ELSE
@@ -161,20 +199,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-ALTER FUNCTION
-   classdb.canCreateDatabase(roleName VARCHAR(63))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.canCreateDatabase(VARCHAR(63)) OWNER TO ClassDB;
 
 
 --Define a function to test if a role can log in
 -- test current user if no user name is supplied
 CREATE OR REPLACE FUNCTION
-   classdb.canLogin(roleName VARCHAR(63) DEFAULT current_user)
+   ClassDB.canLogin(roleName VARCHAR(63) DEFAULT current_user)
    RETURNS BOOLEAN AS
 $$
 BEGIN
    IF EXISTS (SELECT * FROM pg_catalog.pg_roles
-              WHERE rolname = classdb.foldPgID($1) AND rolcanlogin = TRUE
+              WHERE rolname = ClassDB.foldPgID($1) AND rolcanlogin = TRUE
              ) THEN
       RETURN TRUE;
    ELSE
@@ -183,15 +219,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-ALTER FUNCTION
-   classdb.canLogin(roleName VARCHAR(63))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.canLogin(VARCHAR(63)) OWNER TO ClassDB;
+
 
 --Define a function to list all  objects owned by some role.  This query
 -- uses pg_class, which lists all objects Postgres considers relations, such as
--- tables, views, and type.  We UNION with pg_proc, which contains a list of all functions.
+-- tables, views, and type. We UNION with pg_proc, which contains a list of all functions.
 -- The Postgres views are used because they contain the owner of each object, which
-CREATE OR REPLACE FUNCTION classdb.listOwnedObjects(roleName VARCHAR(63) DEFAULT current_user)
+CREATE OR REPLACE FUNCTION
+   ClassDB.listOwnedObjects(roleName VARCHAR(63) DEFAULT current_user)
 RETURNS TABLE
 (
    object VARCHAR(63),
@@ -223,17 +259,13 @@ $$
    WHERE r.rolname = $1;
 $$ LANGUAGE sql;
 
-ALTER FUNCTION
-   classdb.listOwnedObjects(VARCHAR(63))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.listOwnedObjects(VARCHAR(63)) OWNER TO ClassDB;
 
-REVOKE ALL ON FUNCTION
-   classdb.listOwnedObjects(VARCHAR(63))
-   FROM PUBLIC;
+REVOKE ALL ON FUNCTION ClassDB.listOwnedObjects(VARCHAR(63)) FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION
-   classdb.listOwnedObjects(VARCHAR(63))
-   TO ClassDB_Instructor, ClassDB_DBManager;
+GRANT EXECUTE ON FUNCTION ClassDB.listOwnedObjects(VARCHAR(63))
+      TO ClassDB_Instructor, ClassDB_DBManager;
+
 
 --Define a function to list all 'orphan' objects owned by ClassDB_Instructor and
 -- ClassDB_DBManager. This will list all objects that were owned by a dropped instructor
@@ -241,7 +273,8 @@ GRANT EXECUTE ON FUNCTION
 -- will list all objects from both roles. If a parameter starting with i or I is passed,
 -- it will list only Instructor objects, If a Parameter starting with d or D is passed,
 -- it will list only DBManager objects.
-CREATE OR REPLACE FUNCTION classdb.listOrphanObjects(classDBRole VARCHAR(63) DEFAULT NULL)
+CREATE OR REPLACE FUNCTION
+   ClassDB.listOrphanObjects(classDBRole VARCHAR(63) DEFAULT NULL)
 RETURNS TABLE
 (
    owner VARCHAR(63),
@@ -254,33 +287,28 @@ BEGIN
    IF $1 ILIKE 'i%' THEN
       RETURN QUERY
       SELECT 'ClassDB_Instructor'::VARCHAR(63), loo.object, loo.schema, loo.kind
-      FROM classdb.listOwnedObjects('classdb_instructor') loo;
+      FROM ClassDB.listOwnedObjects('classdb_instructor') loo;
    ELSIF $1 ILIKE 'd%' THEN
       RETURN QUERY
       SELECT 'ClassDB_DBManager'::VARCHAR(63), loo.object, loo.schema, loo.kind
-      FROM classdb.listOwnedObjects('classdb_dbmanager') loo;
+      FROM ClassDB.listOwnedObjects('classdb_dbmanager') loo;
    ELSE
       RETURN QUERY
       SELECT 'ClassDB_Instructor'::VARCHAR(63), loo.object, loo.schema, loo.kind
-      FROM classdb.listOwnedObjects('classdb_instructor') loo
+      FROM ClassDB.listOwnedObjects('classdb_instructor') loo
       UNION ALL
       SELECT 'ClassDB_DBManager'::VARCHAR(63), loo.object, loo.schema, loo.kind
-      FROM classdb.listOwnedObjects('classdb_dbmanager') loo;
+      FROM ClassDB.listOwnedObjects('classdb_dbmanager') loo;
    END IF;
 END;
 $$ LANGUAGE plpgsql;
 
-ALTER FUNCTION
-   classdb.listOwnedObjects(VARCHAR(63))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.listOwnedObjects(VARCHAR(63)) OWNER TO ClassDB;
 
-REVOKE ALL ON FUNCTION
-   classdb.listOwnedObjects(VARCHAR(63))
-   FROM PUBLIC;
+REVOKE ALL ON FUNCTION ClassDB.listOwnedObjects(VARCHAR(63)) FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION
-   classdb.listOwnedObjects(VARCHAR(63))
-   TO ClassDB_Instructor, ClassDB_DBManager;
+GRANT EXECUTE ON FUNCTION ClassDB.listOwnedObjects(VARCHAR(63))
+      TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 --Define a function to retrieve specific capabilities a user has
@@ -288,7 +316,7 @@ GRANT EXECUTE ON FUNCTION
 
 --Commenting out the function because a unit test is yet to be developed
 --CREATE OR REPLACE FUNCTION
---   classdb.getRoleCapabilities(roleName VARCHAR(63),
+--   ClassDB.getRoleCapabilities(roleName VARCHAR(63),
 --                               OUT isSuperUser BOOLEAN,
 --                               OUT hasCreateRole BOOLEAN,
 --                               OUT canCreateDatabase BOOLEAN)
@@ -301,7 +329,7 @@ GRANT EXECUTE ON FUNCTION
 --$$ LANGUAGE plpgsql;
 
 --ALTER FUNCTION
---   classdb.getRoleCapabilities(roleName VARCHAR(63),
+--   ClassDB.getRoleCapabilities(roleName VARCHAR(63),
 --                               OUT isSuperUser BOOLEAN,
 --                               OUT hasCreateRole BOOLEAN,
 --                               OUT canCreateDatabase BOOLEAN)
