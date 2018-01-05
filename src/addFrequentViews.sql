@@ -34,18 +34,17 @@ BEGIN
 END
 $$;
 
-DROP FUNCTION IF EXISTS ClassDB.getUserActivitySummary(targetUserName VARCHAR(63));
-CREATE FUNCTION ClassDB.getUserActivitySummary(targetUserName VARCHAR(63) DEFAULT session_user)
+CREATE OR REPLACE FUNCTION ClassDB.getUserActivitySummary(userName VARCHAR(63) DEFAULT session_user)
 RETURNS TABLE
 (
-   UserName VARCHAR(63), LastDDLActivity TIMESTAMP, LastDDLOperation VARCHAR(64),
+   UserName VARCHAR(63), LastDDLActivityAt TIMESTAMP, LastDDLOperation VARCHAR(64),
    LastDDLObject VARCHAR(256), DDLCount INT, LastConnection TIMESTAMP, ConnectionCount INT
 ) AS
 $$
-   SELECT username, ClassDB.ChangeTimeZone(lastddlactivity) LastDDLActivity, lastddloperation, lastddlobject, ddlcount,
-          ClassDB.ChangeTimeZone(lastconnection) LastConnection, connectioncount
-   FROM classdb.StudentActivityAll
-   WHERE username = targetUserName;
+   SELECT username, ClassDB.changeTimeZone(lastddlactivity) LastDDLActivity, lastddloperation, lastddlobject, ddlcount,
+          ClassDB.changeTimeZone(lastconnection) LastConnection, connectioncount
+   FROM ClassDB.StudentActivityAll
+   WHERE username = ClassDB.foldPgID($1);
 $$ LANGUAGE sql
    SECURITY DEFINER;
 
@@ -66,9 +65,7 @@ TO ClassDB_Instructor;
 -- by both students and instructors, which requires that it be placed in the public schema.
 -- Additionally, it is implemented as a function so that students are able to indirectly
 -- access ClassDB.student.
-DROP VIEW IF EXISTS Public.MyActivitySummary; --Have to drop first since it selects from getMyActivitySummary
-DROP FUNCTION IF EXISTS public.getMyActivitySummary();
-CREATE FUNCTION public.getMyActivitySummary()
+CREATE OR REPLACE FUNCTION Public.getMyActivitySummary()
 RETURNS TABLE
 (
    LastDDLActivity TIMESTAMP, LastDDLOperation VARCHAR(64), LastDDLObject VARCHAR(256),
@@ -82,15 +79,15 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION
-   public.getMyActivitySummary()
+   Public.getMyActivitySummary()
    FROM PUBLIC;
 
 ALTER FUNCTION
-   public.getMyActivitySummary()
+   Public.getMyActivitySummary()
    OWNER TO ClassDB;
 
 GRANT EXECUTE ON FUNCTION
-   public.getMyActivitySummary()
+   Public.getMyActivitySummary()
 TO ClassDB_Instructor, ClassDB_DBManager, ClassDB_Student;
 
 CREATE VIEW Public.MyActivitySummary AS
