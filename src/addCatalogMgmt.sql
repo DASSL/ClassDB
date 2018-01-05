@@ -29,8 +29,8 @@ SET LOCAL client_min_messages TO WARNING;
 
 
 --Returns a list of tables and views in the current user's schema
-DROP FUNCTION IF EXISTS public.listTables();
-CREATE FUNCTION public.listTables()
+DROP FUNCTION IF EXISTS Public.listTables();
+CREATE FUNCTION Public.listTables()
    RETURNS TABLE
 (  --Since these functions access the INFORMATION_SCHEMA, we use the standard
    --info schema types for the return table
