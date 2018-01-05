@@ -24,4 +24,4 @@
 \i addHelpers.sql
 \i addRoleBaseMgmt.sql
 \i addConnectionMgmt.sql
-\i addUserMgmt.sql
+\i addClassDBRolesMgmt.sql
