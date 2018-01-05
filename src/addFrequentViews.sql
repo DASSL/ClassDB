@@ -34,32 +34,125 @@ BEGIN
 END
 $$;
 
+
+--This view shows the activity of all students in the student table. This view
+-- is only usable by instructors
+DROP VIEW IF EXISTS ClassDB.StudentActivityAll;
+CREATE VIEW ClassDB.StudentActivityAll AS
+(
+  SELECT username, lastddlactivity, lastddloperation, lastddlobject, ddlcount,
+         lastconnection, connectioncount
+  FROM ClassDB.student
+  ORDER BY username
+);
+
+REVOKE ALL PRIVILEGES
+  ON ClassDB.StudentActivityAll
+  FROM PUBLIC;
+
+ALTER VIEW
+   ClassDB.studentActivityAll
+   OWNER TO ClassDB;
+
+GRANT SELECT ON
+   ClassDB.StudentActivityAll
+   TO ClassDB_Instructor;
+
+--This view shows the activity of all students in the student table, ommiting any
+-- user-identifiable information. This view is only usable by instructors
+DROP VIEW IF EXISTS ClassDB.StudentActivityAnon;
+CREATE VIEW ClassDB.StudentActivityAnon AS
+(
+  SELECT lastddlactivity, lastddloperation, SUBSTRING(lastddlobject, POSITION('.' IN lastddlobject)+1)
+         lastddlobject, ddlcount, lastconnection, connectioncount
+  FROM ClassDB.student
+  ORDER BY connectioncount
+);
+
+REVOKE ALL PRIVILEGES
+  ON ClassDB.StudentActivityAnon
+  FROM PUBLIC;
+
+ALTER VIEW
+   ClassDB.studentActivityAnon
+   OWNER TO ClassDB;
+
+GRANT SELECT ON
+   ClassDB.StudentActivityAnon
+   TO ClassDB_Instructor;
+
+--This view shows all tables and views currently owned by by students. Note that
+-- this is accomplished by listing all tables/views in student schemas. This view is
+-- only accessible by instructors.
+DROP VIEW IF EXISTS ClassDB.StudentTable;
+CREATE VIEW ClassDB.StudentTable AS
+(
+  SELECT table_schema, table_name, table_type
+  FROM information_schema.tables JOIN ClassDB.student ON table_schema = username
+  ORDER BY table_schema
+);
+
+REVOKE ALL PRIVILEGES
+  ON ClassDB.StudentTable
+  FROM PUBLIC;
+
+ALTER VIEW
+   ClassDB.StudentTable
+   OWNER TO ClassDB;
+
+GRANT SELECT ON
+   ClassDB.StudentTable
+   TO ClassDB_Instructor;
+
+--This view lists the current number of tables and views owned by each student. This
+-- view is only accessible by instructors.
+DROP VIEW IF EXISTS ClassDB.StudentTableCount;
+CREATE VIEW ClassDB.StudentTableCount AS
+(
+  SELECT table_schema, COUNT(*)
+  FROM information_schema.tables JOIN ClassDB.student ON table_schema = username
+  GROUP BY table_schema
+  ORDER BY table_schema
+);
+
+REVOKE ALL PRIVILEGES
+  ON ClassDB.StudentTableCount
+  FROM PUBLIC;
+
+ALTER VIEW
+   ClassDB.StudentTableCount
+   OWNER TO ClassDB;
+
+GRANT SELECT ON
+   ClassDB.StudentTableCount
+   TO ClassDB_Instructor;
+
+
 CREATE OR REPLACE FUNCTION ClassDB.getUserActivitySummary(userName VARCHAR(63) DEFAULT session_user)
 RETURNS TABLE
 (
-   UserName VARCHAR(63), LastDDLActivityAt TIMESTAMP, LastDDLOperation VARCHAR(64),
-   LastDDLObject VARCHAR(256), DDLCount INT, LastConnection TIMESTAMP, ConnectionCount INT
+   LastDDLActivityAt TIMESTAMP, LastDDLOperation VARCHAR(64), LastDDLObject VARCHAR(256),
+   DDLCount INT, LastConnection TIMESTAMP, ConnectionCount INT
 ) AS
 $$
-   SELECT username, ClassDB.changeTimeZone(lastddlactivity) LastDDLActivity, lastddloperation, lastddlobject, ddlcount,
-          ClassDB.changeTimeZone(lastconnection) LastConnection, connectioncount
+   SELECT ClassDB.changeTimeZone(lastddlactivity), lastddloperation, lastddlobject, ddlcount,
+          ClassDB.changeTimeZone(lastconnection), connectioncount
    FROM ClassDB.StudentActivityAll
    WHERE username = ClassDB.foldPgID($1);
 $$ LANGUAGE sql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION
-   ClassDB.getUserActivitySummary(targetUserName VARCHAR(63))
+   ClassDB.getUserActivitySummary(VARCHAR(63))
    FROM PUBLIC;
 
 ALTER FUNCTION
-   ClassDB.getUserActivitySummary(targetUserName VARCHAR(63))
+   ClassDB.getUserActivitySummary(VARCHAR(63))
    OWNER TO ClassDB;
 
 GRANT EXECUTE ON FUNCTION
-   ClassDB.getUserActivitySummary(targetUserName VARCHAR(63))
+   ClassDB.getUserActivitySummary(VARCHAR(63))
 TO ClassDB_Instructor;
-
 
 --This function lists the most recent activity of the executing user. This view is accessible
 -- by both students and instructors, which requires that it be placed in the public schema.
@@ -97,86 +190,82 @@ CREATE VIEW Public.MyActivitySummary AS
    FROM Public.getMyActivitySummary()
 );
 
---This view shows the activity of all students in the student table. This view
--- is only usable by instructors
-DROP VIEW IF EXISTS ClassDB.StudentActivityAll;
-CREATE VIEW ClassDB.StudentActivityAll AS
+REVOKE ALL PRIVILEGES
+   Public.MyActivitySummary
+   FROM Public;
+
+ALTER VIEW
+   Public.MyActivitySummary
+   OWNER TO ClassDB;
+
+GRANT SELECT ON
+   Public.MyActivitySummary
+   TO Public;
+
+
+--This function returns all DDL activity for a specified user
+CREATE OR REPLACE FUNCTION ClassDB.getUserDDLActivity(userName VARCHAR(63) DEFAULT session_user)
+RETURNS TABLE
 (
-  SELECT username, lastddlactivity, lastddloperation, lastddlobject, ddlcount,
-         lastconnection, connectioncount
-  FROM ClassDB.student
-  ORDER BY username
+   StatementStartedAt TIMESTAMP, DDLOperation VARCHAR(64), DDLObject VARCHAR(256)
+) AS
+$$
+   SELECT ClassDB.changeTimeZone(StatementStartedAtUTC), DDLOperation, DDLObject
+   FROM ClassDB.DDLActivity
+   WHERE username = ClassDB.foldPgID($1);
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.getUserDDLActivity(VARCHAR(63))
+   FROM PUBLIC;
+
+ALTER FUNCTION
+   ClassDB.getUserDDLActivity(VARCHAR(63))
+   OWNER TO ClassDB;
+
+GRANT EXECUTE ON FUNCTION
+   ClassDB.getUserDDLActivity(VARCHAR(63))
+TO ClassDB_Instructor;
+
+--
+CREATE OR REPLACE FUNCTION Public.getMyDDLActivity()
+RETURNS TABLE
+(
+   StatementStartedAt TIMESTAMP, DDLOperation VARCHAR(64), DDLObject VARCHAR(256)
+) AS
+$$
+   SELECT StatementStartedAt, DDLOperatio, DDLObject
+   FROM ClassDB.getUserDDLActivity();
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION
+   Public.getMyDDLActivity()
+   FROM PUBLIC;
+
+ALTER FUNCTION
+   Public.getMyDDLActivity()
+   OWNER TO ClassDB;
+
+GRANT EXECUTE ON FUNCTION
+   Public.getMyDDLActivity()
+TO ClassDB_Instructor, ClassDB_DBManager, ClassDB_Student;
+
+CREATE VIEW Public.MyDDLActivity AS
+(
+   SELECT StatementStartedAt, DDLOperatio, DDLObject
+   FROM Public.getMyDDLActivity()
 );
 
 REVOKE ALL PRIVILEGES
-  ON ClassDB.StudentActivityAll
-  FROM PUBLIC;
+   Public.MyDDLActivity
+   FROM Public;
 
-ALTER VIEW ClassDB.studentActivityAll
-  OWNER TO ClassDB;
+ALTER VIEW
+   Public.MyDDLActivity
+   OWNER TO ClassDB;
 
-GRANT SELECT ON ClassDB.StudentActivityAll
-  TO ClassDB_Instructor;
-
---This view shows the activity of all students in the student table, ommiting any
--- user-identifiable information. This view is only usable by instructors
-DROP VIEW IF EXISTS ClassDB.StudentActivityAnon;
-CREATE VIEW ClassDB.StudentActivityAnon AS
-(
-  SELECT lastddlactivity, lastddloperation, SUBSTRING(lastddlobject, POSITION('.' IN lastddlobject)+1)
-         lastddlobject, ddlcount, lastconnection, connectioncount
-  FROM ClassDB.student
-  ORDER BY connectioncount
-);
-
-REVOKE ALL PRIVILEGES
-  ON ClassDB.StudentActivityAnon
-  FROM PUBLIC;
-
-ALTER VIEW ClassDB.studentActivityAnon
-  OWNER TO ClassDB;
-
-GRANT SELECT ON ClassDB.StudentActivityAnon
-  TO ClassDB_Instructor;
-
---This view shows all tables and views currently owned by by students. Note that
--- this is accomplished by listing all tables/views in student schemas. This view is
--- only accessible by instructors.
-DROP VIEW IF EXISTS ClassDB.StudentTable;
-CREATE VIEW ClassDB.StudentTable AS
-(
-  SELECT table_schema, table_name, table_type
-  FROM information_schema.tables JOIN ClassDB.student ON table_schema = username
-  ORDER BY table_schema
-);
-
-REVOKE ALL PRIVILEGES
-  ON ClassDB.StudentTable
-  FROM PUBLIC;
-
-ALTER VIEW ClassDB.StudentTable
-  OWNER TO ClassDB;
-
-GRANT SELECT ON ClassDB.StudentTable
-  TO ClassDB_Instructor;
-
---This view lists the current number of tables and views owned by each student. This
--- view is only accessible by instructors.
-DROP VIEW IF EXISTS ClassDB.StudentTableCount;
-CREATE VIEW ClassDB.StudentTableCount AS
-(
-  SELECT table_schema, COUNT(*)
-  FROM information_schema.tables JOIN ClassDB.student ON table_schema = username
-  GROUP BY table_schema
-  ORDER BY table_schema
-);
-
-REVOKE ALL PRIVILEGES
-  ON ClassDB.StudentTableCount
-  FROM PUBLIC;
-
-ALTER VIEW ClassDB.StudentTableCount
-  OWNER TO ClassDB;
-
-GRANT SELECT ON ClassDB.StudentTableCount
-  TO ClassDB_Instructor;
+GRANT SELECT ON
+   Public.MyDDLActivity
+   TO Public;
