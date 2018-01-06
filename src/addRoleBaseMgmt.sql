@@ -46,11 +46,11 @@ $$;
 --  thus, uniquess is enforced using an index on an expression
 CREATE TABLE IF NOT EXISTS ClassDB.RoleBase
 (
-  RoleName VARCHAR(63) NOT NULL --server role name
+  RoleName ClassDB.IDNameDomain NOT NULL --server role name
    CHECK(TRIM(RoleName) <> '' AND NOT ClassDB.isClassDBRoleName(RoleName)),
   FullName VARCHAR NOT NULL CHECK(TRIM(FullName) <> ''), --role's given name
   IsTeam BOOLEAN NOT NULL DEFAULT FALSE, --is the role a team or a user?
-  SchemaName VARCHAR(63) NOT NULL --name of role-specific schema
+  SchemaName ClassDB.IDNameDomain NOT NULL --name of the role-specific schema
    CHECK(TRIM(SchemaName) <> ''),
   ExtraInfo VARCHAR --any additional information instructors wish to maintain
 );
@@ -88,17 +88,17 @@ GRANT UPDATE (FullName, ExtraInfo) ON ClassDB.RoleBase
 -- add a record to ClassDB.RoleBase
 ---- update FullName and ExtraInfo if record already exists
 CREATE OR REPLACE FUNCTION
-   ClassDB.createRole(roleName ClassDB.RoleBase.RoleName%TYPE,
+   ClassDB.createRole(roleName ClassDB.IDNameDomain,
                       fullName ClassDB.RoleBase.FullName%Type,
                       isTeam ClassDB.RoleBase.IsTeam%Type,
-                      schemaName ClassDB.RoleBase.SchemaName%Type DEFAULT NULL,
+                      schemaName ClassDB.IDNameDomain DEFAULT NULL,
                       extraInfo ClassDB.RoleBase.ExtraInfo%Type DEFAULT NULL,
                       okIfRoleExists BOOLEAN DEFAULT TRUE,
                       okIfSchemaExists BOOLEAN DEFAULT TRUE,
                       initialPwd VARCHAR(128) DEFAULT NULL)
    RETURNS VOID AS
 $$
-DECLARE currentSchemaOwnerName ClassDB.RoleBase.RoleName%TYPE;
+DECLARE currentSchemaOwnerName ClassDB.IDNameDomain;
 BEGIN
 
    --validate inputs:
@@ -137,19 +137,11 @@ BEGIN
       EXECUTE FORMAT('CREATE %s %s ENCRYPTED PASSWORD %L',
                      CASE WHEN isTeam THEN 'ROLE' ELSE 'USER' END,
                      $1,
-                     COALESCE($8, $1)
+                     COALESCE($8, ClassDB.foldPgID($1))
                     );
    END IF;
 
-   IF NOT ClassDB.isMember(CURRENT_USER::VARCHAR, $1) THEN
-      EXECUTE FORMAT('GRANT %s TO CURRENT_USER', $1);
-   END IF;
-
-   IF NOT ClassDB.isMember('classdb', $1) THEN
-      EXECUTE FORMAT('GRANT %s TO classdb', $1);
-   END IF;
-
-   --get role-spefic schema's name: role name is the default schema name
+   --get the role-spefic schema's name: the role name is the default schema name
    $4 = COALESCE($4, $1);
 
    --find the current owner of the schema, if the schema already exists
@@ -162,6 +154,12 @@ BEGIN
    --if schema exists, accept only if it is owned by role in question, and even
    -- then only if okIfSchemaExists is TRUE
    IF currentSchemaOwnerName IS NULL THEN
+      --enable the executing user (which should be 'classdb') to grant ownership
+      --of the new schema to the role in question
+      IF NOT ClassDB.isMember(CURRENT_USER::VARCHAR, $1) THEN
+         EXECUTE FORMAT('GRANT %s TO CURRENT_USER', $1);
+      END IF;
+
       EXECUTE FORMAT('CREATE SCHEMA %s AUTHORIZATION %s', $4, $1);
    ELSIF $7 THEN
       --if schema already exists, make sure its owner is the role in question
@@ -198,49 +196,66 @@ $$ LANGUAGE plpgsql
 
 --Make ClassDB the function owner so function runs with that role's privileges
 ALTER FUNCTION
-   ClassDB.createRole(ClassDB.RoleBase.RoleName%TYPE,
-                      ClassDB.RoleBase.FullName%Type,
-                      ClassDB.RoleBase.IsTeam%Type,
-                      ClassDB.RoleBase.SchemaName%Type,
+   ClassDB.createRole(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
+                      ClassDB.RoleBase.IsTeam%Type, ClassDB.IDNameDomain,
                       ClassDB.RoleBase.ExtraInfo%Type,
-                      BOOLEAN,
-                      BOOLEAN,
-                      VARCHAR(128))
+                      BOOLEAN, BOOLEAN, VARCHAR(128)
+                     )
    OWNER TO ClassDB;
 
 --Prevent everyone else from executing the function
 REVOKE ALL ON FUNCTION
-   ClassDB.createRole(ClassDB.RoleBase.RoleName%TYPE,
-                      ClassDB.RoleBase.FullName%Type,
-                      ClassDB.RoleBase.IsTeam%Type,
-                      ClassDB.RoleBase.SchemaName%Type,
+   ClassDB.createRole(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
+                      ClassDB.RoleBase.IsTeam%Type, ClassDB.IDNameDomain,
                       ClassDB.RoleBase.ExtraInfo%Type,
-                      BOOLEAN,
-                      BOOLEAN,
-                      VARCHAR(128))
+                      BOOLEAN, BOOLEAN, VARCHAR(128)
+                     )
    FROM PUBLIC;
+
+
+--Define a function to retrieve the schema for a known role
+-- returns NULL if the role is not known
+CREATE OR REPLACE FUNCTION ClassDB.getSchemaName(roleName ClassDB.IDNameDomain)
+   RETURNS ClassDB.IDNameDomain AS
+$$
+   SELECT SchemaName::ClassDB.IDNameDomain FROM ClassDB.RoleBase R
+   WHERE R.RoleName = ClassDB.foldPgID($1);
+$$ LANGUAGE sql;
+
+ALTER FUNCTION ClassDB.getSchemaName(ClassDB.IDNameDomain)
+   OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION ClassDB.getSchemaName(ClassDB.IDNameDomain)
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.getSchemaName(ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 --Define a function to test if a role is "known"
 -- a role is known if a row exists for the role name in table ClassDB.RoleBase
 -- an "unknown role" could still be defined in the server
-CREATE OR REPLACE FUNCTION
-   ClassDB.isRoleKnown(roleName ClassDB.RoleBase.RoleName%TYPE)
+CREATE OR REPLACE FUNCTION ClassDB.isRoleKnown(roleName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
 $$
-   SELECT EXISTS (SELECT * FROM ClassDB.RoleBase
-                  WHERE RoleName = ClassDB.foldPgID($1)
+   SELECT EXISTS (SELECT * FROM ClassDB.RoleBase R
+                  WHERE R.RoleName = ClassDB.foldPgID($1)
                  );
 $$ LANGUAGE sql;
 
-ALTER FUNCTION ClassDB.isRoleKnown(ClassDB.RoleBase.RoleName%TYPE)
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.isRoleKnown(ClassDB.IDNameDomain) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION ClassDB.isRoleKnown(ClassDB.IDNameDomain)
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.isRoleKnown(ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
 
 
 --Define a function to test if a role is a "known user"
 -- a role is a known user if role is known and IsTeam is FALSE
-CREATE OR REPLACE FUNCTION
-   ClassDB.isUserKnown(userName ClassDB.RoleBase.RoleName%TYPE)
+CREATE OR REPLACE FUNCTION ClassDB.isUserKnown(userName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
 $$
    SELECT EXISTS (SELECT * FROM ClassDB.RoleBase
@@ -248,17 +263,19 @@ $$
                  );
 $$ LANGUAGE sql;
 
-ALTER FUNCTION ClassDB.isUserKnown(ClassDB.RoleBase.RoleName%TYPE)
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.isUserKnown(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
-GRANT EXECUTE ON FUNCTION ClassDB.isUserKnown(ClassDB.RoleBase.RoleName%TYPE)
+REVOKE ALL ON FUNCTION ClassDB.isUserKnown(ClassDB.IDNameDomain)
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.isUserKnown(ClassDB.IDNameDomain)
    TO ClassDB_Instructor, ClassDB_DBManager;
+
 
 
 --Define a function to test if a role is a "known team"
 -- a role is known user if role is known and IsTeam is TRUE
-CREATE OR REPLACE FUNCTION
-   ClassDB.isTeamKnown(teamName ClassDB.RoleBase.RoleName%TYPE)
+CREATE OR REPLACE FUNCTION ClassDB.isTeamKnown(teamName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
 $$
    SELECT EXISTS (SELECT * FROM ClassDB.RoleBase
@@ -266,22 +283,25 @@ $$
                  );
 $$ LANGUAGE sql;
 
-ALTER FUNCTION ClassDB.isTeamKnown(ClassDB.RoleBase.RoleName%TYPE)
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.isTeamKnown(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
-GRANT EXECUTE ON FUNCTION ClassDB.isTeamKnown(ClassDB.RoleBase.RoleName%TYPE)
+REVOKE ALL ON FUNCTION ClassDB.isTeamKnown(ClassDB.IDNameDomain)
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.isTeamKnown(ClassDB.IDNameDomain)
    TO ClassDB_Instructor, ClassDB_DBManager;
+
 
 
 --Define a function to revoke a ClassDB role from a known user
 CREATE OR REPLACE FUNCTION
-   ClassDB.revokeClassDBRole(userName ClassDB.RoleBase.RoleName%TYPE,
-                             classdbRoleName VARCHAR(63))
+   ClassDB.revokeClassDBRole(userName ClassDB.IDNameDomain,
+                             classdbRoleName ClassDB.IDNameDomain)
    RETURNS VOID AS
 $$
 BEGIN
 
-   --test if a ClassDB role is supplied
+   --test if a ClassDB role name is supplied
    -- raise an exception (not a notice) because the role name must be correct
    IF NOT ClassDB.isClassDBRoleName($2) THEN
       RAISE EXCEPTION 'Invalid argument: role name "%" not expected', $2;
@@ -322,25 +342,26 @@ $$ LANGUAGE plpgsql
 
 --Change function ownership and set execution permissions
 ALTER FUNCTION
-   ClassDB.revokeClassDBRole(ClassDB.RoleBase.RoleName%TYPE, VARCHAR(63))
+   ClassDB.revokeClassDBRole(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION
-   ClassDB.revokeClassDBRole(ClassDB.RoleBase.RoleName%TYPE, VARCHAR(63))
+   ClassDB.revokeClassDBRole(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
    FROM PUBLIC;
 
 
 
---The folowing procedure revokes the Instructor role from an Instructor, along
--- with their entry in the ClassDB.Instructor table. If the Instructor role was
--- the only role that the instructor was a member of, the instructor's schema,
--- and the objects contained within, are removed along with the the role
--- representing the instructor.
+--Define a function to drop a role from the record and optionally from the server
+-- can drop or reassign objects owned by the role that is dropped
+-- parameter objectsDisposition decides the action taken. possible values are:
+--  'drop', 'drop-c' (drop cascade), 'assign', 'assign_i', 'assign_m'
+-- parameter newObjectsOwnerName is used if objectsDisposition is 'assign'
 CREATE OR REPLACE FUNCTION
-   ClassDB.dropRole(roleName ClassDB.RoleBase.RoleName%TYPE,
+   ClassDB.dropRole(roleName ClassDB.IDNameDomain,
+                    dropFromServer BOOLEAN DEFAULT FALSE,
                     okIfClassDBRoleMember BOOLEAN DEFAULT FALSE,
                     objectsDisposition VARCHAR DEFAULT 'assign_i',
-                    newObjectsOwnerName VARCHAR(63) DEFAULT NULL
+                    newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL
                    )
    RETURNS VOID AS
 $$
@@ -359,56 +380,61 @@ BEGIN
       RAISE EXCEPTION 'Role "%" is not known', $1;
    END IF;
 
+   --test if role still has a ClassDB role
+   -- not necessary, but better to revoke ClassDB roles prior to dropping
    IF ClassDB.hasClassDBRole($1) THEN
-      IF $2 THEN
+      IF $3 THEN
          RAISE NOTICE 'Role "%" is a member of one or more ClassDB roles', $1;
       ELSE
          RAISE EXCEPTION 'Role "%" is a member of one or more ClassDB roles', $1;
       END IF;
    END IF;
 
-   --determine the disposition for objects the role owns and carry out the choice
+   --determine the disposition for objects the role owns
    -- the default disposition is to assign ownership to role ClassDB_Instructor
-   $3 = COALESCE(LOWER($3), 'assign_i');
+   $4 = COALESCE(LOWER($4), 'assign_i');
 
-   IF ($3 = 'drop' OR $3 = 'drop_c') THEN
+   --enforce the disposition choice
+   IF ($4 = 'drop' OR $4 = 'drop_c'  OR $4 = 'drop-c') THEN
       EXECUTE
          FORMAT( 'DROP OWNED BY %s %s',
                  $1,
-                 CASE $3 WHEN 'drop_c' THEN 'CASCADE' ELSE 'RESTRICT' END
+                 CASE $4 WHEN 'drop' THEN 'RESTRICT' ELSE 'CASCADE' END
                );
    ELSE
-      $4 =  CASE LOWER($3)
-               WHEN 'assign_i' THEN 'classdb_instructor'
-               WHEN 'assign_m' THEN 'classdb_dbmanager'
-               ELSE TRIM($4)
-            END;
+      --determine the name of the new owner of objects
+      $5 = CASE
+            WHEN $4 = 'assign' THEN TRIM($5)
+            WHEN $4 = 'assign_m' OR $4 = 'assign-m' THEN 'classdb_dbmanager'
+            ELSE 'classdb_instructor'
+           END;
 
-      --determine if new owner is valid
-      IF ($4 = '' OR $4 IS NULL) THEN
+      --determine if the new owner's name is valid
+      IF ($5 = '' OR $5 IS NULL) THEN
          RAISE EXCEPTION 'Invalid argument: new owner''s name is empty or NULL';
       END IF;
 
-      --test if new owner exists in the server
-      IF NOT ClassDB.isServerRoleDefined($4) THEN
-         RAISE EXCEPTION 'New owner role "%" is not defined', $4;
+      --test if the new owner exists in the server
+      IF NOT ClassDB.isServerRoleDefined($5) THEN
+         RAISE EXCEPTION 'New owner role "%" is not defined', $5;
       END IF;
 
       --xfer ownership of objects owned by the role in question to the new owner
-      EXECUTE FORMAT('REASSIGN OWNED BY %s TO %s', $1, $4);
-
-      --remove all privileges associated with the role to be dropped
-      -- the role may have access to objects it does not own and those accesses
-      -- should be revoked before dropping the role
-      -- see: https://www.postgresql.org/docs/9.6/static/role-removal.html
-      EXECUTE FORMAT( 'DROP OWNED BY %s', $1);
+      EXECUTE FORMAT('REASSIGN OWNED BY %s TO %s', $1, $5);
    END IF;
 
-   --drop the role and remove it from the record
-   EXECUTE FORMAT('DROP ROLE %s', $1);
-   DELETE FROM ClassDB.RoleBase R WHERE R.RoleName = ClassDB.foldPgID($1);
+   --drop the role from the server if asked to do so
+   --before dropping, remove all privileges the role has
+   -- the role may have access to objects it does not own and those accesses
+   -- should be revoked before dropping the role
+   -- see: https://www.postgresql.org/docs/9.6/static/role-removal.html
+   IF $2 THEN
+      EXECUTE FORMAT('DROP OWNED BY %s', $1);
+      EXECUTE FORMAT('DROP ROLE %s', $1);
+   END IF;
 
-   RAISE NOTICE 'Role "%" is dropped', $1;
+   --remove the role from the record
+   DELETE FROM ClassDB.RoleBase R WHERE R.RoleName = ClassDB.foldPgID($1);
 
 END;
 $$ LANGUAGE plpgsql
@@ -416,11 +442,15 @@ $$ LANGUAGE plpgsql
 
 --Change function ownership and set execution permissions
 ALTER FUNCTION
-   ClassDB.dropRole(ClassDB.RoleBase.RoleName%TYPE,BOOLEAN,VARCHAR,VARCHAR(63))
+   ClassDB.dropRole(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
+                    ClassDB.IDNameDomain
+                   )
 OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION
-   ClassDB.dropRole(ClassDB.RoleBase.RoleName%TYPE,BOOLEAN,VARCHAR,VARCHAR(63))
+   ClassDB.dropRole(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
+                    ClassDB.IDNameDomain
+                   )
    FROM PUBLIC;
 
 
@@ -431,8 +461,7 @@ REVOKE ALL ON FUNCTION
 -- this function is named "resetPassword" instead of "resetRolePassword" to make
 --  it easier to use: experience shows instructors have to use this function many
 --  times in a term
-CREATE OR REPLACE FUNCTION
-   ClassDB.resetPassword(roleName ClassDB.RoleBase.RoleName%TYPE)
+CREATE OR REPLACE FUNCTION ClassDB.resetPassword(roleName ClassDB.IDNameDomain)
    RETURNS VOID AS
 $$
 BEGIN
@@ -446,14 +475,12 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 --Change function ownership and set execution permissions
-ALTER FUNCTION ClassDB.resetPassword(ClassDB.RoleBase.RoleName%TYPE)
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.resetPassword(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
-REVOKE ALL ON FUNCTION ClassDB.resetPassword(ClassDB.RoleBase.RoleName%TYPE)
+REVOKE ALL ON FUNCTION ClassDB.resetPassword(ClassDB.IDNameDomain)
    FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION
-   ClassDB.resetPassword(ClassDB.RoleBase.RoleName%TYPE)
+GRANT EXECUTE ON FUNCTION ClassDB.resetPassword(ClassDB.IDNameDomain)
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
