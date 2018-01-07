@@ -115,7 +115,7 @@ CREATE OR REPLACE FUNCTION
    RETURNS BOOLEAN AS
 $$
    SELECT ClassDB.foldPgID($1)
-          IN ('classdb_student', 'classdb_instructor', 'classdb_manager');
+          IN ('classdb_instructor', 'classdb_student', 'classdb_dbmanager');
 $$ LANGUAGE sql;
 
 ALTER FUNCTION ClassDB.isClassDBRoleName(ClassDB.IDNameDomain) OWNER TO ClassDB;
@@ -168,7 +168,7 @@ $$
          WHERE pg_catalog.pg_has_role(ClassDB.foldPgID($1), oid, 'member')
                AND
                rolname IN
-               ('classdb_student', 'classdb_instructor', 'classdb_manager')
+               ('classdb_instructor', 'classdb_student', 'classdb_dbmanager')
       );
 $$ LANGUAGE sql;
 
