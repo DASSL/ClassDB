@@ -1,6 +1,6 @@
 --addRoleBaseMgmt.sql - ClassDB
 
---Andrew Figueroa, Steven Rollo, Sean Murthy
+--Sean Murthy
 --Data Science & Systems Lab (DASSL)
 --https://dassl.github.io/
 
@@ -77,8 +77,97 @@ GRANT UPDATE (FullName, ExtraInfo) ON ClassDB.RoleBase
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
---Define a function to create a DBMS role
--- create a DBMS role using roleName
+
+--Define a function to retrieve the schema for a known role
+-- returns NULL if the role is not known
+CREATE OR REPLACE FUNCTION ClassDB.getSchemaName(roleName ClassDB.IDNameDomain)
+   RETURNS ClassDB.IDNameDomain AS
+$$
+   SELECT SchemaName::ClassDB.IDNameDomain FROM ClassDB.RoleBase R
+   WHERE R.RoleName = ClassDB.foldPgID($1);
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.getSchemaName(ClassDB.IDNameDomain)
+   OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION ClassDB.getSchemaName(ClassDB.IDNameDomain)
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.getSchemaName(ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+
+--Define a function to test if a role is "known"
+-- a role is known if a row exists for the role name in table ClassDB.RoleBase
+-- an "unknown role" could still be defined in the server
+CREATE OR REPLACE FUNCTION ClassDB.isRoleKnown(roleName ClassDB.IDNameDomain)
+   RETURNS BOOLEAN AS
+$$
+   SELECT EXISTS (SELECT * FROM ClassDB.RoleBase R
+                  WHERE R.RoleName = ClassDB.foldPgID($1)
+                 );
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.isRoleKnown(ClassDB.IDNameDomain) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION ClassDB.isRoleKnown(ClassDB.IDNameDomain)
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.isRoleKnown(ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+
+--Define a function to test if a known role is a "user"
+-- a known role is a user if IsTeam is FALSE
+CREATE OR REPLACE FUNCTION ClassDB.isUser(userName ClassDB.IDNameDomain)
+   RETURNS BOOLEAN AS
+$$
+   SELECT EXISTS (SELECT * FROM ClassDB.RoleBase
+                  WHERE RoleName = ClassDB.foldPgID($1) AND NOT IsTeam
+                 );
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.isUser(ClassDB.IDNameDomain) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION ClassDB.isUser(ClassDB.IDNameDomain) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.isUser(ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+
+--Define a function to test if a known role is a "team"
+-- a known role is a team if IsTeam is TRUE
+CREATE OR REPLACE FUNCTION ClassDB.isTeam(teamName ClassDB.IDNameDomain)
+   RETURNS BOOLEAN AS
+$$
+   SELECT EXISTS (SELECT * FROM ClassDB.RoleBase
+                  WHERE RoleName = ClassDB.foldPgID($1) AND IsTeam
+                 );
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.isTeam(ClassDB.IDNameDomain) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION ClassDB.isTeam(ClassDB.IDNameDomain)
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.isTeam(ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+
+--Define a function to record a server role, optionally creating the server role
+-- create a server role using roleName
 ---- create a "user" (can login) if isTeam is false; else create a "role"
 ---- exception if role exists and okIfRoleExists is FALSE
 -- create a role-specific schema and give the role all rights to that schema
@@ -141,34 +230,49 @@ BEGIN
                     );
    END IF;
 
+   --give the executing user (should be 'classdb') same rights as the role in question
+   -- this grant is needed to make the role the owner of its own schema, as well
+   -- as to reassign and drop objects later in function dropRole
+   -- this grant is also required to be done always because
+   IF NOT ClassDB.isMember(CURRENT_USER::VARCHAR, $1) THEN
+      EXECUTE FORMAT('GRANT %s TO CURRENT_USER', $1);
+   END IF;
+
    --get the role-spefic schema's name: the role name is the default schema name
    $4 = COALESCE($4, $1);
 
    --find the current owner of the schema, if the schema already exists
-   -- NULL is stored in currentSchemaOwnerName if schema does not exist
-   SELECT schema_owner INTO currentSchemaOwnerName
-   FROM information_schema.schemata
-   WHERE schema_name = ClassDB.foldPgID($4);
+   -- place current owner name in variable currentSchemaOwnerName
+   -- value will be NULL if and only if the schema does not exist
+
+   --this query works outside, but fails to locate the schema as used here
+   --using pg_catalog as alternative in the interest of time
+   --SELECT schema_owner INTO currentSchemaOwnerName
+   --FROM information_schema.schemata
+   --WHERE schema_name = ClassDB.foldPgID($4);
+
+   --debug: always shows NULL
+   --RAISE INFO 'Schema owner: %', currentSchemaOwnerName;
+
+   --use system pg_catalog instead of information_schema as a work around
+   SELECT r.rolname INTO currentSchemaOwnerName
+   FROM pg_catalog.pg_namespace ns
+        JOIN pg_catalog.pg_roles r ON ns.nspowner = r.oid
+   WHERE nspname = ClassDB.foldPgID($4);
+
+   --debug: shows the correct value
+   --RAISE INFO 'Schema owner 2: %', currentSchemaOwnerName;
 
    --if schema does not exist, create it and give ownership to role in question
    --if schema exists, accept only if it is owned by role in question, and even
    -- then only if okIfSchemaExists is TRUE
    IF currentSchemaOwnerName IS NULL THEN
-      --enable the executing user (which should be 'classdb') to grant ownership
-      --of the new schema to the role in question
-      IF NOT ClassDB.isMember(CURRENT_USER::VARCHAR, $1) THEN
-         EXECUTE FORMAT('GRANT %s TO CURRENT_USER', $1);
-      END IF;
-
       EXECUTE FORMAT('CREATE SCHEMA %s AUTHORIZATION %s', $4, $1);
    ELSIF $7 THEN
       --if schema already exists, make sure its owner is the role in question
-      IF (ClassDB.foldPgID(currentSchemaOwnerName) = ClassDB.foldPgID($1)) THEN
-         RAISE NOTICE
-            'Schema "%" already exists and is owned by role "%"', $4, $1;
-      ELSE
+      IF (ClassDB.foldPgID(currentSchemaOwnerName) <> ClassDB.foldPgID($1)) THEN
          RAISE EXCEPTION
-            'Schema "%" already exists and is owned by (another) role "%"',
+            'Schema "%" already exists, but is owned by (another) role "%"',
             $4, currentSchemaOwnerName;
       END IF;
    ELSE
@@ -187,6 +291,15 @@ BEGIN
    ELSE
       INSERT INTO ClassDB.RoleBase
       VALUES(ClassDB.foldPgID($1), $2, $3, ClassDB.foldPgID($4), $5);
+   END IF;
+
+   --give the server role LOGIN capability if it is a user
+   --do not remove LOGIN for a team, because instructors may have their reasons
+   -- to make a LOGIN server role a team
+   --this assignment is best made at this point in code because RoleBase.isTeam
+   -- is reliably only at this point
+   IF (ClassDB.isUser($1) AND NOT ClassDB.canLogin($1)) THEN
+      EXECUTE FORMAT('ALTER ROLE %s LOGIN', $1);
    END IF;
 
 END;
@@ -213,85 +326,6 @@ REVOKE ALL ON FUNCTION
    FROM PUBLIC;
 
 
---Define a function to retrieve the schema for a known role
--- returns NULL if the role is not known
-CREATE OR REPLACE FUNCTION ClassDB.getSchemaName(roleName ClassDB.IDNameDomain)
-   RETURNS ClassDB.IDNameDomain AS
-$$
-   SELECT SchemaName::ClassDB.IDNameDomain FROM ClassDB.RoleBase R
-   WHERE R.RoleName = ClassDB.foldPgID($1);
-$$ LANGUAGE sql;
-
-ALTER FUNCTION ClassDB.getSchemaName(ClassDB.IDNameDomain)
-   OWNER TO ClassDB;
-
-REVOKE ALL ON FUNCTION ClassDB.getSchemaName(ClassDB.IDNameDomain)
-   FROM PUBLIC;
-
-GRANT EXECUTE ON FUNCTION ClassDB.getSchemaName(ClassDB.IDNameDomain)
-   TO ClassDB_Instructor, ClassDB_DBManager;
-
-
---Define a function to test if a role is "known"
--- a role is known if a row exists for the role name in table ClassDB.RoleBase
--- an "unknown role" could still be defined in the server
-CREATE OR REPLACE FUNCTION ClassDB.isRoleKnown(roleName ClassDB.IDNameDomain)
-   RETURNS BOOLEAN AS
-$$
-   SELECT EXISTS (SELECT * FROM ClassDB.RoleBase R
-                  WHERE R.RoleName = ClassDB.foldPgID($1)
-                 );
-$$ LANGUAGE sql;
-
-ALTER FUNCTION ClassDB.isRoleKnown(ClassDB.IDNameDomain) OWNER TO ClassDB;
-
-REVOKE ALL ON FUNCTION ClassDB.isRoleKnown(ClassDB.IDNameDomain)
-   FROM PUBLIC;
-
-GRANT EXECUTE ON FUNCTION ClassDB.isRoleKnown(ClassDB.IDNameDomain)
-   TO ClassDB_Instructor, ClassDB_DBManager;
-
-
-
---Define a function to test if a role is a "known user"
--- a role is a known user if role is known and IsTeam is FALSE
-CREATE OR REPLACE FUNCTION ClassDB.isUserKnown(userName ClassDB.IDNameDomain)
-   RETURNS BOOLEAN AS
-$$
-   SELECT EXISTS (SELECT * FROM ClassDB.RoleBase
-                  WHERE RoleName = ClassDB.foldPgID($1) AND NOT IsTeam
-                 );
-$$ LANGUAGE sql;
-
-ALTER FUNCTION ClassDB.isUserKnown(ClassDB.IDNameDomain) OWNER TO ClassDB;
-
-REVOKE ALL ON FUNCTION ClassDB.isUserKnown(ClassDB.IDNameDomain)
-   FROM PUBLIC;
-
-GRANT EXECUTE ON FUNCTION ClassDB.isUserKnown(ClassDB.IDNameDomain)
-   TO ClassDB_Instructor, ClassDB_DBManager;
-
-
-
---Define a function to test if a role is a "known team"
--- a role is known user if role is known and IsTeam is TRUE
-CREATE OR REPLACE FUNCTION ClassDB.isTeamKnown(teamName ClassDB.IDNameDomain)
-   RETURNS BOOLEAN AS
-$$
-   SELECT EXISTS (SELECT * FROM ClassDB.RoleBase
-                  WHERE RoleName = ClassDB.foldPgID($1) AND IsTeam
-                 );
-$$ LANGUAGE sql;
-
-ALTER FUNCTION ClassDB.isTeamKnown(ClassDB.IDNameDomain) OWNER TO ClassDB;
-
-REVOKE ALL ON FUNCTION ClassDB.isTeamKnown(ClassDB.IDNameDomain)
-   FROM PUBLIC;
-
-GRANT EXECUTE ON FUNCTION ClassDB.isTeamKnown(ClassDB.IDNameDomain)
-   TO ClassDB_Instructor, ClassDB_DBManager;
-
-
 
 --Define a function to revoke a ClassDB role from a known user
 CREATE OR REPLACE FUNCTION
@@ -305,7 +339,6 @@ BEGIN
    -- raise an exception (not a notice) because the role name must be correct
    IF NOT ClassDB.isClassDBRoleName($2) THEN
       RAISE EXCEPTION 'Invalid argument: role name "%" not expected', $2;
-      RETURN;
    END IF;
 
    --test if server has a role with the given name
@@ -315,7 +348,7 @@ BEGIN
    END IF;
 
    --test if user is known
-   IF NOT ClassDB.isUserKnown($1) THEN
+   IF NOT ClassDB.isUser($1) THEN
       RAISE NOTICE 'User "%" is not known', $1;
       RETURN;
    END IF;
@@ -331,7 +364,7 @@ BEGIN
 
    --test if user continues to be a member of other ClassDB roles
    -- only for informational purpose
-   IF ClassDB.hasClassDBRole($1, $2) THEN
+   IF ClassDB.hasClassDBRole($1) THEN
       RAISE NOTICE
          'User "%" remains a member of one or more additional ClassDB roles', $1;
    END IF;
@@ -351,10 +384,14 @@ REVOKE ALL ON FUNCTION
 
 
 
---Define a function to drop a role from the record and optionally from the server
--- can drop or reassign objects owned by the role that is dropped
+--Define a function to unrecord a role, and optionally from the server
+-- the role to unrecord does not have to be a server role
+-- if server role, can leave its objects as is, drop, or reassign to another role
 -- parameter objectsDisposition decides the action taken. possible values are:
---  'drop', 'drop-c' (drop cascade), 'assign', 'assign_i', 'assign_m'
+--  'as_is', 'drop', 'drop_c' (drop cascade), 'assign', 'assign_i', 'assign_m'
+--  underscore (_) may be replaced with a dash (-)
+--  the text/prefix 'assign' may be replaced with 'xfer'
+-- 'as_is' or 'drop' cannot be used if dropFromServer is TRUE
 -- parameter newObjectsOwnerName is used if objectsDisposition is 'assign'
 CREATE OR REPLACE FUNCTION
    ClassDB.dropRole(roleName ClassDB.IDNameDomain,
@@ -367,20 +404,22 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
 
-   --test if role exists in the server
-   IF NOT ClassDB.isServerRoleDefined($1) THEN
-      RAISE NOTICE 'Role "%" is not defined', $1;
-      RETURN;
-   END IF;
-
-   --test if role is known
-   -- raise exception because dropping a role can have a lot of adverse effect
-   -- limiting drops only to known roles reduces the chance of inadvertent drops
+   --permit dropping only known roles
    IF NOT ClassDB.isRoleKnown($1) THEN
       RAISE EXCEPTION 'Role "%" is not known', $1;
    END IF;
 
-   --test if role still has a ClassDB role
+   --if server role does not exist, just unrecord the role and exit
+   IF NOT ClassDB.isServerRoleDefined($1) THEN
+      DELETE FROM ClassDB.RoleBase R WHERE R.RoleName = ClassDB.foldPgID($1);
+      RAISE NOTICE 'Server role "%" is not defined, but is removed from ClassDB', $1;
+      RETURN;
+   END IF;
+
+
+   -- the rest of the functionality applies only to server roles
+
+   --test if role has a ClassDB role
    -- not necessary, but better to revoke ClassDB roles prior to dropping
    IF ClassDB.hasClassDBRole($1) THEN
       IF $3 THEN
@@ -392,20 +431,28 @@ BEGIN
 
    --determine the disposition for objects the role owns
    -- the default disposition is to assign ownership to role ClassDB_Instructor
-   $4 = COALESCE(LOWER($4), 'assign_i');
+   -- replace dash (-) with an underscore (_) to ease later testing
+   $4 = COALESCE(LOWER(REPLACE($4, '-', '_')), 'assign_i');
+
+   --object owned cannot be left "as is" or just dropped if role is dropped from server
+   -- only 'drop cascade' and assignment gurantees role no longer owns any object
+   IF ($2 AND $4 IN('as_is', 'drop')) THEN
+      RAISE EXCEPTION
+         'Invalid argument: disposition cannot be "%" if role dropped from server', $4;
+   END IF;
 
    --enforce the disposition choice
-   IF ($4 = 'drop' OR $4 = 'drop_c'  OR $4 = 'drop-c') THEN
+   IF $4 IN ('drop', 'drop_c') THEN
       EXECUTE
          FORMAT( 'DROP OWNED BY %s %s',
                  $1,
                  CASE $4 WHEN 'drop' THEN 'RESTRICT' ELSE 'CASCADE' END
                );
-   ELSE
-      --determine the name of the new owner of objects
+   ELSIF $4 <> 'as_is' THEN
+      --reassign ownership: determine the name of the new owner of objects
       $5 = CASE
-            WHEN $4 = 'assign' THEN TRIM($5)
-            WHEN $4 = 'assign_m' OR $4 = 'assign-m' THEN 'classdb_dbmanager'
+            WHEN $4 IN ('assign', 'xfer') THEN TRIM($5)
+            WHEN $4 IN ('assign_m', 'xfer_m') THEN 'classdb_dbmanager'
             ELSE 'classdb_instructor'
            END;
 
@@ -466,7 +513,9 @@ CREATE OR REPLACE FUNCTION ClassDB.resetPassword(roleName ClassDB.IDNameDomain)
 $$
 BEGIN
    IF ClassDB.isServerRoleDefined($1) THEN
-      EXECUTE FORMAT('ALTER ROLE %s ENCRYPTED PASSWORD %L', $1, $1);
+      EXECUTE FORMAT('ALTER ROLE %s ENCRYPTED PASSWORD %L',
+                     ClassDB.foldPgID($1), ClassDB.foldPgID($1)
+                    );
    ELSE
       RAISE NOTICE 'Server role "%" is not defined', $1;
    END IF;
@@ -482,7 +531,6 @@ REVOKE ALL ON FUNCTION ClassDB.resetPassword(ClassDB.IDNameDomain)
 
 GRANT EXECUTE ON FUNCTION ClassDB.resetPassword(ClassDB.IDNameDomain)
    TO ClassDB_Instructor, ClassDB_DBManager;
-
 
 
 COMMIT;
