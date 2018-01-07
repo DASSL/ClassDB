@@ -102,7 +102,9 @@ $$
             ELSE
                LOWER($1)
       END;
-$$ LANGUAGE sql;
+$$ LANGUAGE sql
+   IMMUTABLE
+   RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.foldPgID(VARCHAR(65)) OWNER TO ClassDB;
 
@@ -116,7 +118,9 @@ CREATE OR REPLACE FUNCTION
 $$
    SELECT ClassDB.foldPgID($1)
           IN ('classdb_instructor', 'classdb_student', 'classdb_dbmanager');
-$$ LANGUAGE sql;
+$$ LANGUAGE sql
+   IMMUTABLE
+   RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.isClassDBRoleName(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
@@ -131,7 +135,9 @@ $$
    SELECT EXISTS (SELECT * FROM pg_catalog.pg_roles
                   WHERE rolname = ClassDB.foldPgID($1)
                  );
-$$ LANGUAGE sql;
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.isServerRoleDefined(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
@@ -150,10 +156,11 @@ $$
          WHERE pg_catalog.pg_has_role(ClassDB.foldPgID($1), oid, 'member')
                AND rolname = ClassDB.foldPgID($2)
       );
-$$ LANGUAGE sql;
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
-ALTER FUNCTION
-   ClassDB.isMember(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
+ALTER FUNCTION ClassDB.isMember(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
 
@@ -170,7 +177,9 @@ $$
                rolname IN
                ('classdb_instructor', 'classdb_student', 'classdb_dbmanager')
       );
-$$ LANGUAGE sql;
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.hasClassDBRole(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
@@ -190,9 +199,10 @@ BEGIN
       RETURN FALSE;
    END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
---Make ClassDB the function owner so only that role can drop/replace the function
 ALTER FUNCTION ClassDB.isSuperUser(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
 
@@ -211,7 +221,9 @@ BEGIN
       RETURN FALSE;
    END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.hasCreateRole(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
@@ -231,7 +243,9 @@ BEGIN
       RETURN FALSE;
    END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.canCreateDatabase(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
@@ -251,7 +265,9 @@ BEGIN
       RETURN FALSE;
    END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.canLogin(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
@@ -291,7 +307,9 @@ $$
    JOIN pg_roles r ON r.oid = p.proowner
    JOIN pg_namespace n ON n.oid = p.pronamespace
    WHERE r.rolname = $1;
-$$ LANGUAGE sql;
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
@@ -335,7 +353,9 @@ BEGIN
       FROM ClassDB.listOwnedObjects('classdb_dbmanager') loo;
    END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
