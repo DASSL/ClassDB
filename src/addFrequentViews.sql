@@ -17,8 +17,8 @@
 
 --This script creates several objects (we colletively refer to them as views) to
 -- display summary data related to student activity in the current ClassDB database.
--- Views that are accessible to students and require access to ClassDB.student are
--- implmemted as functions. This allows the views to access the ClassDB schema Steven
+-- Views that are accessible to students and require access to ClassDB.User are
+-- implmemted as functions. This allows the views to access the ClassDB schema
 -- though students cannot directly access the schema.
 -- These views pull data from both the ClassDB student table and info schema.
 
@@ -42,7 +42,7 @@ CREATE VIEW ClassDB.StudentActivityAll AS
 (
   SELECT username, lastddlactivity, lastddloperation, lastddlobject, ddlcount,
          lastconnection, connectioncount
-  FROM ClassDB.student
+  FROM ClassDB.User
   ORDER BY username
 );
 
@@ -65,7 +65,7 @@ CREATE VIEW ClassDB.StudentActivityAnon AS
 (
   SELECT lastddlactivity, lastddloperation, SUBSTRING(lastddlobject, POSITION('.' IN lastddlobject)+1)
          lastddlobject, ddlcount, lastconnection, connectioncount
-  FROM ClassDB.student
+  FROM ClassDB.User
   ORDER BY connectioncount
 );
 
@@ -88,7 +88,7 @@ DROP VIEW IF EXISTS ClassDB.StudentTable;
 CREATE VIEW ClassDB.StudentTable AS
 (
   SELECT table_schema, table_name, table_type
-  FROM information_schema.tables JOIN ClassDB.student ON table_schema = username
+  FROM information_schema.tables JOIN ClassDB.User ON table_schema = username
   ORDER BY table_schema
 );
 
@@ -110,7 +110,7 @@ DROP VIEW IF EXISTS ClassDB.StudentTableCount;
 CREATE VIEW ClassDB.StudentTableCount AS
 (
   SELECT table_schema, COUNT(*)
-  FROM information_schema.tables JOIN ClassDB.student ON table_schema = username
+  FROM information_schema.tables JOIN ClassDB.User ON table_schema = username
   GROUP BY table_schema
   ORDER BY table_schema
 );
@@ -135,11 +135,12 @@ RETURNS TABLE
    DDLCount INT, LastConnection TIMESTAMP, ConnectionCount INT
 ) AS
 $$
-   SELECT ClassDB.changeTimeZone(lastddlactivity), lastddloperation, lastddlobject, ddlcount,
-          ClassDB.changeTimeZone(lastconnection), connectioncount
+   SELECT ClassDB.changeTimeZone(LastDDLActivityAtUTC), lastddloperation, lastddlobject, ddlcount,
+          ClassDB.changeTimeZone(LastConnectionAtUTC), connectioncount
    FROM ClassDB.StudentActivityAll
    WHERE username = ClassDB.foldPgID($1);
 $$ LANGUAGE sql
+   STABLE
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION
@@ -157,7 +158,7 @@ TO ClassDB_Instructor;
 --This function lists the most recent activity of the executing user. This view is accessible
 -- by both students and instructors, which requires that it be placed in the public schema.
 -- Additionally, it is implemented as a function so that students are able to indirectly
--- access ClassDB.student.
+-- access ClassDB.User.
 CREATE OR REPLACE FUNCTION Public.getMyActivitySummary()
 RETURNS TABLE
 (
@@ -169,6 +170,7 @@ $$
           lastconnection, connectioncount
    FROM ClassDB.getUserActivitySummary();
 $$ LANGUAGE sql
+   STABLE
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION
@@ -214,6 +216,7 @@ $$
    FROM ClassDB.DDLActivity
    WHERE username = ClassDB.foldPgID($1);
 $$ LANGUAGE sql
+   STABLE
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION
@@ -235,9 +238,10 @@ RETURNS TABLE
    StatementStartedAt TIMESTAMP, DDLOperation VARCHAR(64), DDLObject VARCHAR(256)
 ) AS
 $$
-   SELECT StatementStartedAt, DDLOperatio, DDLObject
+   SELECT StatementStartedAt, DDLOperation, DDLObject
    FROM ClassDB.getUserDDLActivity();
 $$ LANGUAGE sql
+   STABLE
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION
@@ -254,7 +258,7 @@ TO ClassDB_Instructor, ClassDB_DBManager, ClassDB_Student;
 
 CREATE VIEW Public.MyDDLActivity AS
 (
-   SELECT StatementStartedAt, DDLOperatio, DDLObject
+   SELECT StatementStartedAt, DDLOperation, DDLObject
    FROM Public.getMyDDLActivity()
 );
 
@@ -268,4 +272,145 @@ ALTER VIEW
 
 GRANT SELECT ON
    Public.MyDDLActivity
+   TO Public;
+
+
+--This function returns all connection activity for a specified user
+CREATE OR REPLACE FUNCTION ClassDB.getUserConnectionActivity(userName VARCHAR(63) DEFAULT session_user)
+RETURNS TABLE
+(
+   AcceptedAt TIMESTAMP
+) AS
+$$
+   SELECT ClassDB.changeTimeZone(AcceptedAtUTC)
+   FROM ClassDB.ConnectionActivity
+   WHERE username = ClassDB.foldPgID($1);
+$$ LANGUAGE sql
+   STABLE
+   SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.getUserConnectionActivity(VARCHAR(63))
+   FROM PUBLIC;
+
+ALTER FUNCTION
+   ClassDB.getUserConnectionActivity(VARCHAR(63))
+   OWNER TO ClassDB;
+
+GRANT EXECUTE ON FUNCTION
+   ClassDB.getUserConnectionActivity(VARCHAR(63))
+TO ClassDB_Instructor;
+
+--
+CREATE OR REPLACE FUNCTION Public.getMyConnectionActivity()
+RETURNS TABLE
+(
+   AcceptedAt TIMESTAMP
+) AS
+$$
+   SELECT ClassDB.changeTimeZone(AcceptedAtUTC)
+   FROM ClassDB.getUserConnectionActivity()
+$$ LANGUAGE sql
+   STABLE
+   SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION
+   Public.getMyConnectionActivity()
+   FROM PUBLIC;
+
+ALTER FUNCTION
+   Public.getMyConnectionActivity()
+   OWNER TO ClassDB;
+
+GRANT EXECUTE ON FUNCTION
+   Public.getMyConnectionActivity()
+TO ClassDB_Instructor, ClassDB_DBManager, ClassDB_Student;
+
+CREATE VIEW Public.MyConnectionActivity AS
+(
+   SELECT AcceptedAt
+   FROM Public.getMyConnectionActivity()
+);
+
+REVOKE ALL PRIVILEGES
+   Public.MyConnectionActivity
+   FROM Public;
+
+ALTER VIEW
+   Public.MyConnectionActivity
+   OWNER TO ClassDB;
+
+GRANT SELECT ON
+   Public.MyConnectionActivity
+   TO Public;
+
+--This function returns all activity for a specified user
+CREATE OR REPLACE FUNCTION ClassDB.getUserActivity(userName VARCHAR(63) DEFAULT session_user)
+RETURNS TABLE
+(
+   ActivityAt TIMESTAMP, ActivityType VARCHAR(10), DDLOperation VARCHAR(64), DDLObject VARCHAR(256)
+) AS
+$$
+   SELECT StatementStartedAt, 'DDL', DDLOperation, DDLObject
+   FROM ClassDB.getUserDDLActivity($1)
+   UNION ALL
+   SELECT AcceptedAt, 'Connection', NULL, NULL
+   FROM ClassDB.getUserConnectionActivity($1)
+$$ LANGUAGE sql
+   STABLE
+   SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.getUserActivity(VARCHAR(63))
+   FROM PUBLIC;
+
+ALTER FUNCTION
+   ClassDB.getUserActivity(VARCHAR(63))
+   OWNER TO ClassDB;
+
+GRANT EXECUTE ON FUNCTION
+   ClassDB.getUserActivity(VARCHAR(63))
+TO ClassDB_Instructor;
+
+--
+CREATE OR REPLACE FUNCTION Public.getMyActivity()
+RETURNS TABLE
+(
+   ActivityAt TIMESTAMP, ActivityType VARCHAR(10), DDLOperation VARCHAR(64), DDLObject VARCHAR(256)
+) AS
+$$
+   SELECT ActivityAt, ActivityType, DDLOperation, DDLObject
+   FROM ClassDB.getUserActivity();
+$$ LANGUAGE sql
+   STABLE
+   SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION
+   Public.getMyActivity()
+   FROM PUBLIC;
+
+ALTER FUNCTION
+   Public.getMyActivity()
+   OWNER TO ClassDB;
+
+GRANT EXECUTE ON FUNCTION
+   Public.getMyActivity()
+TO ClassDB_Instructor, ClassDB_DBManager, ClassDB_Student;
+
+CREATE VIEW Public.MyActivity AS
+(
+   SELECT ActivityAt, ActivityType, DDLOperation, DDLObject
+   FROM ClassDB.getUserActivity();
+);
+
+REVOKE ALL PRIVILEGES
+   Public.MyActivity
+   FROM Public;
+
+ALTER VIEW
+   Public.MyActivity
+   OWNER TO ClassDB;
+
+GRANT SELECT ON
+   Public.MyActivity
    TO Public;
