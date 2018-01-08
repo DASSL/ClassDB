@@ -282,37 +282,6 @@ GRANT EXECUTE ON FUNCTION
    classdb.listOwnedObjects(VARCHAR(63))
    TO ClassDB_Instructor, ClassDB_DBManager;
 
---Checks if the current user is associated with the supplied schema. This is used
--- to check if the current user can access the current schema, since it is possible
--- for users to be given schemas with a differnt name than their user name.
-CREATE OR REPLACE FUNCTION ClassDB.isCurrentUserSchema(schemaName ClassDB.RoleBase.SchemaName%TYPE)
-RETURNS BOOLEAN AS
-$$
-BEGIN
-   IF (SELECT SchemaName
-       FROM ClassDB.Student
-       WHERE RoleName = session_user
-       LIMIT 1
-   ) = ClassDB.foldPgID(schemaName) THEN
-      RETURN TRUE;
-   ELSE
-      RETURN FALSE;
-   END IF;
-END;
-$$ LANGUAGE plpgsql
-   SECURITY DEFINER;
-
-ALTER FUNCTION
-   classdb.isCurrentUserSchema(ClassDB.RoleBase.SchemaName%TYPE)
-   OWNER TO ClassDB;
-
-REVOKE ALL ON FUNCTION
-   classdb.isCurrentUserSchema(ClassDB.RoleBase.SchemaName%TYPE)
-   FROM PUBLIC;
-
-GRANT EXECUTE ON FUNCTION
-   classdb.isCurrentUserSchema(ClassDB.RoleBase.SchemaName%TYPE)
-   TO ClassDB_Instructor, ClassDB_DBManager;
 
 --Define a function to retrieve specific capabilities a user has
 -- use this function to get status of different capabilities in one call
