@@ -42,7 +42,7 @@ BEGIN
    --Check if the user is associated with the schema they are trying to list from.
    -- This is required because a user's schema name is not always the same as their
    -- user name.
-   IF ClassDB.getSchemaOwnerName(schemaName) <> SESSION_USER THEN
+   IF ClassDB.getSchemaOwnerName(schemaName) <> SESSION_USER::ClassDB.IDNameDomain THEN
       RAISE EXCEPTION 'Insufficient privileges: you do not have permission to access'
          ' the requested schema';
 
@@ -62,7 +62,7 @@ GRANT EXECUTE ON FUNCTION
    Public.listTables()
    TO PUBLIC;
 
---Returns a list of columns in the specified table or view in the current schema
+--Returns a list of columns in the specified table or view in the current user's schema
 CREATE OR REPLACE FUNCTION Public.describe(tableName VARCHAR(63))
 RETURNS TABLE
 (
@@ -73,7 +73,8 @@ RETURNS TABLE
 AS $$
    SELECT column_name, data_type || COALESCE('(' || character_maximum_length || ')', '')
    FROM INFORMATION_SCHEMA.COLUMNS
-   WHERE table_schema = session_user AND table_name = ClassDB.FoldPgID($1);
+   WHERE table_schema = ClassDB.getSchemaName(SESSION_USER)
+   AND table_name = ClassDB.FoldPgID($1);
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
@@ -99,7 +100,7 @@ AS $$
    --Check if the user is associated with the scheam they are trying to list from.
    -- This is required because a user's schema name is not always the same as their
    -- user name.
-   IF ClassDB.getSchemaOwnerName(schemaName) <> SESSION_USER THEN
+   IF ClassDB.getSchemaOwnerName(schemaName) <> SESSION_USER::ClassDB.IDNameDomain THEN
    RAISE EXCEPTION 'Insufficient privileges: you do not have permission to access'
       ' the requested schema';
 
