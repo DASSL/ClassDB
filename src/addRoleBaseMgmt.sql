@@ -234,7 +234,7 @@ BEGIN
    -- this grant is needed to make the role the owner of its own schema, as well
    -- as to reassign and drop objects later in function dropRole
    -- this grant is also required to be done always because
-   IF NOT ClassDB.isMember(CURRENT_USER::VARCHAR, $1) THEN
+   IF NOT ClassDB.isMember(CURRENT_USER::ClassDB.IDNameDomain, $1) THEN
       EXECUTE FORMAT('GRANT %s TO CURRENT_USER', $1);
    END IF;
 
@@ -242,26 +242,8 @@ BEGIN
    $4 = COALESCE($4, $1);
 
    --find the current owner of the schema, if the schema already exists
-   -- place current owner name in variable currentSchemaOwnerName
    -- value will be NULL if and only if the schema does not exist
-
-   --this query works outside, but fails to locate the schema as used here
-   --using pg_catalog as alternative in the interest of time
-   --SELECT schema_owner INTO currentSchemaOwnerName
-   --FROM information_schema.schemata
-   --WHERE schema_name = ClassDB.foldPgID($4);
-
-   --debug: always shows NULL
-   --RAISE INFO 'Schema owner: %', currentSchemaOwnerName;
-
-   --use system pg_catalog instead of information_schema as a work around
-   SELECT r.rolname INTO currentSchemaOwnerName
-   FROM pg_catalog.pg_namespace ns
-        JOIN pg_catalog.pg_roles r ON ns.nspowner = r.oid
-   WHERE nspname = ClassDB.foldPgID($4);
-
-   --debug: shows the correct value
-   --RAISE INFO 'Schema owner 2: %', currentSchemaOwnerName;
+   currentSchemaOwnerName = ClassDB.getSchemaOwnerName($4);
 
    --if schema does not exist, create it and give ownership to role in question
    --if schema exists, accept only if it is owned by role in question, and even
@@ -396,7 +378,7 @@ REVOKE ALL ON FUNCTION
 CREATE OR REPLACE FUNCTION
    ClassDB.dropRole(roleName ClassDB.IDNameDomain,
                     dropFromServer BOOLEAN DEFAULT FALSE,
-                    okIfClassDBRoleMember BOOLEAN DEFAULT FALSE,
+                    okIfClassDBRoleMember BOOLEAN DEFAULT TRUE,
                     objectsDisposition VARCHAR DEFAULT 'assign_i',
                     newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL
                    )
@@ -412,27 +394,22 @@ BEGIN
    --if server role does not exist, just unrecord the role and exit
    IF NOT ClassDB.isServerRoleDefined($1) THEN
       DELETE FROM ClassDB.RoleBase R WHERE R.RoleName = ClassDB.foldPgID($1);
-      RAISE NOTICE 'Server role "%" is not defined, but is removed from ClassDB', $1;
       RETURN;
    END IF;
 
 
-   -- the rest of the functionality applies only to server roles
+   -- the rest of the code in this function applies only to server roles
+
 
    --test if role has a ClassDB role
-   -- not necessary, but better to revoke ClassDB roles prior to dropping
-   IF ClassDB.hasClassDBRole($1) THEN
-      IF $3 THEN
-         RAISE NOTICE 'Role "%" is a member of one or more ClassDB roles', $1;
-      ELSE
-         RAISE EXCEPTION 'Role "%" is a member of one or more ClassDB roles', $1;
-      END IF;
+   IF (ClassDB.hasClassDBRole($1) AND NOT $3) THEN
+      RAISE EXCEPTION 'Role "%" is a member of one or more ClassDB roles', $1;
    END IF;
 
    --determine the disposition for objects the role owns
    -- the default disposition is to assign ownership to role ClassDB_Instructor
    -- replace dash (-) with an underscore (_) to ease later testing
-   $4 = COALESCE(LOWER(REPLACE($4, '-', '_')), 'assign_i');
+   $4 = COALESCE(LOWER(REPLACE(TRIM($4), '-', '_')), 'assign_i');
 
    --object owned cannot be left "as is" or just dropped if role is dropped from server
    -- only 'drop cascade' and assignment gurantees role no longer owns any object
