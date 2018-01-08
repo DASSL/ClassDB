@@ -29,7 +29,7 @@ SET LOCAL client_min_messages TO WARNING;
 
 
 --Returns a list of tables and views in the current user's schema
-CREATE OR REPLACE FUNCTION Public.listTables(schemaName VARCHAR(63) DEFAULT session_user)
+CREATE OR REPLACE FUNCTION Public.listTables(schemaName VARCHAR(63) DEFAULT SESSION_USER)
    RETURNS TABLE
 (  --Since these functions access the INFORMATION_SCHEMA, we use the standard
    --info schema types for the return table
@@ -39,10 +39,10 @@ CREATE OR REPLACE FUNCTION Public.listTables(schemaName VARCHAR(63) DEFAULT sess
 )
 AS $$
 BEGIN
-   --Check if the user is associated with the scheam they are trying to list from.
+   --Check if the user is associated with the schema they are trying to list from.
    -- This is required because a user's schema name is not always the same as their
    -- user name.
-   IF NOT ClassDB.isCurrentUserSchema(schemaName) THEN
+   IF ClassDB.getSchemaOwnerName(schemaName) <> SESSION_USER THEN
       RAISE EXCEPTION 'Insufficient privileges: you do not have permission to access'
          ' the requested schema';
 
@@ -51,6 +51,7 @@ BEGIN
    WHERE table_schema = schemaName;
 END;
 $$ LANGUAGE plpgsql
+   STABLE
    SECURITY DEFINER;
 
 ALTER FUNCTION
@@ -74,6 +75,7 @@ AS $$
    FROM INFORMATION_SCHEMA.COLUMNS
    WHERE table_schema = session_user AND table_name = ClassDB.FoldPgID($1);
 $$ LANGUAGE sql
+   STABLE
    SECURITY DEFINER;
 
 ALTER FUNCTION
@@ -97,7 +99,7 @@ AS $$
    --Check if the user is associated with the scheam they are trying to list from.
    -- This is required because a user's schema name is not always the same as their
    -- user name.
-   IF NOT ClassDB.isCurrentUserSchema(schemaName) THEN
+   IF ClassDB.getSchemaOwnerName(schemaName) <> SESSION_USER THEN
    RAISE EXCEPTION 'Insufficient privileges: you do not have permission to access'
       ' the requested schema';
 
@@ -106,6 +108,7 @@ AS $$
    WHERE table_schema = ClassDB.foldPgID(schemaName)
    AND   table_name = ClassDB.foldPgID(tableName)
 $$ LANGUAGE plpgsql
+   STABLE
    SECURITY DEFINER;
 
 ALTER FUNCTION
