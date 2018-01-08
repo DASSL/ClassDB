@@ -79,8 +79,7 @@ REVOKE ALL PRIVILEGES ON classdb.postgresLog FROM PUBLIC;
 -- starting with the supplied date (startDate)
 -- For each line containing connection information, the matching student's
 -- connection info is updated
-DROP FUNCTION IF EXISTS classdb.importLog(startDate DATE);
-CREATE FUNCTION classdb.importLog(startDate DATE DEFAULT current_date)
+CREATE OR REPLACE FUNCTION classdb.importLog(startDate DATE DEFAULT current_date)
    RETURNS VOID AS
 $$
 DECLARE
@@ -88,8 +87,8 @@ DECLARE
    lastConDate DATE;
 BEGIN
 	--Set the date of last logged connection to either the latest connection in
-	-- classdb.student, or startDate if that is NULL
-	lastConDate := COALESCE(date((SELECT MAX(lastConnection) FROM classdb.student)), startDate);
+	-- classdb.ConnectionActivity, or startDate if that is NULL
+	lastConDate := COALESCE(date((SELECT MAX(AcceptedAt) FROM ClassDB.ConnectionActivity)), startDate);
 
 	--We want to import all logs between the lastConDate and current date
 	WHILE lastConDate <= current_date LOOP
@@ -102,29 +101,17 @@ BEGIN
       lastConDate := lastConDate + 1; --Check the next day
    END LOOP;
 
-   --Update the student table based on the temp log table
-   UPDATE classdb.student
-   --Get the total # of connections made in the imported log
-   --Ignore connections from an earlier date than the lastConnections
-   --These should already be counted
-   SET connectionCount = connectionCount + (
-      SELECT COUNT(user_name)
-      FROM classdb.postgresLog pg
-      WHERE pg.user_name = userName
-      AND (pg.log_time AT TIME ZONE 'utc') > COALESCE(lastConnection, to_timestamp(0))
-      AND message LIKE 'connection%' --Filter out extraneous log lines
-      AND database_name = current_database() --Limit to log lines for current db only
-   ),
-   --Find the latest connection date in the logs
-   lastConnection = COALESCE(
-      (
-         SELECT MAX(log_time AT TIME ZONE 'utc')
-         FROM classdb.postgresLog pg
-         WHERE pg.user_name = userName
-         AND (pg.log_time AT TIME ZONE 'utc') > COALESCE(lastConnection, to_timestamp(0))
-         AND message LIKE 'connection%' --conn log messages start w/ 'connection'
-         AND database_name = current_database()
-      ), lastConnection);
+   --Update the connection activity table based on the temp log table
+   INSERT INTO ClassDB.ConnectionActivity
+   SELECT user_name, log_time AT TIME ZONE 'utc'
+   FROM ClassDB.postgresLog
+   WHERE EXISTS (SELECT UserName
+                 FROM ClassDB.User
+                 WHERE UserName = user_name) --Check the connection is from a ClassDB user
+   AND (log_time AT TIME ZONE 'utc') > COALESCE(lastConnection, to_timestamp(0))
+   AND message LIKE 'connection%' --Filter out extraneous log lines
+   AND database_name = current_database(); --Limit to log lines for current db only
+   
    --Clear the log table
    TRUNCATE classdb.postgresLog;
 END;
@@ -136,10 +123,14 @@ $$ LANGUAGE plpgsql
 --Revoke permissions on classdb.importLog(startDate DATE) from PUBLIC, but allow
 -- Instructors and DBManagers to use it
 REVOKE ALL ON FUNCTION
-   classdb.importLog(startDate DATE)
+   ClassDB.importLog(DATE)
    FROM PUBLIC;
+
+ALTER FUNCTION ClassDB.importLog(DATE)
+   OWNER TO ClassDB;
+
 GRANT EXECUTE ON FUNCTION
-   classdb.importLog(startDate DATE)
+   ClassDB.importLog(DATE)
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 COMMIT;
