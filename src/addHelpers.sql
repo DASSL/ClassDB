@@ -35,7 +35,7 @@ DO
 $$
 BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
-                  WHERE rolname = current_user AND rolsuper = TRUE
+                  WHERE rolname = CURRENT_USER AND rolsuper = TRUE
                  ) THEN
       RAISE EXCEPTION 'Insufficient privilege: script must be run as a superuser';
    END IF;
@@ -78,11 +78,19 @@ END;
 $$;
 
 --Notes on type conversion between ClassDB.IDNameDomain and VARCHAR
--- DBMS coerces among VARCHAR, TEXT, and ClassDB.IDNameDomain, but
---  functions which return type ClassDB.IDNameDomain must explicitly cast
---  VARCHAR or TEXT
--- an exception is raised if a string longer than 63 characters is assigned to
---  a variable of type ClassDB.IDNameDomain
+--DBMS coerces among VARCHAR, TEXT, and ClassDB.IDNameDomain on assignment, but
+-- functions which return type ClassDB.IDNameDomain must explicitly cast
+-- a VARCHAR or TEXT they wish to return as ClassDB.IDNameDomain
+--an exception is raised if a string longer than 63 characters is assigned to
+-- a variable of type ClassDB.IDNameDomain
+--Data of type NAME must be explicitly cast to ClassDB.IDNameDomain (or to
+-- VARCHAR or TEXT) for assignment though Postgres docs say such casting is auto
+-- Example: use CURRENT_USER::ClassDB.IDNameDomain when passing as parameter
+--Postgres does not support custom casts involving domains because conversion is
+-- automatic via the underlying type, but that does not work from NAME to
+-- ClassDB.IDNameDomain
+-- See: https://www.postgresql.org/docs/9.6/static/sql-createcast.html
+
 
 
 --Define a function to replicate PostgreSQL's folding behavior for SQL IDs
@@ -107,6 +115,35 @@ $$ LANGUAGE sql
    RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.foldPgID(VARCHAR(65)) OWNER TO ClassDB;
+
+
+
+--Define a function to get the name of the owner of a schema
+-- returns NULL if schema is not found
+CREATE OR REPLACE FUNCTION
+   ClassDB.getSchemaOwnerName(schemaName ClassDB.IDNameDomain)
+   RETURNS ClassDB.IDNameDomain AS
+$$
+   --this query generally works but was observed as failing in one circumstance
+   --yet keeping it because unit tests pass and usage in addRoleBaseMgmt.sql works
+   --use the pg_catalog workaround shown below if necessary
+   SELECT schema_owner::ClassDB.IDNameDomain
+   FROM information_schema.schemata
+   WHERE schema_name = ClassDB.foldPgID($1);
+
+   --system pg_catalog instead of information_schema as a work around to any
+   --issue with using INFORMATION_SCHEMA
+   --SELECT r.rolname::ClassDB.IDNameDomain
+   --FROM pg_catalog.pg_namespace ns
+   --     JOIN pg_catalog.pg_roles r ON ns.nspowner = r.oid
+   --WHERE nspname = ClassDB.foldPgID($1);
+
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.getSchemaOwnerName(ClassDB.IDNameDomain) OWNER TO ClassDB;
+
 
 
 --Define a function to test if a role name is a ClassDB role name
@@ -187,7 +224,7 @@ ALTER FUNCTION ClassDB.hasClassDBRole(ClassDB.IDNameDomain) OWNER TO ClassDB;
 --Define a function to test if a user is a superuser
 -- test current user if no user name is supplied
 CREATE OR REPLACE FUNCTION
-   ClassDB.isSuperUser(roleName ClassDB.IDNameDomain DEFAULT current_user)
+   ClassDB.isSuperUser(roleName ClassDB.IDNameDomain DEFAULT CURRENT_USER)
    RETURNS BOOLEAN AS
 $$
 BEGIN
@@ -209,7 +246,7 @@ ALTER FUNCTION ClassDB.isSuperUser(ClassDB.IDNameDomain) OWNER TO ClassDB;
 --Define a function to test if a user has CREATEROLE privilege
 -- test current user if no user name is supplied
 CREATE OR REPLACE FUNCTION
-   ClassDB.hasCreateRole(roleName ClassDB.IDNameDomain DEFAULT current_user)
+   ClassDB.hasCreateRole(roleName ClassDB.IDNameDomain DEFAULT CURRENT_USER)
    RETURNS BOOLEAN AS
 $$
 BEGIN
@@ -231,7 +268,7 @@ ALTER FUNCTION ClassDB.hasCreateRole(ClassDB.IDNameDomain) OWNER TO ClassDB;
 --Define a function to test if a user has CREATEDB privilege
 -- test current user if no user name is supplied
 CREATE OR REPLACE FUNCTION
-   ClassDB.canCreateDatabase(roleName ClassDB.IDNameDomain DEFAULT current_user)
+   ClassDB.canCreateDatabase(roleName ClassDB.IDNameDomain DEFAULT CURRENT_USER)
    RETURNS BOOLEAN AS
 $$
 BEGIN
@@ -253,7 +290,7 @@ ALTER FUNCTION ClassDB.canCreateDatabase(ClassDB.IDNameDomain) OWNER TO ClassDB;
 --Define a function to test if a role can log in
 -- test current user if no user name is supplied
 CREATE OR REPLACE FUNCTION
-   ClassDB.canLogin(roleName ClassDB.IDNameDomain DEFAULT current_user)
+   ClassDB.canLogin(roleName ClassDB.IDNameDomain DEFAULT CURRENT_USER)
    RETURNS BOOLEAN AS
 $$
 BEGIN
@@ -277,7 +314,7 @@ ALTER FUNCTION ClassDB.canLogin(ClassDB.IDNameDomain) OWNER TO ClassDB;
 -- tables, views, and type. We UNION with pg_proc, which contains a list of all functions.
 -- The Postgres views are used because they contain the owner of each object, which
 CREATE OR REPLACE FUNCTION
-   ClassDB.listOwnedObjects(roleName ClassDB.IDNameDomain DEFAULT current_user)
+   ClassDB.listOwnedObjects(roleName ClassDB.IDNameDomain DEFAULT CURRENT_USER)
 RETURNS TABLE
 (
    object VARCHAR(63),
