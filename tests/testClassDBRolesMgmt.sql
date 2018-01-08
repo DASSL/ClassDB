@@ -1,7 +1,8 @@
---testAddUserMgmt.sql - ClassDB
+--testClassDBRolesMgmt.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+--Data Science & Systems Lab (DASSL)
+--https://dassl.github.io/
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -22,7 +23,7 @@ CREATE OR REPLACE FUNCTION pg_temp.isSchemaDefined(schemaName VARCHAR(63))
 $$
 BEGIN
    IF EXISTS (SELECT * FROM pg_catalog.pg_namespace
-              WHERE nspname = classdb.foldpgID($1)) THEN
+              WHERE nspname = ClassDB.foldpgID($1)) THEN
       RETURN TRUE;
    ELSE
       RETURN FALSE;
@@ -35,23 +36,23 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 BEGIN
-   IF NOT classdb.isSuperUser() THEN
+   IF NOT ClassDB.isSuperUser() THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a superuser';
    END IF;
 END
 $$;
 
 
-CREATE OR REPLACE FUNCTION classdb.createUserTest() RETURNS TEXT AS
+CREATE OR REPLACE FUNCTION ClassDB.createUserTest() RETURNS TEXT AS
 $$
 BEGIN
-   PERFORM classdb.createUser('testlc', 'password');
-   PERFORM classdb.createUser('testUC', 'password');
-   PERFORM classdb.createUser('"testQUC"', 'password');
+   PERFORM ClassDB.createUser('testlc', 'password');
+   PERFORM ClassDB.createUser('testUC', 'password');
+   PERFORM ClassDB.createUser('"testQUC"', 'password');
 
    --Check that all 3 roles exist
-   IF NOT (classdb.isRoleDefined('testlc') AND classdb.isRoleDefined('testUC')
-      AND classdb.isRoleDefined('"testQUC"')) THEN
+   IF NOT (ClassDB.isServerRoleDefined('testlc') AND ClassDB.isServerRoleDefined('testUC')
+      AND ClassDB.isServerRoleDefined('"testQUC"')) THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
@@ -70,8 +71,8 @@ BEGIN
    DROP ROLE "testQUC";
 
    --Check that all 3 roles no longer exist
-   IF classdb.isRoleDefined('testlc') OR classdb.isRoleDefined('testUC')
-      OR classdb.isRoleDefined('"testQUC"') THEN
+   IF ClassDB.isServerRoleDefined('testlc') OR ClassDB.isServerRoleDefined('testUC')
+      OR ClassDB.isServerRoleDefined('"testQUC"') THEN
       RETURN 'FAIL: Code 3';
    END IF;
 
@@ -86,22 +87,22 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION classdb.createStudentTest() RETURNS TEXT AS
+CREATE OR REPLACE FUNCTION ClassDB.createStudentTest() RETURNS TEXT AS
 $$
 BEGIN
    --Minimal test: Password should be set to username
-   PERFORM classdb.createStudent('testStu0', 'Yvette Alexander');
+   PERFORM ClassDB.createStudent('testStu0', 'Yvette Alexander');
    --SchoolID given: Password should still be set to username, ID should be stored
-   PERFORM classdb.createStudent('testStu1', 'Edwin Morrison', '101');
+   PERFORM ClassDB.createStudent('testStu1', 'Edwin Morrison', '101');
    --initialPassword given: Password should be set to 'testpass'
-   PERFORM classdb.createStudent('testStu2', 'Ramon Harrington', '102', 'testpass');
+   PERFORM ClassDB.createStudent('testStu2', 'Ramon Harrington', '102', 'testpass');
    --initialPassword given with no schoolID
-   PERFORM classdb.createStudent('testStu3', 'Cathy Young', NULL, 'testpass2');
+   PERFORM ClassDB.createStudent('testStu3', 'Cathy Young', NULL, 'testpass2');
 
    --Multi-role: NOTICE is suppressed; password should not change
-   PERFORM classdb.createStudent('testStuDBM0', 'Edwin Morrison', NULL, 'testpass3');
+   PERFORM ClassDB.createStudent('testStuDBM0', 'Edwin Morrison', NULL, 'testpass3');
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM classdb.createDBManager('testStuDBM0', 'notPass');
+   PERFORM ClassDB.createDBManager('testStuDBM0', 'notPass');
    RESET client_min_messages;
 
    --Test existence of all schemas
@@ -126,18 +127,18 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION classdb.createInstructorTest() RETURNS TEXT AS
+CREATE OR REPLACE FUNCTION ClassDB.createInstructorTest() RETURNS TEXT AS
 $$
 BEGIN
    --Minimal test: Password should be set to username
-   PERFORM classdb.createInstructor('testIns0', 'Dave Paul');
+   PERFORM ClassDB.createInstructor('testIns0', 'Dave Paul');
    --initialPassword given: Password should be set to 'testpass4'
-   PERFORM classdb.createInstructor('testIns1', 'Dianna Wilson', 'testpass4');
+   PERFORM ClassDB.createInstructor('testIns1', 'Dianna Wilson', 'testpass4');
 
    --Multi-role: NOTICE is suppressed; password should not change
-   PERFORM classdb.createInstructor('testStuIns1', 'Rosalie Flowers', 'testpass5');
+   PERFORM ClassDB.createInstructor('testStuIns1', 'Rosalie Flowers', 'testpass5');
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM classdb.createStudent('testStuIns1', 'Rosalie Flowers', '106', 'notPass');
+   PERFORM ClassDB.createStudent('testStuIns1', 'Rosalie Flowers', '106', 'notPass');
    RESET client_min_messages;
 
    --Test existence of all schemas
@@ -157,18 +158,18 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION classdb.createDBManagerTest() RETURNS TEXT AS
+CREATE OR REPLACE FUNCTION ClassDB.createDBManagerTest() RETURNS TEXT AS
 $$
 BEGIN
    --Minimal test: Password should be set to username
-   PERFORM classdb.createDBmanager('testDBM0');
+   PERFORM ClassDB.createDBmanager('testDBM0');
    --initialPassword used: Password should be set to 'testpass6'
-   PERFORM classdb.createDBManager('testDBM1', 'testpass6');
+   PERFORM ClassDB.createDBManager('testDBM1', 'testpass6');
 
    --Multi-role: NOTICE is suppressed; password should not change
-   PERFORM classdb.createDBManager('testInsMg0', 'testpass7');
+   PERFORM ClassDB.createDBManager('testInsMg0', 'testpass7');
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM classdb.createInstructor('testInsMg0', 'Shawn Nash');
+   PERFORM ClassDB.createInstructor('testInsMg0', 'Shawn Nash');
    RESET client_min_messages;
 
    --Test existence of all schemas
@@ -188,15 +189,15 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION classdb.dropStudentTest() RETURNS TEXT AS
+CREATE OR REPLACE FUNCTION ClassDB.dropStudentTest() RETURNS TEXT AS
 $$
 BEGIN
    --"Normal" case, Regular student: Role and schema should be dropped
-   PERFORM classdb.createStudent('testStu4', 'Ramon Harrington', '102', 'testpass');
-   PERFORM classdb.dropStudent('testStu4');
+   PERFORM ClassDB.createStudent('testStu4', 'Ramon Harrington', '102', 'testpass');
+   PERFORM ClassDB.dropStudent('testStu4');
 
    --Check for existence of role
-   IF classdb.isRoleDefined('testStu4') THEN
+   IF ClassDB.isServerRoleDefined('testStu4') THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
@@ -206,15 +207,15 @@ BEGIN
    END IF;
 
    --Multi-role case: schema and role should still exist after dropStudent
-   PERFORM classdb.createStudent('testStuIns2', 'Roland Baker');
+   PERFORM ClassDB.createStudent('testStuIns2', 'Roland Baker');
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM classdb.createInstructor('testStuIns2', 'Roland Baker');
-   PERFORM classdb.dropStudent('testStuIns2');
+   PERFORM ClassDB.createInstructor('testStuIns2', 'Roland Baker');
+   PERFORM ClassDB.dropStudent('testStuIns2');
    RESET client_min_messages;
 
-   IF classdb.isRoleDefined('testStuIns2') THEN
+   IF ClassDB.isServerRoleDefined('testStuIns2') THEN
       IF pg_temp.isSchemaDefined('testStuIns2') THEN
-         PERFORM classdb.dropInstructor('testStuIns2');
+         PERFORM ClassDB.dropInstructor('testStuIns2');
       ELSE
          RETURN 'FAIL: Code 4'; --schema was not defined
       END IF;
@@ -227,15 +228,15 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION classdb.dropInstructorTest() RETURNS TEXT AS
+CREATE OR REPLACE FUNCTION ClassDB.dropInstructorTest() RETURNS TEXT AS
 $$
 BEGIN
    --"Normal" case, Regular Instructor: Role and schema should be dropped
-   PERFORM classdb.createInstructor('testIns2', 'Wayne Bates', 'testpass');
-   PERFORM classdb.dropInstructor('testIns2');
+   PERFORM ClassDB.createInstructor('testIns2', 'Wayne Bates', 'testpass');
+   PERFORM ClassDB.dropInstructor('testIns2');
 
    --Check for existence of role
-   IF classdb.isRoleDefined('testIns2') THEN
+   IF ClassDB.isServerRoleDefined('testIns2') THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
@@ -245,15 +246,15 @@ BEGIN
    END IF;
 
    --Multi-role case: schema and role should still exist after dropInstructor
-   PERFORM classdb.createInstructor('testStuIns3', 'Julius Patton');
+   PERFORM ClassDB.createInstructor('testStuIns3', 'Julius Patton');
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM classdb.createStudent('testStuIns3', 'Julius Paton');
-   PERFORM classdb.dropInstructor('testStuIns3');
+   PERFORM ClassDB.createStudent('testStuIns3', 'Julius Paton');
+   PERFORM ClassDB.dropInstructor('testStuIns3');
    RESET client_min_messages;
 
-   IF classdb.isRoleDefined('testStuIns3') THEN
+   IF ClassDB.isServerRoleDefined('testStuIns3') THEN
       IF pg_temp.isSchemaDefined('testStuIns3') THEN
-         PERFORM classdb.dropStudent('testStuIns3');
+         PERFORM ClassDB.dropStudent('testStuIns3');
       ELSE
          RETURN 'FAIL: Code 4'; --schema was not defined
       END IF;
@@ -266,15 +267,15 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION classdb.dropDBManagerTest() RETURNS TEXT AS
+CREATE OR REPLACE FUNCTION ClassDB.dropDBManagerTest() RETURNS TEXT AS
 $$
 BEGIN
    --"Normal" case, Regular DBManager: Role and schema should be dropped
-   PERFORM classdb.createDBManager('testDBM2', 'testpass');
-   PERFORM classdb.dropDBManager('testDBM2');
+   PERFORM ClassDB.createDBManager('testDBM2', 'testpass');
+   PERFORM ClassDB.dropDBManager('testDBM2');
 
    --Check for existence of role
-   IF classdb.isRoleDefined('testDBM2') THEN
+   IF ClassDB.isServerRoleDefined('testDBM2') THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
@@ -284,15 +285,15 @@ BEGIN
    END IF;
 
    --Multi-role case: schema and role should still exist after dropDBManager
-   PERFORM classdb.createDBManager('testInsMg2');
+   PERFORM ClassDB.createDBManager('testInsMg2');
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM classdb.createInstructor('testInsMg2', 'Alice West');
-   PERFORM classdb.dropDBManager('testInsMg2');
+   PERFORM ClassDB.createInstructor('testInsMg2', 'Alice West');
+   PERFORM ClassDB.dropDBManager('testInsMg2');
    RESET client_min_messages;
 
-   IF classdb.isRoleDefined('testInsMg2') THEN
+   IF ClassDB.isServerRoleDefined('testInsMg2') THEN
       IF pg_temp.isSchemaDefined('testInsMg2') THEN
-         PERFORM classdb.dropInstructor('testInsMg2');
+         PERFORM ClassDB.dropInstructor('testInsMg2');
       ELSE
          RETURN 'FAIL: Code 4'; --schema was not defined
       END IF;
@@ -305,21 +306,21 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION classdb.prepareClassDBTest() RETURNS VOID AS
+CREATE OR REPLACE FUNCTION ClassDB.prepareClassDBTest() RETURNS VOID AS
 $$
 BEGIN
-   RAISE INFO '%   createUserTest()', classdb.createUserTest();
-   RAISE INFO '%   createStudentTest()', classdb.createStudentTest();
-   RAISE INFO '%   createInstructorTest()', classdb.createInstructorTest();
-   RAISE INFO '%   createDBManagerTest()', classdb.createDBManagerTest();
-   RAISE INFO '%   dropStudentTest()', classdb.dropStudentTest();
-   RAISE INFO '%   dropInstructorTest()', classdb.dropInstructorTest();
-   RAISE INFO '%   dropDBManagerTest()', classdb.dropDBManagerTest();
+   RAISE INFO '%   createUserTest()', ClassDB.createUserTest();
+   RAISE INFO '%   createStudentTest()', ClassDB.createStudentTest();
+   RAISE INFO '%   createInstructorTest()', ClassDB.createInstructorTest();
+   RAISE INFO '%   createDBManagerTest()', ClassDB.createDBManagerTest();
+   RAISE INFO '%   dropStudentTest()', ClassDB.dropStudentTest();
+   RAISE INFO '%   dropInstructorTest()', ClassDB.dropInstructorTest();
+   RAISE INFO '%   dropDBManagerTest()', ClassDB.dropDBManagerTest();
 END
 $$  LANGUAGE plpgsql;
 
 
-SELECT classdb.prepareClassDBTest();
+SELECT ClassDB.prepareClassDBTest();
 
 
 COMMIT;
