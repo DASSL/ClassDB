@@ -111,11 +111,12 @@ BEGIN
    AND (log_time AT TIME ZONE 'utc') > COALESCE(lastConnection, to_timestamp(0))
    AND message LIKE 'connection%' --Filter out extraneous log lines
    AND database_name = current_database(); --Limit to log lines for current db only
-   
+
    --Clear the log table
    TRUNCATE classdb.postgresLog;
 END;
 $$ LANGUAGE plpgsql
+   VOLATILE
    SECURITY DEFINER;
 
 --The COPY statement requires importLog() to be run as a superuser, with SECURITY

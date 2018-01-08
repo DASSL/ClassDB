@@ -84,6 +84,7 @@ BEGIN
    END IF;
 END;
 $$ LANGUAGE plpgsql
+   VOLATILE
    SECURITY DEFINER;
 
 
