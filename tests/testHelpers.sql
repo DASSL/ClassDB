@@ -197,15 +197,6 @@ BEGIN
       RETURN 'FAIL: Code 2';
    END IF;
 
-   --test if schema owner's name is retrieved
-   CREATE SCHEMA tset_amehcs_iierr8;
-   IF ClassDB.getSchemaOwnerName('tset_amehcs_iierr8') <> CURRENT_USER THEN
-      DROP SCHEMA tset_amehcs_iierr8;
-      RETURN 'FAIL: Code 3';
-   END IF;
-   DROP SCHEMA tset_amehcs_iierr8;
-
-
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
