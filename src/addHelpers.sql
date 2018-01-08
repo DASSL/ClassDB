@@ -283,7 +283,7 @@ GRANT EXECUTE ON FUNCTION
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 --Changes a timestamp in fromTimeZone to toTimeZone
-CREATE OR REPLACE FUNCTION ClassDB.ChangeTimeZone(ts TIMESTAMP,
+CREATE OR REPLACE FUNCTION ClassDB.changeTimeZone(ts TIMESTAMP,
    toTimeZone VARCHAR DEFAULT TO_CHAR(CURRENT_TIMESTAMP, 'TZ'), fromTimeZone VARCHAR DEFAULT 'UTC')
 RETURNS TIMESTAMP AS
 $$

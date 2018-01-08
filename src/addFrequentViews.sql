@@ -35,15 +35,15 @@ END
 $$;
 
 
---This view shows the activity of all students in the student table. This view
+--This view shows the activity summary of all students in the User table. This view
 -- is only usable by instructors
 DROP VIEW IF EXISTS ClassDB.StudentActivityAll;
 CREATE VIEW ClassDB.StudentActivityAll AS
 (
-  SELECT username, lastddlactivity, lastddloperation, lastddlobject, ddlcount,
-         lastconnection, connectioncount
+  SELECT UserName, ClassDB.changeTimeZone(LastDDLActivityAt), LastDDLOperation, LastDDLObject,
+         DDLCount, ClassDB.changeTimeZone(LastConnectionAt), ConnectionCount
   FROM ClassDB.User
-  ORDER BY username
+  ORDER BY UserName
 );
 
 REVOKE ALL PRIVILEGES
@@ -63,10 +63,10 @@ GRANT SELECT ON
 DROP VIEW IF EXISTS ClassDB.StudentActivityAnon;
 CREATE VIEW ClassDB.StudentActivityAnon AS
 (
-  SELECT lastddlactivity, lastddloperation, SUBSTRING(lastddlobject, POSITION('.' IN lastddlobject)+1)
-         lastddlobject, ddlcount, lastconnection, connectioncount
-  FROM ClassDB.User
-  ORDER BY connectioncount
+   SELECT ClassDB.changeTimeZone(LastDDLActivityAt), LastDDLOperation, LastDDLObject,
+          DDLCount, ClassDB.changeTimeZone(LastConnectionAt), ConnectionCount
+   FROM ClassDB.User
+   ORDER BY ConnectionCount
 );
 
 REVOKE ALL PRIVILEGES
@@ -88,7 +88,7 @@ DROP VIEW IF EXISTS ClassDB.StudentTable;
 CREATE VIEW ClassDB.StudentTable AS
 (
   SELECT table_schema, table_name, table_type
-  FROM information_schema.tables JOIN ClassDB.User ON table_schema = username
+  FROM information_schema.tables JOIN ClassDB.User ON table_schema = UserName
   ORDER BY table_schema
 );
 
@@ -110,7 +110,7 @@ DROP VIEW IF EXISTS ClassDB.StudentTableCount;
 CREATE VIEW ClassDB.StudentTableCount AS
 (
   SELECT table_schema, COUNT(*)
-  FROM information_schema.tables JOIN ClassDB.User ON table_schema = username
+  FROM information_schema.tables JOIN ClassDB.User ON table_schema = UserName
   GROUP BY table_schema
   ORDER BY table_schema
 );
