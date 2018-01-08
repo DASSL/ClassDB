@@ -71,15 +71,16 @@ BEGIN
    -- pg_event_trigger_ddl_commands().object_identity is NULL for DROP statements
    -- Since ddl_command_end is sent after sql_drop, we don't update if objId
    -- IS NULL, because that is the ddl_command_end event after sql_drop,
-   -- and we would overwrite student.lastDDLObject with NULL
+   -- and we would log a duplicate DDL event with a NULL object ID
    IF objId IS NOT NULL THEN
-      UPDATE classdb.Student
-      SET lastDDLActivity = (SELECT statement_timestamp() AT TIME ZONE 'utc'),
-      DDLCount = DDLCount + 1, --Increment the student's DDL statement count
-      lastDDLOperation = TG_TAG,
-      lastDDLObject = objId --Set the student's last DDL target object to the
-                            --one we got from the correct event trigger function
-      WHERE userName = session_user; --Update info for the appropriate user
+      INSERT INTO ClassDB.DDLActivity VALUES
+      (
+         SESSION_USER, --User performing the DDL activity
+         SELECT statement_timestamp() AT TIME ZONE 'utc',
+         TG_TAG,
+         objId --Set the student's last DDL target object to the
+               --one we got from the correct event trigger functio
+      );
    END IF;
 END;
 $$ LANGUAGE plpgsql
