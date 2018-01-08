@@ -75,7 +75,7 @@ BEGIN
    IF EXISTS(SELECT UserName
              FROM ClassDB.User
              WHERE UserName = SESSION_USER
-             )
+             ) --Check if the triggering user is a ClassDB user
    AND objId IS NOT NULL THEN
       INSERT INTO ClassDB.DDLActivity VALUES
       (
