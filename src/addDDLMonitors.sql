@@ -72,10 +72,7 @@ BEGIN
    -- Since ddl_command_end is sent after sql_drop, we don't update if objId
    -- IS NULL, because that is the ddl_command_end event after sql_drop,
    -- and we would log a duplicate DDL event with a NULL object ID
-   IF EXISTS(SELECT UserName
-             FROM ClassDB.User
-             WHERE UserName = SESSION_USER
-             ) --Check if the triggering user is a ClassDB user
+   IF ClassDB.isUser(SESSION_USER::ClassDB.IDNameDomain) --Check if the triggering user is a ClassDB user
    AND objId IS NOT NULL THEN
       INSERT INTO ClassDB.DDLActivity VALUES
       (

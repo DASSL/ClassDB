@@ -105,9 +105,7 @@ BEGIN
    INSERT INTO ClassDB.ConnectionActivity
    SELECT user_name, log_time AT TIME ZONE 'utc'
    FROM ClassDB.postgresLog
-   WHERE EXISTS (SELECT UserName
-                 FROM ClassDB.User
-                 WHERE UserName = user_name) --Check the connection is from a ClassDB user
+   WHERE ClassDB.isUser(user_name) --Check the connection is from a ClassDB user
    AND (log_time AT TIME ZONE 'utc') > COALESCE(lastConnection, to_timestamp(0))
    AND message LIKE 'connection%' --Filter out extraneous log lines
    AND database_name = current_database(); --Limit to log lines for current db only
