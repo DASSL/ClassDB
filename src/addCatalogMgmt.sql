@@ -57,7 +57,6 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 ALTER FUNCTION Public.listTables(ClassDB.IDNameDomain) OWNER TO ClassDB;
-GRANT EXECUTE ON FUNCTION Public.listTables(ClassDB.IDNameDomain) TO PUBLIC;
 
 
 --Returns a list of columns in the specified table or view in the specified schema
@@ -86,7 +85,6 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 ALTER FUNCTION public.describe(ClassDB.IDNameDomain, ClassDB.IDNameDomain) OWNER TO ClassDB;
-GRANT EXECUTE ON FUNCTION public.describe(ClassDB.IDNameDomain, ClassDB.IDNameDomain) TO PUBLIC;
 
 
 --Returns a list of columns in the specified table or view in the current user's schema
@@ -106,6 +104,6 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 
 ALTER FUNCTION public.describe(ClassDB.IDNameDomain) OWNER TO ClassDB;
-GRANT EXECUTE ON FUNCTION public.describe(ClassDB.IDNameDomain) TO PUBLIC;
+
 
 COMMIT;
