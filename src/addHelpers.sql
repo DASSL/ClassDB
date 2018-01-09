@@ -23,7 +23,7 @@
 --  ClassDB schema so uninstall scripts can easily remove the functions
 
 --All ClassDB scripts executing in the context of a database should use these
--- helper functions instead of repating code
+-- helper functions instead of repeating code
 
 
 

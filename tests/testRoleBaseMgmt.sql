@@ -48,7 +48,7 @@ BEGIN
    RAISE INFO '%   createRole(u1, u1 name, FALSE)',
    CASE EXISTS(SELECT * FROM ClassDB.RoleBase
                WHERE RoleName = 'u1' AND FullName = 'u1 name'
-               AND NOT ISTeam AND SchemaName = RoleName AND ExtraInfo IS NULL
+               AND NOT IsTeam AND SchemaName = RoleName AND ExtraInfo IS NULL
               )
       WHEN TRUE THEN 'PASS'
       ELSE 'FAIL: Code 2'
@@ -66,12 +66,12 @@ BEGIN
    CASE ClassDB.isRoleKnown('u1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 4' END;
 
    --u1 is a known user
-   RAISE INFO '%   isUserKnown(u1)',
+   RAISE INFO '%   isUser(u1)',
    CASE ClassDB.isUser('u1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 5' END;
 
    --u1 is not a known team
-   RAISE INFO '%   isTeamKnown(u1)',
-   CASE ClassDB.isTeamKnown('u1') WHEN TRUE THEN 'FAIL: Code 6' ELSE 'PASS' END;
+   RAISE INFO '%   isTeam(u1)',
+   CASE ClassDB.isTeam('u1') WHEN TRUE THEN 'FAIL: Code 6' ELSE 'PASS' END;
 
    --change u1's full name and extraInfo via u1
    PERFORM ClassDB.createRole('u1', 'u1 modified name', FALSE, NULL, '5287');
@@ -80,7 +80,7 @@ BEGIN
    RAISE INFO '%   createRole(u1, u1 modified name, FALSE)',
    CASE EXISTS(SELECT * FROM ClassDB.RoleBase
                WHERE RoleName = 'u1' AND FullName = 'u1 modified name'
-               AND NOT ISTeam AND SchemaName = RoleName AND ExtraInfo = '5287'
+               AND NOT IsTeam AND SchemaName = RoleName AND ExtraInfo = '5287'
               )
       WHEN TRUE THEN 'PASS'
       ELSE 'FAIL: Code 7'
@@ -102,7 +102,7 @@ BEGIN
    --lookup role using 't1' because that is what should be stored
    RAISE INFO '%   createRole(T1, t1 name, TRUE, t1_schema)',
    CASE EXISTS(SELECT * FROM ClassDB.RoleBase
-               WHERE RoleName = 't1' AND FullName = 't1 name' AND ISTeam
+               WHERE RoleName = 't1' AND FullName = 't1 name' AND IsTeam
                AND SchemaName = 't1_schema' AND ExtraInfo IS NULL
               )
       WHEN TRUE THEN 'PASS'
@@ -117,12 +117,12 @@ BEGIN
    END;
 
    --t1 is not a known user
-   RAISE INFO '%   isUserKnown(t1)',
+   RAISE INFO '%   isUser(t1)',
    CASE ClassDB.isUser('t1') WHEN TRUE THEN 'FAIL: Code 11' ELSE 'PASS' END;
 
    --t1 is a known team
-   RAISE INFO '%   isTeamKnown(t1)',
-   CASE ClassDB.isTeamKnown('t1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 12' END;
+   RAISE INFO '%   isTeam(t1)',
+   CASE ClassDB.isTeam('t1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 12' END;
 
 --------------------------------------------------------------------------------
 
@@ -152,7 +152,7 @@ BEGIN
    RAISE INFO '%   createRole(s1, s1 name, FALSE)',
    CASE EXISTS(SELECT * FROM ClassDB.RoleBase
                WHERE RoleName = 's1' AND FullName = 's1 name'
-               AND NOT ISTeam AND SchemaName = RoleName AND ExtraInfo IS NULL
+               AND NOT IsTeam AND SchemaName = RoleName AND ExtraInfo IS NULL
               )
       WHEN TRUE THEN 'PASS'
       ELSE 'FAIL: Code 16'
@@ -163,7 +163,7 @@ BEGIN
    CASE ClassDB.isRoleKnown('s1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 17' END;
 
    --s1 is now a known user
-   RAISE INFO '%   isUserKnown(s1)',
+   RAISE INFO '%   isUser(s1)',
    CASE ClassDB.isUser('s1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 18' END;
 
    --s1 now has LOGIN

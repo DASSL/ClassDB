@@ -10,6 +10,7 @@
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
+
 --This script requires the current user to be a superuser
 
 --This script should be run after addHelpers.sql
@@ -43,7 +44,7 @@ $$;
 -- the table is named RoleBase because it is sort of "base class" for both
 -- users and teams
 -- No primary key is defined because uniqueness depends on case folding
---  thus, uniquess is enforced using an index on an expression
+--  instead, uniqueness is enforced using an index on an expression
 CREATE TABLE IF NOT EXISTS ClassDB.RoleBase
 (
   RoleName ClassDB.IDNameDomain NOT NULL --server role name
@@ -89,6 +90,10 @@ $$ LANGUAGE sql
    STABLE
    RETURNS NULL ON NULL INPUT;
 
+--make ClassDB the fn. owner, let only instructors and managers execute the fn.
+-- this pattern of ownership and grant/revoke applies to all functions in this
+-- script: for brevity, such code is not prefaced ain with comments unless
+-- the code does something significantly different
 ALTER FUNCTION ClassDB.getSchemaName(ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
@@ -233,12 +238,12 @@ BEGIN
    --give the executing user (should be 'classdb') same rights as the role in question
    -- this grant is needed to make the role the owner of its own schema, as well
    -- as to reassign and drop objects later in function dropRole
-   -- this grant is also required to be done always because
+   -- this grant is also required in case the role was created outside ClassDB
    IF NOT ClassDB.isMember(CURRENT_USER::ClassDB.IDNameDomain, $1) THEN
       EXECUTE FORMAT('GRANT %s TO CURRENT_USER', $1);
    END IF;
 
-   --get the role-spefic schema's name: the role name is the default schema name
+   --get name of role-specific schema: the role name is the default schema name
    $4 = COALESCE($4, $1);
 
    --find the current owner of the schema, if the schema already exists
@@ -251,7 +256,6 @@ BEGIN
    IF currentSchemaOwnerName IS NULL THEN
       EXECUTE FORMAT('CREATE SCHEMA %s AUTHORIZATION %s', $4, $1);
    ELSIF $7 THEN
-      --if schema already exists, make sure its owner is the role in question
       IF (ClassDB.foldPgID(currentSchemaOwnerName) <> ClassDB.foldPgID($1)) THEN
          RAISE EXCEPTION
             'Schema "%" already exists, but is owned by (another) role "%"',
@@ -279,7 +283,7 @@ BEGIN
    --do not remove LOGIN for a team, because instructors may have their reasons
    -- to make a LOGIN server role a team
    --this assignment is best made at this point in code because RoleBase.isTeam
-   -- is reliably only at this point
+   -- is reliable only at this point
    IF (ClassDB.isUser($1) AND NOT ClassDB.canLogin($1)) THEN
       EXECUTE FORMAT('ALTER ROLE %s LOGIN', $1);
    END IF;
@@ -288,8 +292,6 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
-
---Make ClassDB the function owner so function runs with that role's privileges
 ALTER FUNCTION
    ClassDB.createRole(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
                       ClassDB.RoleBase.IsTeam%Type, ClassDB.IDNameDomain,
@@ -298,7 +300,6 @@ ALTER FUNCTION
                      )
    OWNER TO ClassDB;
 
---Prevent everyone else from executing the function
 REVOKE ALL ON FUNCTION
    ClassDB.createRole(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
                       ClassDB.RoleBase.IsTeam%Type, ClassDB.IDNameDomain,
@@ -408,44 +409,65 @@ BEGIN
 
    --determine the disposition for objects the role owns
    -- the default disposition is to assign ownership to role ClassDB_Instructor
-   -- replace dash (-) with an underscore (_) to ease later testing
+   -- trim spaces, replace dash (-) with an underscore (_) to ease later testing
    $4 = COALESCE(LOWER(REPLACE(TRIM($4), '-', '_')), 'assign_i');
 
-   --object owned cannot be left "as is" or just dropped if role is dropped from server
-   -- only 'drop cascade' and assignment gurantees role no longer owns any object
+   --objects cannot be left "as is" or just dropped if role is dropped from server
+   -- only drop-cascade and assignment guarantee the role no longer owns any object
    IF ($2 AND $4 IN('as_is', 'drop')) THEN
       RAISE EXCEPTION
          'Invalid argument: disposition cannot be "%" if role dropped from server', $4;
    END IF;
 
    --enforce the disposition choice
-   IF $4 IN ('drop', 'drop_c') THEN
-      EXECUTE
-         FORMAT( 'DROP OWNED BY %s %s',
-                 $1,
-                 CASE $4 WHEN 'drop' THEN 'RESTRICT' ELSE 'CASCADE' END
-               );
-   ELSIF $4 <> 'as_is' THEN
-      --reassign ownership: determine the name of the new owner of objects
-      $5 = CASE
-            WHEN $4 IN ('assign', 'xfer') THEN TRIM($5)
-            WHEN $4 IN ('assign_m', 'xfer_m') THEN 'classdb_dbmanager'
-            ELSE 'classdb_instructor'
-           END;
+   IF ($4 <> 'as_is') THEN
 
-      --determine if the new owner's name is valid
-      IF ($5 = '' OR $5 IS NULL) THEN
-         RAISE EXCEPTION 'Invalid argument: new owner''s name is empty or NULL';
+      --give the executing user (should be 'classdb') same rights as role to drop
+      -- this grant is needed to reassign and drop objects
+      -- this grant is also required in case the role was created outside ClassDB
+      -- a similar grant is also required for the new object owner, and that is
+      -- done later just before reassignment
+      IF NOT ClassDB.isMember(CURRENT_USER::ClassDB.IDNameDomain, $1) THEN
+         EXECUTE FORMAT('GRANT %s TO CURRENT_USER', $1);
       END IF;
 
-      --test if the new owner exists in the server
-      IF NOT ClassDB.isServerRoleDefined($5) THEN
-         RAISE EXCEPTION 'New owner role "%" is not defined', $5;
+      IF $4 IN ('drop', 'drop_c') THEN
+         EXECUTE
+            FORMAT( 'DROP OWNED BY %s %s',
+                    $1,
+                    CASE $4 WHEN 'drop' THEN 'RESTRICT' ELSE 'CASCADE' END
+                  );
+      ELSE
+         --reassign ownership: determine the name of the new owner of objects
+         $5 = CASE
+               WHEN $4 IN ('assign', 'xfer') THEN TRIM($5)
+               WHEN $4 IN ('assign_m', 'xfer_m') THEN 'classdb_dbmanager'
+               ELSE 'classdb_instructor'
+              END;
+
+         --determine if the new owner's name is valid
+         IF ($5 = '' OR $5 IS NULL) THEN
+            RAISE EXCEPTION 'Invalid argument: new owner''s name is empty or NULL';
+         END IF;
+
+         --test if the new owner exists in the server
+         IF NOT ClassDB.isServerRoleDefined($5) THEN
+            RAISE EXCEPTION 'New owner role "%" is not defined', $5;
+         END IF;
+
+         IF NOT ClassDB.isMember(CURRENT_USER::ClassDB.IDNameDomain, $1) THEN
+            EXECUTE FORMAT('GRANT %s TO CURRENT_USER', $1);
+         END IF;
+
+         --xfer ownership of objects owned by role in question to the new owner
+         -- grant the executing user the same rights as new owner prior to xfer
+         IF NOT ClassDB.isMember(CURRENT_USER::ClassDB.IDNameDomain, $5) THEN
+            EXECUTE FORMAT('GRANT %s TO CURRENT_USER', $5);
+         END IF;
+         EXECUTE FORMAT('REASSIGN OWNED BY %s TO %s', $1, $5);
       END IF;
 
-      --xfer ownership of objects owned by the role in question to the new owner
-      EXECUTE FORMAT('REASSIGN OWNED BY %s TO %s', $1, $5);
-   END IF;
+   END IF; --end of object disposition
 
    --drop the role from the server if asked to do so
    --before dropping, remove all privileges the role has
@@ -464,18 +486,18 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
---Change function ownership and set execution permissions
 ALTER FUNCTION
    ClassDB.dropRole(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
                     ClassDB.IDNameDomain
                    )
-OWNER TO ClassDB;
+   OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION
    ClassDB.dropRole(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
                     ClassDB.IDNameDomain
                    )
    FROM PUBLIC;
+
 
 
 --Define a function to reset a role's password to a default value
@@ -500,7 +522,6 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
---Change function ownership and set execution permissions
 ALTER FUNCTION ClassDB.resetPassword(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION ClassDB.resetPassword(ClassDB.IDNameDomain)
