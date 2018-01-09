@@ -1,7 +1,8 @@
 --addCatalogMgmt.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab (DASSL), https://dassl.github.io/
+--Data Science & Systems Lab (DASSL)
+--https://dassl.github.io/
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -29,7 +30,7 @@ SET LOCAL client_min_messages TO WARNING;
 
 
 --Returns a list of tables and views in the current user's schema
-CREATE OR REPLACE FUNCTION Public.listTables(schemaName VARCHAR(63) DEFAULT SESSION_USER)
+CREATE OR REPLACE FUNCTION public.listTables(schemaName VARCHAR(63) DEFAULT SESSION_USER)
    RETURNS TABLE
 (  --Since these functions access the INFORMATION_SCHEMA, we use the standard
    --info schema types for the return table
@@ -63,7 +64,7 @@ GRANT EXECUTE ON FUNCTION
    TO PUBLIC;
 
 --Returns a list of columns in the specified table or view in the current user's schema
-CREATE OR REPLACE FUNCTION Public.describe(tableName VARCHAR(63))
+CREATE OR REPLACE FUNCTION public.describe(tableName VARCHAR(63))
 RETURNS TABLE
 (
    "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
@@ -89,7 +90,7 @@ GRANT EXECUTE ON FUNCTION
 
 --Returns a list of columns in the specified table or view in the specified schema
 -- This overide allows a schema name to be specified
-CREATE OR REPLACE FUNCTION Public.describe(schemaName VARCHAR(63), tableName VARCHAR(63))
+CREATE OR REPLACE FUNCTION public.describe(schemaName VARCHAR(63), tableName VARCHAR(63))
 RETURNS TABLE
 (
    "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
