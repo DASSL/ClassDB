@@ -1,7 +1,8 @@
 --addHelpers.sql - ClassDB
 
---Sean Murthy
---Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+--Sean Murthy, Andrew Figueroa, Steven Rollo
+--Data Science & Systems Lab (DASSL)
+--https://dassl.github.io/
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -17,9 +18,9 @@
 
 --This script creates some helper functions for ClassDB operations
 -- makes ClassDB role the owner of all functions so only that role can drop or
--- replace the functions
+--  replace the functions
 -- permits any role to execute these functions, but defines the functions in the
--- ClassDB schema so uninstall scripts can easily remove the functions
+--  ClassDB schema so uninstall scripts can easily remove the functions
 
 --All ClassDB scripts executing in the context of a database should use these
 -- helper functions instead of repating code
@@ -34,7 +35,7 @@ DO
 $$
 BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
-                  WHERE rolname = current_user AND rolsuper = TRUE
+                  WHERE rolname = CURRENT_USER AND rolsuper = TRUE
                  ) THEN
       RAISE EXCEPTION 'Insufficient privilege: script must be run as a superuser';
    END IF;
@@ -56,142 +57,264 @@ END
 $$;
 
 
+--Create a custom domain to represent "identifier names"
+-- role names, user names, schema names, and other such names are ID names
+-- create the domain only if it does not already exist
+--  must query info schema because there is no "CREATE DOMAIN IF NOT EXISTS"
+-- from as far back Postgres 8.1 and as of Postgres 10.1, 63 is the default max
+--  length of an ID name default distribution; the length can be changed by
+--  changing the DBMS source code
+--  see: https://www.postgresql.org/docs/10/static/sql-syntax-lexical.html
+DO
+$$
+BEGIN
+   IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.DOMAINS
+                  WHERE domain_schema = 'classdb' AND domain_name = 'idnamedomain'
+                 )
+   THEN
+      CREATE DOMAIN ClassDB.IDNameDomain VARCHAR(63);
+   END IF;
+END;
+$$;
+
+--Notes on type conversion between ClassDB.IDNameDomain and VARCHAR
+--DBMS coerces among VARCHAR, TEXT, and ClassDB.IDNameDomain on assignment, but
+-- functions which return type ClassDB.IDNameDomain must explicitly cast
+-- a VARCHAR or TEXT they wish to return as ClassDB.IDNameDomain
+--an exception is raised if a string longer than 63 characters is assigned to
+-- a variable of type ClassDB.IDNameDomain
+--Data of type NAME must be explicitly cast to ClassDB.IDNameDomain (or to
+-- VARCHAR or TEXT) for assignment though Postgres docs say such casting is auto
+-- Example: use CURRENT_USER::ClassDB.IDNameDomain when passing as parameter
+--Postgres does not support custom casts involving domains because conversion is
+-- automatic via the underlying type, but that does not work from NAME to
+-- ClassDB.IDNameDomain
+-- See: https://www.postgresql.org/docs/9.6/static/sql-createcast.html
+
+
+
 --Define a function to replicate PostgreSQL's folding behavior for SQL IDs
 -- If identifier is quoted, then the same value is returned with quotes removed
 -- If it is not, then identifier is returned, but made lowercase
+-- The return type is intentionally left as VARCHAR (instead of ClassDB.IDName)
+--  due to how this function is used
 CREATE OR REPLACE FUNCTION
-   classdb.foldPgID(identifier VARCHAR(65))
+   ClassDB.foldPgID(identifier VARCHAR(65))
    RETURNS VARCHAR(63) AS
 $$
-SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
-                 SUBSTRING($1 from LENGTH($1) for 1) = '"'
+   SELECT
+      CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
+                SUBSTRING($1 from LENGTH($1) for 1) = '"'
             THEN
-                 SUBSTRING($1 from 2 for LENGTH($1) - 2)
+               SUBSTRING($1 from 2 for LENGTH($1) - 2)
             ELSE
-                 LOWER($1)
-       END;
-$$ LANGUAGE sql;
+               LOWER($1)
+      END;
+$$ LANGUAGE sql
+   IMMUTABLE
+   RETURNS NULL ON NULL INPUT;
 
-ALTER FUNCTION
-   classdb.foldPgID(identifier VARCHAR(65))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.foldPgID(VARCHAR(65)) OWNER TO ClassDB;
 
 
---Define a function to test if a role is "defined"
+
+--Define a function to get the name of the owner of a schema
+-- returns NULL if schema is not found
+CREATE OR REPLACE FUNCTION
+   ClassDB.getSchemaOwnerName(schemaName ClassDB.IDNameDomain)
+   RETURNS ClassDB.IDNameDomain AS
+$$
+   --this query generally works but was observed as failing in one circumstance
+   --yet keeping it because unit tests pass and usage in addRoleBaseMgmt.sql works
+   --use the pg_catalog workaround shown below if necessary
+   SELECT schema_owner::ClassDB.IDNameDomain
+   FROM information_schema.schemata
+   WHERE schema_name = ClassDB.foldPgID($1);
+
+   --system pg_catalog instead of information_schema as a work around to any
+   --issue with using INFORMATION_SCHEMA
+   --SELECT r.rolname::ClassDB.IDNameDomain
+   --FROM pg_catalog.pg_namespace ns
+   --     JOIN pg_catalog.pg_roles r ON ns.nspowner = r.oid
+   --WHERE nspname = ClassDB.foldPgID($1);
+
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.getSchemaOwnerName(ClassDB.IDNameDomain) OWNER TO ClassDB;
+
+
+
+--Define a function to test if a role name is a ClassDB role name
+-- tests if the name supplied is one of the following strings:
+--  'classdb_student', 'classdb_instructor', 'classdb_manager'
+CREATE OR REPLACE FUNCTION
+   ClassDB.isClassDBRoleName(roleName ClassDB.IDNameDomain)
+   RETURNS BOOLEAN AS
+$$
+   SELECT ClassDB.foldPgID($1)
+          IN ('classdb_instructor', 'classdb_student', 'classdb_dbmanager');
+$$ LANGUAGE sql
+   IMMUTABLE
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.isClassDBRoleName(ClassDB.IDNameDomain) OWNER TO ClassDB;
+
+
+--Define a function to test if a role is "defined" in the DBMS
 -- a role is defined if a pg_catalog.pg_roles row exists for the supplied name
 -- use this function to test if a string represents the name of a server role
 CREATE OR REPLACE FUNCTION
-   classdb.isRoleDefined(roleName VARCHAR(63))
+   ClassDB.isServerRoleDefined(roleName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
 $$
-BEGIN
-   IF EXISTS (SELECT * FROM pg_catalog.pg_roles
-              WHERE rolname = classdb.foldPgID($1)) THEN
-      RETURN TRUE;
-   ELSE
-      RETURN FALSE;
-   END IF;
-END;
-$$ LANGUAGE plpgsql;
+   SELECT EXISTS (SELECT * FROM pg_catalog.pg_roles
+                  WHERE rolname = ClassDB.foldPgID($1)
+                 );
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
-ALTER FUNCTION
-   classdb.isRoleDefined(roleName VARCHAR(63))
+ALTER FUNCTION ClassDB.isServerRoleDefined(ClassDB.IDNameDomain) OWNER TO ClassDB;
+
+
+--Define a function to test if a user is a member of a role
+-- parameter userName can name any server role, yet it is called "userName" for
+--  consistency with Postgres function pg_catalog.pg_has_role (see Postgres docs)
+CREATE OR REPLACE FUNCTION
+   ClassDB.isMember(userName ClassDB.IDNameDomain, roleName ClassDB.IDNameDomain)
+   RETURNS BOOLEAN AS
+$$
+   SELECT
+      EXISTS
+      (
+         SELECT * FROM pg_catalog.pg_roles
+         WHERE pg_catalog.pg_has_role(ClassDB.foldPgID($1), oid, 'member')
+               AND rolname = ClassDB.foldPgID($2)
+      );
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.isMember(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
    OWNER TO ClassDB;
+
+
+--Define a function to test if a user is a member of a ClassDB role
+CREATE OR REPLACE FUNCTION ClassDB.hasClassDBRole(userName ClassDB.IDNameDomain)
+   RETURNS BOOLEAN AS
+$$
+   SELECT
+      EXISTS
+      (
+         SELECT * FROM pg_catalog.pg_roles
+         WHERE pg_catalog.pg_has_role(ClassDB.foldPgID($1), oid, 'member')
+               AND
+               rolname IN
+               ('classdb_instructor', 'classdb_student', 'classdb_dbmanager')
+      );
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.hasClassDBRole(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
 
 --Define a function to test if a user is a superuser
 -- test current user if no user name is supplied
 CREATE OR REPLACE FUNCTION
-   classdb.isSuperUser(roleName VARCHAR(63) DEFAULT current_user)
+   ClassDB.isSuperUser(roleName ClassDB.IDNameDomain DEFAULT CURRENT_USER)
    RETURNS BOOLEAN AS
 $$
 BEGIN
    IF EXISTS (SELECT * FROM pg_catalog.pg_roles
-              WHERE rolname = classdb.foldPgID($1) AND rolsuper = TRUE
+              WHERE rolname = ClassDB.foldPgID($1) AND rolsuper = TRUE
              ) THEN
       RETURN TRUE;
    ELSE
       RETURN FALSE;
    END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
---Make ClassDB the function owner so only that role can drop/replace the function
-ALTER FUNCTION
-   classdb.isSuperUser(roleName VARCHAR(63))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.isSuperUser(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
 
 --Define a function to test if a user has CREATEROLE privilege
 -- test current user if no user name is supplied
 CREATE OR REPLACE FUNCTION
-   classdb.hasCreateRole(roleName VARCHAR(63) DEFAULT current_user)
+   ClassDB.hasCreateRole(roleName ClassDB.IDNameDomain DEFAULT CURRENT_USER)
    RETURNS BOOLEAN AS
 $$
 BEGIN
    IF EXISTS (SELECT * FROM pg_catalog.pg_roles
-              WHERE rolname = classdb.foldPgID($1) AND rolcreaterole = TRUE
+              WHERE rolname = ClassDB.foldPgID($1) AND rolcreaterole = TRUE
              ) THEN
       RETURN TRUE;
    ELSE
       RETURN FALSE;
    END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
-ALTER FUNCTION
-   classdb.hasCreateRole(roleName VARCHAR(63))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.hasCreateRole(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
 
 --Define a function to test if a user has CREATEDB privilege
 -- test current user if no user name is supplied
 CREATE OR REPLACE FUNCTION
-   classdb.canCreateDatabase(roleName VARCHAR(63) DEFAULT current_user)
+   ClassDB.canCreateDatabase(roleName ClassDB.IDNameDomain DEFAULT CURRENT_USER)
    RETURNS BOOLEAN AS
 $$
 BEGIN
    IF EXISTS (SELECT * FROM pg_catalog.pg_roles
-              WHERE rolname = classdb.foldPgID($1) AND rolcreatedb = TRUE
+              WHERE rolname = ClassDB.foldPgID($1) AND rolcreatedb = TRUE
              ) THEN
       RETURN TRUE;
    ELSE
       RETURN FALSE;
    END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
-ALTER FUNCTION
-   classdb.canCreateDatabase(roleName VARCHAR(63))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.canCreateDatabase(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
 
 --Define a function to test if a role can log in
 -- test current user if no user name is supplied
 CREATE OR REPLACE FUNCTION
-   classdb.canLogin(roleName VARCHAR(63) DEFAULT current_user)
+   ClassDB.canLogin(roleName ClassDB.IDNameDomain DEFAULT CURRENT_USER)
    RETURNS BOOLEAN AS
 $$
 BEGIN
    IF EXISTS (SELECT * FROM pg_catalog.pg_roles
-              WHERE rolname = classdb.foldPgID($1) AND rolcanlogin = TRUE
+              WHERE rolname = ClassDB.foldPgID($1) AND rolcanlogin = TRUE
              ) THEN
       RETURN TRUE;
    ELSE
       RETURN FALSE;
    END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
-ALTER FUNCTION
-   classdb.canLogin(roleName VARCHAR(63))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.canLogin(ClassDB.IDNameDomain) OWNER TO ClassDB;
+
 
 --Define a function to list all  objects owned by some role.  This query
 -- uses pg_class, which lists all objects Postgres considers relations, such as
--- tables, views, and type.  We UNION with pg_proc, which contains a list of all functions.
+-- tables, views, and type. We UNION with pg_proc, which contains a list of all functions.
 -- The Postgres views are used because they contain the owner of each object, which
-CREATE OR REPLACE FUNCTION classdb.listOwnedObjects(roleName VARCHAR(63) DEFAULT current_user)
+CREATE OR REPLACE FUNCTION
+   ClassDB.listOwnedObjects(roleName ClassDB.IDNameDomain DEFAULT CURRENT_USER)
 RETURNS TABLE
 (
    object VARCHAR(63),
@@ -221,19 +344,17 @@ $$
    JOIN pg_roles r ON r.oid = p.proowner
    JOIN pg_namespace n ON n.oid = p.pronamespace
    WHERE r.rolname = $1;
-$$ LANGUAGE sql;
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
-ALTER FUNCTION
-   classdb.listOwnedObjects(VARCHAR(63))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
-REVOKE ALL ON FUNCTION
-   classdb.listOwnedObjects(VARCHAR(63))
-   FROM PUBLIC;
+REVOKE ALL ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain) FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION
-   classdb.listOwnedObjects(VARCHAR(63))
-   TO ClassDB_Instructor, ClassDB_DBManager;
+GRANT EXECUTE ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain)
+      TO ClassDB_Instructor, ClassDB_DBManager;
+
 
 --Define a function to list all 'orphan' objects owned by ClassDB_Instructor and
 -- ClassDB_DBManager. This will list all objects that were owned by a dropped instructor
@@ -241,7 +362,8 @@ GRANT EXECUTE ON FUNCTION
 -- will list all objects from both roles. If a parameter starting with i or I is passed,
 -- it will list only Instructor objects, If a Parameter starting with d or D is passed,
 -- it will list only DBManager objects.
-CREATE OR REPLACE FUNCTION classdb.listOrphanObjects(classDBRole VARCHAR(63) DEFAULT NULL)
+CREATE OR REPLACE FUNCTION
+   ClassDB.listOrphanObjects(classDBRole ClassDB.IDNameDomain DEFAULT NULL)
 RETURNS TABLE
 (
    owner VARCHAR(63),
@@ -254,33 +376,30 @@ BEGIN
    IF $1 ILIKE 'i%' THEN
       RETURN QUERY
       SELECT 'ClassDB_Instructor'::VARCHAR(63), loo.object, loo.schema, loo.kind
-      FROM classdb.listOwnedObjects('classdb_instructor') loo;
+      FROM ClassDB.listOwnedObjects('classdb_instructor') loo;
    ELSIF $1 ILIKE 'd%' THEN
       RETURN QUERY
       SELECT 'ClassDB_DBManager'::VARCHAR(63), loo.object, loo.schema, loo.kind
-      FROM classdb.listOwnedObjects('classdb_dbmanager') loo;
+      FROM ClassDB.listOwnedObjects('classdb_dbmanager') loo;
    ELSE
       RETURN QUERY
       SELECT 'ClassDB_Instructor'::VARCHAR(63), loo.object, loo.schema, loo.kind
-      FROM classdb.listOwnedObjects('classdb_instructor') loo
+      FROM ClassDB.listOwnedObjects('classdb_instructor') loo
       UNION ALL
       SELECT 'ClassDB_DBManager'::VARCHAR(63), loo.object, loo.schema, loo.kind
-      FROM classdb.listOwnedObjects('classdb_dbmanager') loo;
+      FROM ClassDB.listOwnedObjects('classdb_dbmanager') loo;
    END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
-ALTER FUNCTION
-   classdb.listOwnedObjects(VARCHAR(63))
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
-REVOKE ALL ON FUNCTION
-   classdb.listOwnedObjects(VARCHAR(63))
-   FROM PUBLIC;
+REVOKE ALL ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain) FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION
-   classdb.listOwnedObjects(VARCHAR(63))
-   TO ClassDB_Instructor, ClassDB_DBManager;
+GRANT EXECUTE ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain)
+      TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 --Define a function to retrieve specific capabilities a user has
@@ -288,7 +407,7 @@ GRANT EXECUTE ON FUNCTION
 
 --Commenting out the function because a unit test is yet to be developed
 --CREATE OR REPLACE FUNCTION
---   classdb.getRoleCapabilities(roleName VARCHAR(63),
+--   ClassDB.getRoleCapabilities(roleName ClassDB.IDNameDomain,
 --                               OUT isSuperUser BOOLEAN,
 --                               OUT hasCreateRole BOOLEAN,
 --                               OUT canCreateDatabase BOOLEAN)
@@ -301,7 +420,7 @@ GRANT EXECUTE ON FUNCTION
 --$$ LANGUAGE plpgsql;
 
 --ALTER FUNCTION
---   classdb.getRoleCapabilities(roleName VARCHAR(63),
+--   ClassDB.getRoleCapabilities(roleName ClassDB.IDNameDomain,
 --                               OUT isSuperUser BOOLEAN,
 --                               OUT hasCreateRole BOOLEAN,
 --                               OUT canCreateDatabase BOOLEAN)
