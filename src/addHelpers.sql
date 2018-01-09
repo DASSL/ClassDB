@@ -94,9 +94,9 @@ $$;
 
 
 --Define a function to replicate PostgreSQL's folding behavior for SQL IDs
--- If identifier is quoted, then the same value is returned with quotes removed
--- If it is not, then identifier is returned, but made lowercase
--- The return type is intentionally left as VARCHAR (instead of ClassDB.IDName)
+-- if identifier is quoted, it is returned as is but without the quotes
+-- if unquoted, the identifier is returned in lower case
+--The return type is intentionally left as VARCHAR (instead of ClassDB.IDName)
 --  due to how this function is used
 CREATE OR REPLACE FUNCTION
    ClassDB.foldPgID(identifier VARCHAR(65))
@@ -181,7 +181,7 @@ ALTER FUNCTION ClassDB.isServerRoleDefined(ClassDB.IDNameDomain) OWNER TO ClassD
 
 --Define a function to test if a user is a member of a role
 -- parameter userName can name any server role, yet it is called "userName" for
---  consistency with Postgres function pg_catalog.pg_has_role (see Postgres docs)
+-- consistency with Postgres function pg_catalog.pg_has_role (see Postgres docs)
 CREATE OR REPLACE FUNCTION
    ClassDB.isMember(userName ClassDB.IDNameDomain, roleName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
@@ -309,10 +309,10 @@ $$ LANGUAGE plpgsql
 ALTER FUNCTION ClassDB.canLogin(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
 
---Define a function to list all  objects owned by some role.  This query
--- uses pg_class, which lists all objects Postgres considers relations, such as
--- tables, views, and type. We UNION with pg_proc, which contains a list of all functions.
--- The Postgres views are used because they contain the owner of each object, which
+--Define a function to list all  objects owned by some role. This query uses
+-- pg_class which lists all objects Postgres considers relations (tables, views,
+-- and types) and UNIONs with pg_proc include functions
+--Postgres views are used because they contain the owner of each object
 CREATE OR REPLACE FUNCTION
    ClassDB.listOwnedObjects(roleName ClassDB.IDNameDomain DEFAULT CURRENT_USER)
 RETURNS TABLE

@@ -90,7 +90,7 @@ $$ LANGUAGE sql
    STABLE
    RETURNS NULL ON NULL INPUT;
 
---make ClassDB the fn. owner, let only instructors and managers execute the fn.
+--Make ClassDB the fn. owner, let only instructors and managers execute the fn.
 -- this pattern of ownership and grant/revoke applies to all functions in this
 -- script: for brevity, such code is not prefaced ain with comments unless
 -- the code does something significantly different
