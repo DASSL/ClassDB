@@ -30,7 +30,8 @@ SET LOCAL client_min_messages TO WARNING;
 
 
 --Returns a list of tables and views in the current user's schema
-CREATE OR REPLACE FUNCTION public.listTables(schemaName VARCHAR(63) DEFAULT SESSION_USER)
+CREATE OR REPLACE FUNCTION public.listTables(schemaName ClassDB.IDNameDomain
+   DEFAULT SESSION_USER::ClassDB.IDNameDomain)
    RETURNS TABLE
 (  --Since these functions access the INFORMATION_SCHEMA, we use the standard
    --info schema types for the return table
@@ -43,7 +44,7 @@ BEGIN
    --Check if the user is associated with the schema they are trying to list from.
    -- This is required because a user's schema name is not always the same as their
    -- user name.
-   IF ClassDB.getSchemaOwnerName(schemaName) <> SESSION_USER::ClassDB.IDNameDomain THEN
+   IF ClassDB.getSchemaOwnerName(schemaName) <> SESSION_USER THEN
       RAISE EXCEPTION 'Insufficient privileges: you do not have permission to access'
          ' the requested schema';
 
@@ -55,16 +56,12 @@ $$ LANGUAGE plpgsql
    STABLE
    SECURITY DEFINER;
 
-ALTER FUNCTION
-   Public.listTables()
-   OWNER TO ClassDB;
+ALTER FUNCTION Public.listTables(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
-GRANT EXECUTE ON FUNCTION
-   Public.listTables()
-   TO PUBLIC;
+GRANT EXECUTE ON FUNCTION Public.listTables(ClassDB.IDNameDomain) TO PUBLIC;
 
 --Returns a list of columns in the specified table or view in the current user's schema
-CREATE OR REPLACE FUNCTION public.describe(tableName VARCHAR(63))
+CREATE OR REPLACE FUNCTION public.describe(tableName ClassDB.IDNameDomain)
 RETURNS TABLE
 (
    "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
@@ -80,17 +77,12 @@ $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
 
-ALTER FUNCTION
-   Public.describe(VARCHAR(63))
-   OWNER TO ClassDB;
-
-GRANT EXECUTE ON FUNCTION
-   Public.describe(VARCHAR(63))
-   TO PUBLIC;
+ALTER FUNCTION public.describe(ClassDB.IDNameDomain) OWNER TO ClassDB;
+GRANT EXECUTE ON FUNCTION public.describe(ClassDB.IDNameDomain) TO PUBLIC;
 
 --Returns a list of columns in the specified table or view in the specified schema
 -- This overide allows a schema name to be specified
-CREATE OR REPLACE FUNCTION public.describe(schemaName VARCHAR(63), tableName VARCHAR(63))
+CREATE OR REPLACE FUNCTION public.describe(schemaName ClassDB.IDNameDomain, tableName ClassDB.IDNameDomain)
 RETURNS TABLE
 (
    "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
@@ -101,7 +93,7 @@ AS $$
    --Check if the user is associated with the scheam they are trying to list from.
    -- This is required because a user's schema name is not always the same as their
    -- user name.
-   IF ClassDB.getSchemaOwnerName(schemaName) <> SESSION_USER::ClassDB.IDNameDomain THEN
+   IF ClassDB.getSchemaOwnerName(schemaName) <> SESSION_USER THEN
    RAISE EXCEPTION 'Insufficient privileges: you do not have permission to access'
       ' the requested schema';
 
@@ -113,13 +105,8 @@ $$ LANGUAGE plpgsql
    STABLE
    SECURITY DEFINER;
 
-ALTER FUNCTION
-   Public.describe(VARCHAR(63), VARCHAR(63))
-   OWNER TO ClassDB;
-
-GRANT EXECUTE ON FUNCTION
-   Public.describe(VARCHAR(63), VARCHAR(63))
-   TO PUBLIC;
+ALTER FUNCTION public.describe(ClassDB.IDNameDomain, ClassDB.IDNameDomain) OWNER TO ClassDB;
+GRANT EXECUTE ON FUNCTION public.describe(ClassDB.IDNameDomain, ClassDB.IDNameDomain) TO PUBLIC;
 
 
 COMMIT;
