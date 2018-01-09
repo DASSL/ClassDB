@@ -43,7 +43,7 @@ SET LOCAL client_min_messages TO WARNING;
 
 --We use CREATE OR REPLACE for this function because it can't be dropped if the
 -- event triggers already exist.  For example, when re-runing this script
-CREATE OR REPLACE FUNCTION ClassDB.updateDDLActivity()
+CREATE OR REPLACE FUNCTION ClassDB.logDDLActivity()
 RETURNS event_trigger AS
 $$
 DECLARE
@@ -85,21 +85,54 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
+REVOKE ALL ON FUNCTION ClassDB.disableDDLActivityLogging() FROM PUBLIC;
+ALTER FUNCTION ClassDB.logDDLActivity() OWNER TO ClassDB;
 
---Event triggers to update user last activity time on DDL events
--- the 'Drop' trigger is fired during the sql_drop event, which occurs when
--- DROP statements are executed. The 'DDL' trigger is executed on ddl_command_end
--- which is fired when any DDL statement finishes executing. Both triggers are
--- needed to log all DDL statements, as not all infomation about DROP statements
--- is provided by the ddl_command_end event
-DROP EVENT TRIGGER IF EXISTS triggerDDLCommandSqlDrop;
-CREATE EVENT TRIGGER triggerDDLCommandSqlDrop
-ON sql_drop
-EXECUTE PROCEDURE ClassDB.updateDDLActivity();
 
-DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
-CREATE EVENT TRIGGER triggerDDLCommandEnd
-ON ddl_command_end
-EXECUTE PROCEDURE ClassDB.updateDDLActivity();
+--The functions ClassDB.enableDDLActivityLogging() and ClassDB.disableDDLActivityLogging()
+-- enable and disable the DDL monitoring feature by creating and removing DDL triggers.
+-- These triggers insert rows into ClassDB.DDLActivity any time a classDB user performs
+-- a DDL statement.
+--These functions must be owned by the superuser running this script, because only
+-- superusers have the permissions to create or drop event triggers
+CREATE OR REPLACE FUNCTION ClassDB.enableDDLActivityLogging()
+RETURNS VOID AS
+$$
+   --Event triggers to update user last activity time on DDL events
+   -- the 'Drop' trigger is fired during the sql_drop event, which occurs when
+   -- DROP statements are executed. The 'DDL' trigger is executed on ddl_command_end
+   -- which is fired when any DDL statement finishes executing. Both triggers are
+   -- needed to log all DDL statements, as not all infomation about DROP statements
+   -- is provided by the ddl_command_end event
+   DROP EVENT TRIGGER IF EXISTS triggerDDLCommandSqlDrop;
+   CREATE EVENT TRIGGER triggerDDLCommandSqlDrop
+   ON sql_drop
+   EXECUTE PROCEDURE ClassDB.logDDLActivity();
+
+   DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
+   CREATE EVENT TRIGGER triggerDDLCommandEnd
+   ON ddl_command_end
+   EXECUTE PROCEDURE ClassDB.logDDLActivity();
+$$ LANGUAGE sql
+   VOLATILE
+   SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION ClassDB.enableDDLActivityLogging() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ClassDB.enableDDLActivityLogging()
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+CREATE OR REPLACE FUNCTION ClassDB.disableDDLActivityLogging()
+RETURNS VOID AS
+$$
+   DROP EVENT TRIGGER IF EXISTS triggerDDLCommandSqlDrop;
+   DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
+$$ LANGUAGE sql
+   VOLATILE
+   SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION ClassDB.disableDDLActivityLogging() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ClassDB.disableDDLActivityLogging()
+   TO ClassDB_Instructor, ClassDB_DBManager;
 
 COMMIT;
