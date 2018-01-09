@@ -32,7 +32,7 @@ SET LOCAL client_min_messages TO WARNING;
 --Returns a list of tables and views in the current user's schema
 CREATE OR REPLACE FUNCTION public.listTables(schemaName ClassDB.IDNameDomain
    DEFAULT SESSION_USER::ClassDB.IDNameDomain)
-   RETURNS TABLE
+RETURNS TABLE
 (  --Since these functions access the INFORMATION_SCHEMA, we use the standard
    --info schema types for the return table
    "Schema" INFORMATION_SCHEMA.SQL_IDENTIFIER,
@@ -50,35 +50,15 @@ BEGIN
 
    SELECT table_schema, table_name, table_type
    FROM INFORMATION_SCHEMA.TABLES
-   WHERE table_schema = schemaName;
+   WHERE table_schema = ClassDB.foldPgID(schemaName);
 END;
 $$ LANGUAGE plpgsql
    STABLE
    SECURITY DEFINER;
 
 ALTER FUNCTION Public.listTables(ClassDB.IDNameDomain) OWNER TO ClassDB;
-
 GRANT EXECUTE ON FUNCTION Public.listTables(ClassDB.IDNameDomain) TO PUBLIC;
 
---Returns a list of columns in the specified table or view in the current user's schema
-CREATE OR REPLACE FUNCTION public.describe(tableName ClassDB.IDNameDomain)
-RETURNS TABLE
-(
-   "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
-   "Type" VARCHAR(100) --Use VARCHAR since we are going to modify the
-                       -- data returned from INFO_SCHEMA
-)
-AS $$
-   SELECT column_name, data_type || COALESCE('(' || character_maximum_length || ')', '')
-   FROM INFORMATION_SCHEMA.COLUMNS
-   WHERE table_schema = ClassDB.getSchemaName(SESSION_USER)
-   AND table_name = ClassDB.FoldPgID($1);
-$$ LANGUAGE sql
-   STABLE
-   SECURITY DEFINER;
-
-ALTER FUNCTION public.describe(ClassDB.IDNameDomain) OWNER TO ClassDB;
-GRANT EXECUTE ON FUNCTION public.describe(ClassDB.IDNameDomain) TO PUBLIC;
 
 --Returns a list of columns in the specified table or view in the specified schema
 -- This overide allows a schema name to be specified
@@ -108,5 +88,24 @@ $$ LANGUAGE plpgsql
 ALTER FUNCTION public.describe(ClassDB.IDNameDomain, ClassDB.IDNameDomain) OWNER TO ClassDB;
 GRANT EXECUTE ON FUNCTION public.describe(ClassDB.IDNameDomain, ClassDB.IDNameDomain) TO PUBLIC;
 
+
+--Returns a list of columns in the specified table or view in the current user's schema
+CREATE OR REPLACE FUNCTION public.describe(tableName ClassDB.IDNameDomain)
+RETURNS TABLE
+(
+   "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
+   "Type" VARCHAR(100) --Use VARCHAR since we are going to modify the
+                       -- data returned from INFO_SCHEMA
+)
+AS $$
+   SELECT "Column", "Type"
+   FROM public.describe(
+      ClassDB.getSchemaName(SESSION_USER::ClassDB.IDNameDomain), ClassDB.FoldPgID($1));
+$$ LANGUAGE sql
+   STABLE
+   SECURITY DEFINER;
+
+ALTER FUNCTION public.describe(ClassDB.IDNameDomain) OWNER TO ClassDB;
+GRANT EXECUTE ON FUNCTION public.describe(ClassDB.IDNameDomain) TO PUBLIC;
 
 COMMIT;
