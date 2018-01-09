@@ -114,7 +114,6 @@ $$
    ON ddl_command_end
    EXECUTE PROCEDURE ClassDB.logDDLActivity();
 $$ LANGUAGE sql
-   VOLATILE
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION ClassDB.enableDDLActivityLogging() FROM PUBLIC;
@@ -128,7 +127,6 @@ $$
    DROP EVENT TRIGGER IF EXISTS triggerDDLCommandSqlDrop;
    DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
 $$ LANGUAGE sql
-   VOLATILE
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION ClassDB.disableDDLActivityLogging() FROM PUBLIC;
