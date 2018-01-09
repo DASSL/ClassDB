@@ -1,7 +1,8 @@
 --addFrequentViews.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab (DASSL), dassl.github.io
+--Data Science & Systems Lab (DASSL)
+--https://dassl.github.io/
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -46,40 +47,24 @@ CREATE VIEW ClassDB.StudentActivityAll AS
   ORDER BY UserName
 );
 
-REVOKE ALL PRIVILEGES
-  ON ClassDB.StudentActivityAll
-  FROM PUBLIC;
-
-ALTER VIEW
-   ClassDB.studentActivityAll
-   OWNER TO ClassDB;
-
-GRANT SELECT ON
-   ClassDB.StudentActivityAll
-   TO ClassDB_Instructor;
+REVOKE ALL PRIVILEGES ON ClassDB.StudentActivityAll FROM PUBLIC;
+ALTER VIEW ClassDB.studentActivityAll OWNER TO ClassDB;
+GRANT SELECT ON ClassDB.StudentActivityAll TO ClassDB_Instructor;
 
 --This view shows the activity of all students in the student table, ommiting any
 -- user-identifiable information. This view is only usable by instructors
 DROP VIEW IF EXISTS ClassDB.StudentActivityAnon;
 CREATE VIEW ClassDB.StudentActivityAnon AS
 (
-   SELECT ClassDB.changeTimeZone(LastDDLActivityAt), LastDDLOperation, LastDDLObject,
-          DDLCount, ClassDB.changeTimeZone(LastConnectionAt), ConnectionCount
-   FROM ClassDB.User
+   SELECT LastDDLActivityAt, LastDDLOperation, LastDDLObject, DDLCount,
+          LastConnectionAt, ConnectionCount
+   FROM ClassDB.StudentActivityAll
    ORDER BY ConnectionCount
 );
 
-REVOKE ALL PRIVILEGES
-  ON ClassDB.StudentActivityAnon
-  FROM PUBLIC;
-
-ALTER VIEW
-   ClassDB.studentActivityAnon
-   OWNER TO ClassDB;
-
-GRANT SELECT ON
-   ClassDB.StudentActivityAnon
-   TO ClassDB_Instructor;
+REVOKE ALL PRIVILEGES ON ClassDB.StudentActivityAnon FROM PUBLIC;
+ALTER VIEW ClassDB.studentActivityAnon OWNER TO ClassDB;
+GRANT SELECT ON ClassDB.StudentActivityAnon TO ClassDB_Instructor;
 
 --This view shows all tables and views currently owned by by students. Note that
 -- this is accomplished by listing all tables/views in student schemas. This view is
@@ -92,17 +77,9 @@ CREATE VIEW ClassDB.StudentTable AS
   ORDER BY table_schema
 );
 
-REVOKE ALL PRIVILEGES
-  ON ClassDB.StudentTable
-  FROM PUBLIC;
-
-ALTER VIEW
-   ClassDB.StudentTable
-   OWNER TO ClassDB;
-
-GRANT SELECT ON
-   ClassDB.StudentTable
-   TO ClassDB_Instructor;
+REVOKE ALL PRIVILEGES ON ClassDB.StudentTable FROM PUBLIC;
+ALTER VIEW ClassDB.StudentTable OWNER TO ClassDB;
+GRANT SELECT ON ClassDB.StudentTable TO ClassDB_Instructor;
 
 --This view lists the current number of tables and views owned by each student. This
 -- view is only accessible by instructors.
@@ -115,98 +92,64 @@ CREATE VIEW ClassDB.StudentTableCount AS
   ORDER BY table_schema
 );
 
-REVOKE ALL PRIVILEGES
-  ON ClassDB.StudentTableCount
-  FROM PUBLIC;
-
-ALTER VIEW
-   ClassDB.StudentTableCount
-   OWNER TO ClassDB;
-
-GRANT SELECT ON
-   ClassDB.StudentTableCount
-   TO ClassDB_Instructor;
+REVOKE ALL PRIVILEGES ON ClassDB.StudentTableCount FROM PUBLIC;
+ALTER VIEW ClassDB.StudentTableCount OWNER TO ClassDB;
+GRANT SELECT ON ClassDB.StudentTableCount TO ClassDB_Instructor;
 
 
-CREATE OR REPLACE FUNCTION ClassDB.getUserActivitySummary(userName VARCHAR(63) DEFAULT session_user)
+--This function gets the user activity summary for a given user. This includes their latest
+-- DDL and connection activity, as well as their total number of DDL and Connection events
+CREATE OR REPLACE FUNCTION ClassDB.getUserActivitySummary(userName ClassDB.IDNameDomain
+   DEFAULT SESSION_USER::ClassDB.IDNameDomain)
 RETURNS TABLE
 (
    LastDDLActivityAt TIMESTAMP, LastDDLOperation VARCHAR(64), LastDDLObject VARCHAR(256),
    DDLCount INT, LastConnection TIMESTAMP, ConnectionCount INT
 ) AS
 $$
-   SELECT ClassDB.changeTimeZone(LastDDLActivityAtUTC), lastddloperation, lastddlobject, ddlcount,
-          ClassDB.changeTimeZone(LastConnectionAtUTC), connectioncount
+   SELECT LastDDLActivityAt, lastddloperation, lastddlobject, ddlcount, LastConnectionAt, connectioncount
    FROM ClassDB.StudentActivityAll
    WHERE username = ClassDB.foldPgID($1);
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION
-   ClassDB.getUserActivitySummary(VARCHAR(63))
-   FROM PUBLIC;
-
-ALTER FUNCTION
-   ClassDB.getUserActivitySummary(VARCHAR(63))
-   OWNER TO ClassDB;
-
-GRANT EXECUTE ON FUNCTION
-   ClassDB.getUserActivitySummary(VARCHAR(63))
-TO ClassDB_Instructor;
+REVOKE ALL ON FUNCTION ClassDB.getUserActivitySummary(ClassDB.IDNameDomain) FROM PUBLIC;
+ALTER FUNCTION ClassDB.getUserActivitySummary(ClassDB.IDNameDomain) OWNER TO ClassDB;
+GRANT EXECUTE ON FUNCTION ClassDB.getUserActivitySummary(ClassDB.IDNameDomain) TO ClassDB_Instructor;
 
 --This function lists the most recent activity of the executing user. This view is accessible
 -- by both students and instructors, which requires that it be placed in the public schema.
 -- Additionally, it is implemented as a function so that students are able to indirectly
 -- access ClassDB.User.
-CREATE OR REPLACE FUNCTION Public.getMyActivitySummary()
+CREATE OR REPLACE FUNCTION public.getMyActivitySummary()
 RETURNS TABLE
 (
    LastDDLActivity TIMESTAMP, LastDDLOperation VARCHAR(64), LastDDLObject VARCHAR(256),
    DDLCount INT, LastConnection TIMESTAMP, ConnectionCount INT
 ) AS
 $$
-   SELECT lastddlactivity, lastddloperation, lastddlobject, ddlcount,
-          lastconnection, connectioncount
+   SELECT lastddlactivityat, lastddloperation, lastddlobject, ddlcount, lastconnectionat, connectioncount
    FROM ClassDB.getUserActivitySummary();
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION
-   Public.getMyActivitySummary()
-   FROM PUBLIC;
+ALTER FUNCTION public.getMyActivitySummary() OWNER TO ClassDB;
 
-ALTER FUNCTION
-   Public.getMyActivitySummary()
-   OWNER TO ClassDB;
-
-GRANT EXECUTE ON FUNCTION
-   Public.getMyActivitySummary()
-TO ClassDB_Instructor, ClassDB_DBManager, ClassDB_Student;
-
-CREATE VIEW Public.MyActivitySummary AS
+--Proxy view for public.getMyActivitySummary(). Designed to make access easier for students
+CREATE VIEW public.MyActivitySummary AS
 (
-   SELECT lastddlactivity, lastddloperation, lastddlobject, ddlcount, lastconnection,
-          connectioncount
-   FROM Public.getMyActivitySummary()
+   SELECT lastddlactivity, lastddloperation, lastddlobject, ddlcount, lastconnection, connectioncount
+   FROM public.getMyActivitySummary()
 );
 
-REVOKE ALL PRIVILEGES
-   Public.MyActivitySummary
-   FROM Public;
-
-ALTER VIEW
-   Public.MyActivitySummary
-   OWNER TO ClassDB;
-
-GRANT SELECT ON
-   Public.MyActivitySummary
-   TO Public;
+ALTER VIEW public.MyActivitySummary OWNER TO ClassDB;
 
 
 --This function returns all DDL activity for a specified user
-CREATE OR REPLACE FUNCTION ClassDB.getUserDDLActivity(userName VARCHAR(63) DEFAULT session_user)
+CREATE OR REPLACE FUNCTION ClassDB.getUserDDLActivity(userName ClassDB.IDNameDomain
+   DEFAULT SESSION_USER::ClassDB.IDNameDomain)
 RETURNS TABLE
 (
    StatementStartedAt TIMESTAMP, DDLOperation VARCHAR(64), DDLObject VARCHAR(256)
@@ -219,20 +162,12 @@ $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION
-   ClassDB.getUserDDLActivity(VARCHAR(63))
-   FROM PUBLIC;
+REVOKE ALL ON FUNCTION ClassDB.getUserDDLActivity(ClassDB.IDNameDomain) FROM PUBLIC;
+ALTER FUNCTION ClassDB.getUserDDLActivity(ClassDB.IDNameDomain) OWNER TO ClassDB;
+GRANT EXECUTE ON FUNCTION ClassDB.getUserDDLActivity(ClassDB.IDNameDomain) TO ClassDB_Instructor;
 
-ALTER FUNCTION
-   ClassDB.getUserDDLActivity(VARCHAR(63))
-   OWNER TO ClassDB;
-
-GRANT EXECUTE ON FUNCTION
-   ClassDB.getUserDDLActivity(VARCHAR(63))
-TO ClassDB_Instructor;
-
---
-CREATE OR REPLACE FUNCTION Public.getMyDDLActivity()
+--This function returns all DDL activity for the current user
+CREATE OR REPLACE FUNCTION public.getMyDDLActivity()
 RETURNS TABLE
 (
    StatementStartedAt TIMESTAMP, DDLOperation VARCHAR(64), DDLObject VARCHAR(256)
@@ -244,39 +179,21 @@ $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION
-   Public.getMyDDLActivity()
-   FROM PUBLIC;
+ALTER FUNCTION public.getMyDDLActivity() OWNER TO ClassDB;
 
-ALTER FUNCTION
-   Public.getMyDDLActivity()
-   OWNER TO ClassDB;
-
-GRANT EXECUTE ON FUNCTION
-   Public.getMyDDLActivity()
-TO ClassDB_Instructor, ClassDB_DBManager, ClassDB_Student;
-
-CREATE VIEW Public.MyDDLActivity AS
+--This view wraps getMyDDLActivity() for easier student access
+CREATE VIEW public.MyDDLActivity AS
 (
    SELECT StatementStartedAt, DDLOperation, DDLObject
-   FROM Public.getMyDDLActivity()
+   FROM public.getMyDDLActivity()
 );
 
-REVOKE ALL PRIVILEGES
-   Public.MyDDLActivity
-   FROM Public;
-
-ALTER VIEW
-   Public.MyDDLActivity
-   OWNER TO ClassDB;
-
-GRANT SELECT ON
-   Public.MyDDLActivity
-   TO Public;
+ALTER VIEW public.MyDDLActivity OWNER TO ClassDB;
 
 
 --This function returns all connection activity for a specified user
-CREATE OR REPLACE FUNCTION ClassDB.getUserConnectionActivity(userName VARCHAR(63) DEFAULT session_user)
+CREATE OR REPLACE FUNCTION ClassDB.getUserConnectionActivity(userName ClassDB.IDNameDomain
+   DEFAULT SESSION_USER::ClassDB.IDNameDomain)
 RETURNS TABLE
 (
    AcceptedAt TIMESTAMP
@@ -289,63 +206,38 @@ $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION
-   ClassDB.getUserConnectionActivity(VARCHAR(63))
-   FROM PUBLIC;
+REVOKE ALL ON FUNCTION ClassDB.getUserConnectionActivity(ClassDB.IDNameDomain) FROM PUBLIC;
+ALTER FUNCTION ClassDB.getUserConnectionActivity(ClassDB.IDNameDomain) OWNER TO ClassDB;
+GRANT EXECUTE ON FUNCTION ClassDB.getUserConnectionActivity(ClassDB.IDNameDomain) TO ClassDB_Instructor;
 
-ALTER FUNCTION
-   ClassDB.getUserConnectionActivity(VARCHAR(63))
-   OWNER TO ClassDB;
-
-GRANT EXECUTE ON FUNCTION
-   ClassDB.getUserConnectionActivity(VARCHAR(63))
-TO ClassDB_Instructor;
-
---
-CREATE OR REPLACE FUNCTION Public.getMyConnectionActivity()
+--This function returns all connection activity for the current user
+CREATE OR REPLACE FUNCTION public.getMyConnectionActivity()
 RETURNS TABLE
 (
    AcceptedAt TIMESTAMP
 ) AS
 $$
-   SELECT ClassDB.changeTimeZone(AcceptedAtUTC)
+   SELECT AcceptedAt
    FROM ClassDB.getUserConnectionActivity()
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION
-   Public.getMyConnectionActivity()
-   FROM PUBLIC;
+ALTER FUNCTION public.getMyConnectionActivity() OWNER TO ClassDB;
 
-ALTER FUNCTION
-   Public.getMyConnectionActivity()
-   OWNER TO ClassDB;
-
-GRANT EXECUTE ON FUNCTION
-   Public.getMyConnectionActivity()
-TO ClassDB_Instructor, ClassDB_DBManager, ClassDB_Student;
-
-CREATE VIEW Public.MyConnectionActivity AS
+--This view wraps getMyConnectionActivity for easier student access
+CREATE VIEW public.MyConnectionActivity AS
 (
    SELECT AcceptedAt
-   FROM Public.getMyConnectionActivity()
+   FROM public.getMyConnectionActivity()
 );
 
-REVOKE ALL PRIVILEGES
-   Public.MyConnectionActivity
-   FROM Public;
+ALTER VIEW public.MyConnectionActivity OWNER TO ClassDB;
 
-ALTER VIEW
-   Public.MyConnectionActivity
-   OWNER TO ClassDB;
-
-GRANT SELECT ON
-   Public.MyConnectionActivity
-   TO Public;
 
 --This function returns all activity for a specified user
-CREATE OR REPLACE FUNCTION ClassDB.getUserActivity(userName VARCHAR(63) DEFAULT session_user)
+CREATE OR REPLACE FUNCTION ClassDB.getUserActivity(userName ClassDB.IDNameDomain
+   DEFAULT SESSION_USER::ClassDB.IDNameDomain)
 RETURNS TABLE
 (
    ActivityAt TIMESTAMP, ActivityType VARCHAR(10), DDLOperation VARCHAR(64), DDLObject VARCHAR(256)
@@ -360,20 +252,12 @@ $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION
-   ClassDB.getUserActivity(VARCHAR(63))
-   FROM PUBLIC;
+REVOKE ALL ON FUNCTION ClassDB.getUserActivity(ClassDB.IDNameDomain) FROM PUBLIC;
+ALTER FUNCTION ClassDB.getUserActivity(ClassDB.IDNameDomain) OWNER TO ClassDB;
+GRANT EXECUTE ON FUNCTION ClassDB.getUserActivity(ClassDB.IDNameDomain) TO ClassDB_Instructor;
 
-ALTER FUNCTION
-   ClassDB.getUserActivity(VARCHAR(63))
-   OWNER TO ClassDB;
-
-GRANT EXECUTE ON FUNCTION
-   ClassDB.getUserActivity(VARCHAR(63))
-TO ClassDB_Instructor;
-
---
-CREATE OR REPLACE FUNCTION Public.getMyActivity()
+--This view returns all activity for the current user
+CREATE OR REPLACE FUNCTION public.getMyActivity()
 RETURNS TABLE
 (
    ActivityAt TIMESTAMP, ActivityType VARCHAR(10), DDLOperation VARCHAR(64), DDLObject VARCHAR(256)
@@ -385,32 +269,13 @@ $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION
-   Public.getMyActivity()
-   FROM PUBLIC;
+ALTER FUNCTION public.getMyActivity() OWNER TO ClassDB;
 
-ALTER FUNCTION
-   Public.getMyActivity()
-   OWNER TO ClassDB;
-
-GRANT EXECUTE ON FUNCTION
-   Public.getMyActivity()
-TO ClassDB_Instructor, ClassDB_DBManager, ClassDB_Student;
-
-CREATE VIEW Public.MyActivity AS
+--This view wraps getMyActivity() for easier student access
+CREATE VIEW public.MyActivity AS
 (
    SELECT ActivityAt, ActivityType, DDLOperation, DDLObject
    FROM ClassDB.getUserActivity();
 );
 
-REVOKE ALL PRIVILEGES
-   Public.MyActivity
-   FROM Public;
-
-ALTER VIEW
-   Public.MyActivity
-   OWNER TO ClassDB;
-
-GRANT SELECT ON
-   Public.MyActivity
-   TO Public;
+ALTER VIEW public.MyActivity OWNER TO ClassDB;
