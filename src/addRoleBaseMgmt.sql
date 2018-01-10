@@ -273,7 +273,9 @@ BEGIN
    --  for ON CONFLICT ON CONSTRAINT: see the last-but-one example at
    --  https://www.postgresql.org/docs/9.6/static/sql-insert.html
    IF ClassDB.isRoleKnown($1) THEN
-      UPDATE ClassDB.RoleBase SET FullName = $2, ExtraInfo = $5;
+      UPDATE ClassDB.RoleBase R
+      SET FullName = $2, ExtraInfo = $5
+      WHERE R.RoleName = ClassDB.foldPgID($1);
    ELSE
       INSERT INTO ClassDB.RoleBase
       VALUES(ClassDB.foldPgID($1), $2, $3, ClassDB.foldPgID($4), $5);
