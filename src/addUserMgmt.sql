@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS ClassDB.DDLActivity
 -- prevent everyone else from doing anything with the table, except permit
 -- instructors and DB managers to read rows
 -- this pattern of ownership and grant/revoke applies to all objects defined in
--- this script: for brevity, such code is not prefaced ain with comments unless
+-- this script: for brevity, such code is not prefaced again with comments unless
 -- the code does something significantly different
 ALTER TABLE ClassDB.DDLActivity OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.DDLActivity FROM PUBLIC;
@@ -71,7 +71,7 @@ GRANT SELECT ON ClassDB.DDLActivity TO ClassDB_Instructor, ClassDB_DBManager;
 --Define a table to record connection activity of users
 -- no primary key is defined because there are no viable key attributes, and
 -- there is no benefit to having a primary key
--- UserName is not constrained to known users because DDL activity may be
+-- UserName is not constrained to known users because connection activity may be
 -- maintained for users who are no longer known, but see trigger definitions
 CREATE TABLE IF NOT EXISTS ClassDB.ConnectionActivity
 (
@@ -190,10 +190,27 @@ $$;
 
 
 
--------------- Start definition of view User on this line ---------------------
+--Define a view to return known users
+-- the fields marked TBD are yet to be filled in: they are commented out so
+-- the view definition can be replaced later
+CREATE OR REPLACE VIEW ClassDB.User AS
+SELECT
+   RoleName AS UserName, FullName, SchemaName, ExtraInfo,
+   ClassDB.isMember(RoleName, 'classdb_instructor') AS IsInstructor,
+   ClassDB.isMember(RoleName, 'classdb_student') AS IsStudent,
+   ClassDB.isMember(RoleName, 'classdb_dbmanager') AS IsDBManager,
+   ClassDB.hasClassDBRole(RoleName) AS HasClassDBRole
+   --0 AS DDLCount,              --TBD
+   --NULL AS LastDDLObject,      --TBD
+   --NULL AS LastDDLActivityAt,  --TBD
+   --0 AS ConnectionCount,       --TBD
+   --NULL AS LastConnectionAtUTC --TBD
+FROM ClassDB.RoleBase
+WHERE NOT IsTeam;
 
-
-
+ALTER VIEW ClassDB.User OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.User FROM PUBLIC;
+GRANT SELECT ON ClassDB.User TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 
