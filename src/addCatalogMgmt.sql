@@ -34,8 +34,8 @@ SET LOCAL client_min_messages TO WARNING;
 -- objects in the ClassDB schema, this version is required so that students can use
 -- the catalog management functions. Any change to foldPgID() must also be made to
 -- the version in addHelpers.sql
-CREATE OR REPLACE FUNCTION public.foldPgID(identifier ClassDB.IDNameDomain)
-RETURNS ClassDB.IDNameDomain AS
+CREATE OR REPLACE FUNCTION public.foldPgID(identifier VARCHAR(63))
+RETURNS VARCHAR(63) AS
 $$
 SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
                  SUBSTRING($1 from LENGTH($1) for 1) = '"'
@@ -47,12 +47,11 @@ SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
 $$ LANGUAGE sql
    STABLE;
 
-ALTER FUNCTION public.foldPgID(ClassDB.IDNameDomain) OWNER TO ClassDB;
+ALTER FUNCTION public.foldPgID(VARCHAR(63)) OWNER TO ClassDB;
 
 
 --Returns a list of tables and views in the current user's schema
-CREATE OR REPLACE FUNCTION public.listTables(schemaName ClassDB.IDNameDomain
-   DEFAULT CURRENT_SCHEMA::ClassDB.IDNameDomain)
+CREATE OR REPLACE FUNCTION public.listTables(schemaName VARCHAR(63) DEFAULT CURRENT_SCHEMA)
 RETURNS TABLE
 (  --Since these functions access the INFORMATION_SCHEMA, we use the standard
    --info schema types for the return table
@@ -69,13 +68,12 @@ END;
 $$ LANGUAGE plpgsql
    STABLE;
 
-ALTER FUNCTION public.listTables(ClassDB.IDNameDomain) OWNER TO ClassDB;
+ALTER FUNCTION public.listTables(VARCHAR(63)) OWNER TO ClassDB;
 
 
 --Returns a list of columns in the specified table or view in the specified schema
 -- This overide allows a schema name to be specified
-CREATE OR REPLACE FUNCTION public.describe(schemaName ClassDB.IDNameDomain,
-   tableName ClassDB.IDNameDomain)
+CREATE OR REPLACE FUNCTION public.describe(schemaName VARCHAR(63), tableName VARCHAR(63))
 RETURNS TABLE
 (
    "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
@@ -89,11 +87,11 @@ AS $$
 $$ LANGUAGE plpgsql
    STABLE;
 
-ALTER FUNCTION public.describe(ClassDB.IDNameDomain, ClassDB.IDNameDomain) OWNER TO ClassDB;
+ALTER FUNCTION public.describe(VARCHAR(63), VARCHAR(63)) OWNER TO ClassDB;
 
 
 --Returns a list of columns in the specified table or view in the current user's schema
-CREATE OR REPLACE FUNCTION public.describe(tableName ClassDB.IDNameDomain)
+CREATE OR REPLACE FUNCTION public.describe(tableName VARCHAR(63))
 RETURNS TABLE
 (
    "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
@@ -105,7 +103,7 @@ AS $$
 $$ LANGUAGE sql
    STABLE;
 
-ALTER FUNCTION public.describe(ClassDB.IDNameDomain) OWNER TO ClassDB;
+ALTER FUNCTION public.describe(VARCHAR(63)) OWNER TO ClassDB;
 
 
 COMMIT;
