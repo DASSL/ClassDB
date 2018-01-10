@@ -64,12 +64,12 @@ AS $$
 BEGIN
    SELECT table_schema, table_name, table_type
    FROM INFORMATION_SCHEMA.TABLES
-   WHERE table_schema = ClassDB.foldPgID(schemaName);
+   WHERE table_schema = public.foldPgID(schemaName);
 END;
 $$ LANGUAGE plpgsql
    STABLE;
 
-ALTER FUNCTION Public.listTables(ClassDB.IDNameDomain) OWNER TO ClassDB;
+ALTER FUNCTION public.listTables(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
 
 --Returns a list of columns in the specified table or view in the specified schema
@@ -84,8 +84,8 @@ RETURNS TABLE
 AS $$
    SELECT column_name, data_type || COALESCE('(' || character_maximum_length || ')', '')
    FROM INFORMATION_SCHEMA.COLUMNS
-   WHERE table_schema = ClassDB.foldPgID(schemaName)
-   AND   table_name = ClassDB.foldPgID(tableName)
+   WHERE table_schema = public.foldPgID(schemaName)
+   AND   table_name = public.foldPgID(tableName)
 $$ LANGUAGE plpgsql
    STABLE;
 
