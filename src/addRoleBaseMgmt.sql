@@ -318,25 +318,25 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
 
-   --test if a ClassDB role name is supplied
+   --revoke only a ClassDB role
    -- raise an exception (not a notice) because the role name must be correct
    IF NOT ClassDB.isClassDBRoleName($2) THEN
       RAISE EXCEPTION 'Invalid argument: role name "%" not expected', $2;
    END IF;
 
-   --test if server has a role with the given name
+   --should be a server role
    IF NOT ClassDB.isServerRoleDefined($1) THEN
       RAISE NOTICE 'User "%" is not defined in the server', $1;
       RETURN;
    END IF;
 
-   --test if user is known
+   --should be a known user
    IF NOT ClassDB.isUser($1) THEN
       RAISE NOTICE 'User "%" is not known', $1;
       RETURN;
    END IF;
 
-   --test if user is a member of the specified role
+   --user should already have the role to revoke
    IF NOT ClassDB.isMember($1, $2) THEN
       RAISE NOTICE 'User "%" is not a member of role "%"', $1, $2;
       RETURN;
@@ -345,8 +345,7 @@ BEGIN
    --revoke the specified ClassDB role from the user
    EXECUTE FORMAT('REVOKE %s FROM %s', $2, $1);
 
-   --test if user continues to be a member of other ClassDB roles
-   -- only for informational purpose
+   --inform if user continues to be a member of other ClassDB roles
    IF ClassDB.hasClassDBRole($1) THEN
       RAISE NOTICE
          'User "%" remains a member of one or more additional ClassDB roles', $1;
@@ -356,7 +355,6 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
---Change function ownership and set execution permissions
 ALTER FUNCTION
    ClassDB.revokeClassDBRole(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
    OWNER TO ClassDB;
