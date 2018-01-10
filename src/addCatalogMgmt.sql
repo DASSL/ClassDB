@@ -60,11 +60,9 @@ RETURNS TABLE
    "Type" INFORMATION_SCHEMA.CHARACTER_DATA
 )
 AS $$
-BEGIN
    SELECT table_schema, table_name, table_type
    FROM INFORMATION_SCHEMA.TABLES
    WHERE table_schema = public.foldPgID(schemaName);
-END;
 $$ LANGUAGE sql
    STABLE;
 
@@ -98,8 +96,9 @@ RETURNS TABLE
    "Type" VARCHAR --Use VARCHAR since we modify data returned from info schema
 )
 AS $$
+   --We have to explicitly cast "Name" to "VARCHAR" here as well
    SELECT "Column", "Type"
-   FROM public.describe(CURRENT_SCHEMA::ClasDB.IDNameDomain, ClassDB.FoldPgID($1));
+   FROM public.describe(CURRENT_SCHEMA::VARCHAR(63), ClassDB.FoldPgID($1));
 $$ LANGUAGE sql
    STABLE;
 
