@@ -182,7 +182,7 @@ BEGIN
       CREATE TRIGGER RejectConnectionActivityUpdate
       BEFORE UPDATE ON ClassDB.ConnectionActivity
       EXECUTE PROCEDURE
-         ClassDB.declineUpdate('UPDATE', 'ClassDB.ConnectionActivity');
+         ClassDB.rejectOperation('UPDATE', 'ClassDB.ConnectionActivity');
    END IF;
 
 END
