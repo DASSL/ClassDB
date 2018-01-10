@@ -43,86 +43,107 @@ END
 $$;
 
 
-CREATE OR REPLACE FUNCTION ClassDB.createUserTest() RETURNS TEXT AS
-$$
-BEGIN
-   PERFORM ClassDB.createUser('testlc', 'password');
-   PERFORM ClassDB.createUser('testUC', 'password');
-   PERFORM ClassDB.createUser('"testQUC"', 'password');
-
-   --Check that all 3 roles exist
-   IF NOT (ClassDB.isServerRoleDefined('testlc') AND ClassDB.isServerRoleDefined('testUC')
-      AND ClassDB.isServerRoleDefined('"testQUC"')) THEN
-      RETURN 'FAIL: Code 1';
-   END IF;
-
-   --Check that all 3 schemas were created
-   IF NOT (pg_temp.isSchemaDefined('testlc') AND pg_temp.isSchemaDefined('testUC')
-      AND pg_temp.isSchemaDefined('"testQUC"')) THEN
-      RETURN 'FAIL: Code 2';
-   END IF;
-
-   --Remove users that were created
-   DROP SCHEMA testlc;
-   DROP ROLE testlc;
-   DROP SCHEMA testUC;
-   DROP ROLE testUC;
-   DROP SCHEMA "testQUC";
-   DROP ROLE "testQUC";
-
-   --Check that all 3 roles no longer exist
-   IF ClassDB.isServerRoleDefined('testlc') OR ClassDB.isServerRoleDefined('testUC')
-      OR ClassDB.isServerRoleDefined('"testQUC"') THEN
-      RETURN 'FAIL: Code 3';
-   END IF;
-
-   --Check that all 3 schemas no longer exist
-   IF pg_temp.isSchemaDefined('testlc') OR pg_temp.isSchemaDefined('testUC')
-      OR pg_temp.isSchemaDefined('"testQUC"') THEN
-      RETURN 'FAIL: Code 4';
-   END IF;
-
-   RETURN 'PASS';
-END;
-$$ LANGUAGE plpgsql;
-
 
 CREATE OR REPLACE FUNCTION ClassDB.createStudentTest() RETURNS TEXT AS
 $$
 BEGIN
-   --Minimal test: Password should be set to username
-   PERFORM ClassDB.createStudent('testStu0', 'Yvette Alexander');
-   --SchoolID given: Password should still be set to username, ID should be stored
-   PERFORM ClassDB.createStudent('testStu1', 'Edwin Morrison', '101');
+   --Minimal test: Password and schema should be set to username
+   PERFORM ClassDB.createStudent('testStu0', 'Test student 0');
+   --Extra info given: Pwd and schema set to username, extrainfo should be stored
+   PERFORM ClassDB.createStudent('testStu1', 'Test student 1', NULL, '101');
    --initialPassword given: Password should be set to 'testpass'
-   PERFORM ClassDB.createStudent('testStu2', 'Ramon Harrington', '102', 'testpass');
-   --initialPassword given with no schoolID
-   PERFORM ClassDB.createStudent('testStu3', 'Cathy Young', NULL, 'testpass2');
+   PERFORM ClassDB.createStudent('testStu2', 'Test student 2', NULL, '102',
+                                 FALSE, FALSE, 'testpass');
+   --initialPassword given with no extra info
+   PERFORM ClassDB.createStudent('testStu3', 'Test student 3', NULL, NULL, FALSE,
+                                 FALSE, 'testpass2');
 
-   --Multi-role: NOTICE is suppressed; password should not change
-   PERFORM ClassDB.createStudent('testStuDBM0', 'Edwin Morrison', NULL, 'testpass3');
+   --Multi-role: NOTICE is suppressed; name should update, password should not change
+   PERFORM ClassDB.createDBManager('testStuDBM0', 'Wrong Name', NULL, NULL,
+                                   FALSE, FALSE, 'testpass3');
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM ClassDB.createDBManager('testStuDBM0', 'notPass');
+   PERFORM ClassDB.createStudent('testStuDBM0', 'Test student/DB manager 0', 
+                                 NULL, NULL, TRUE, TRUE, 'notPass');
+   RESET client_min_messages;
+   
+   --Updating with non-default schema: Create student, create schema, then re-assign
+   PERFORM ClassDB.createStudent('testStu4', 'Test student 4');
+   CREATE SCHEMA newTestStu4 AUTHORIZATION testStu4;
+   SET LOCAL client_min_messages TO WARNING;
+   PERFORM ClassDB.createStudent('testStu4', 'Test student 4', 'newTestStu4');
    RESET client_min_messages;
 
    --Test existence of all schemas
    IF NOT(pg_temp.isSchemaDefined('testStu0') AND pg_temp.isSchemaDefined('testStu1')
       AND pg_temp.isSchemaDefined('testStu2') AND pg_temp.isSchemaDefined('testStu3')
-      AND pg_temp.isSchemaDefined('testStuDBM0')) THEN
+      AND pg_temp.isSchemaDefined('testStuDBM0') AND pg_temp.isSchemaDefined('testStu4')
+      AND pg_temp.isSchemaDefined('newTestStu4'))
+   THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
    --Test role membership (and existence)
-   IF pg_has_role('teststu0', 'classdb_student', 'member') AND
-      pg_has_role('teststu1', 'classdb_student', 'member') AND
-      pg_has_role('teststu2', 'classdb_student', 'member') AND
-      pg_has_role('teststu3', 'classdb_student', 'member') AND
-      pg_has_role('teststudbm0', 'classdb_student', 'member') AND
-      pg_has_role('teststudbm0', 'classdb_dbmanager', 'member') THEN
-      RETURN 'PENDING - see testPrepareClassDBREADME.txt';
-   ELSE
+   IF NOT(pg_has_role('teststu0', 'classdb_student', 'member')
+      AND pg_has_role('teststu1', 'classdb_student', 'member') 
+      AND pg_has_role('teststu2', 'classdb_student', 'member') 
+      AND pg_has_role('teststu3', 'classdb_student', 'member') 
+      AND pg_has_role('teststudbm0', 'classdb_student', 'member') 
+      AND pg_has_role('teststudbm0', 'classdb_dbmanager', 'member') 
+      AND pg_has_role('teststu4', 'classdb_student', 'member'))
+   THEN
       RETURN 'FAIL: Code 2';
    END IF;
+   
+   --Test role-schema correspondence with ClassDB function
+   IF NOT(ClassDB.getSchemaName('testStu0') = 'teststu0')
+   THEN
+      RETURN 'FAIL: Code 3.1';
+   END IF;
+   
+   --Test role-schema correspondence with ClassDB function
+   IF NOT(ClassDB.getSchemaName('testStu1') = 'teststu1')
+   THEN
+      RETURN 'FAIL: Code 3.2';
+   END IF;
+   
+   --Test role-schema correspondence with ClassDB function
+   IF NOT(ClassDB.getSchemaName('testStu2') = 'teststu2')
+   THEN
+      RETURN 'FAIL: Code 3.3';
+   END IF;
+   
+   --Test role-schema correspondence with ClassDB function
+   IF NOT(ClassDB.getSchemaName('testStu3') = 'teststu3')
+   THEN
+      RETURN 'FAIL: Code 3.4';
+   END IF;
+   
+   --Test role-schema correspondence with ClassDB function
+   IF NOT(ClassDB.getSchemaName('testStuDBM0') = 'teststudbm0')
+   THEN
+      RETURN 'FAIL: Code 3.5';
+   END IF;
+   
+   --Test role-schema correspondence with ClassDB function
+   IF NOT(ClassDB.getSchemaName('testStu4') = 'newteststu4')
+   THEN
+      RAISE NOTICE 'KNOWN FAIL: Code 3.6';
+   END IF;
+   
+   --Test connection limit and statement timeout settings for all created students
+   IF EXISTS(
+      SELECT * FROM pg_catalog.pg_roles
+      WHERE RolName IN ('teststu0', 'teststu1', 'teststu2', 'teststu3',
+                        'teststudbm0', 'teststu4')
+            AND
+               (RolConnLimit <> 5 OR 
+                array_to_string(RolConfig, '') NOT LIKE '%statement_timeout=2000%')
+            )
+   THEN
+      RETURN 'FAIL Code 4';
+   END IF;
+   
+   RETURN 'PENDING: see testPrepareClassDBREADME.txt';
 END;
 $$ LANGUAGE plpgsql;
 
@@ -309,14 +330,15 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION ClassDB.prepareClassDBTest() RETURNS VOID AS
 $$
 BEGIN
-   RAISE INFO '%   createUserTest()', ClassDB.createUserTest();
    RAISE INFO '%   createStudentTest()', ClassDB.createStudentTest();
-   RAISE INFO '%   createInstructorTest()', ClassDB.createInstructorTest();
-   RAISE INFO '%   createDBManagerTest()', ClassDB.createDBManagerTest();
-   RAISE INFO '%   dropStudentTest()', ClassDB.dropStudentTest();
-   RAISE INFO '%   dropInstructorTest()', ClassDB.dropInstructorTest();
-   RAISE INFO '%   dropDBManagerTest()', ClassDB.dropDBManagerTest();
-END
+   --The following tests need to be updated to test the latest version of the
+   --functions they test
+   --RAISE INFO '%   createInstructorTest()', ClassDB.createInstructorTest();
+   --RAISE INFO '%   createDBManagerTest()', ClassDB.createDBManagerTest();
+   --RAISE INFO '%   dropStudentTest()', ClassDB.dropStudentTest();
+   --RAISE INFO '%   dropInstructorTest()', ClassDB.dropInstructorTest();
+   --RAISE INFO '%   dropDBManagerTest()', ClassDB.dropDBManagerTest();
+END;
 $$  LANGUAGE plpgsql;
 
 
