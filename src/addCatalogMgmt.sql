@@ -34,9 +34,8 @@ SET LOCAL client_min_messages TO WARNING;
 -- objects in the ClassDB schema, this version is required so that students can use
 -- the catalog management functions. Any change to foldPgID() must also be made to
 -- the version in addHelpers.sql
-CREATE OR REPLACE FUNCTION
-   public.foldPgID(identifier ClassDB.IDNameDomain)
-   RETURNS ClassDB.IDNameDomain AS
+CREATE OR REPLACE FUNCTION public.foldPgID(identifier ClassDB.IDNameDomain)
+RETURNS ClassDB.IDNameDomain AS
 $$
 SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
                  SUBSTRING($1 from LENGTH($1) for 1) = '"'
@@ -48,9 +47,7 @@ SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
 $$ LANGUAGE sql
    STABLE;
 
-ALTER FUNCTION
-   public.foldPgID(ClassDB.IDNameDomain)
-   OWNER TO ClassDB;
+ALTER FUNCTION public.foldPgID(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
 
 --Returns a list of tables and views in the current user's schema
@@ -77,7 +74,8 @@ ALTER FUNCTION Public.listTables(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
 --Returns a list of columns in the specified table or view in the specified schema
 -- This overide allows a schema name to be specified
-CREATE OR REPLACE FUNCTION public.describe(schemaName ClassDB.IDNameDomain, tableName ClassDB.IDNameDomain)
+CREATE OR REPLACE FUNCTION public.describe(schemaName ClassDB.IDNameDomain,
+   tableName ClassDB.IDNameDomain)
 RETURNS TABLE
 (
    "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
@@ -103,8 +101,7 @@ RETURNS TABLE
 )
 AS $$
    SELECT "Column", "Type"
-   FROM public.describe(
-      ClassDB.getSchemaName(SESSION_USER::ClassDB.IDNameDomain), ClassDB.FoldPgID($1));
+   FROM public.describe(CURRENT_SCHEMA::ClasDB.IDNameDomain, ClassDB.FoldPgID($1));
 $$ LANGUAGE sql
    STABLE;
 
