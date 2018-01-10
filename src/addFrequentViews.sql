@@ -38,12 +38,12 @@ $$;
 
 --This view shows the activity summary of all students in the User table. This view
 -- is only usable by instructors
-DROP VIEW IF EXISTS ClassDB.StudentActivityAll;
-CREATE VIEW ClassDB.StudentActivityAll AS
+CREATE OR REPLACE VIEW ClassDB.StudentActivityAll AS
 (
-  SELECT UserName, ClassDB.changeTimeZone(LastDDLActivityAt), LastDDLOperation, LastDDLObject,
-         DDLCount, ClassDB.changeTimeZone(LastConnectionAt), ConnectionCount
-  FROM ClassDB.User
+  SELECT UserName, DDLCount, LastDDLOperation, LastDDLObject,
+         ClassDB.changeTimeZone(LastDDLActivityAtUTC) LastActivityAt,
+         ConnectionCount, ClassDB.changeTimeZone(LastConnectionAtUTC) LastConnectionAt
+  FROM ClassDB.Student
   ORDER BY UserName
 );
 
@@ -53,11 +53,10 @@ GRANT SELECT ON ClassDB.StudentActivityAll TO ClassDB_Instructor;
 
 --This view shows the activity of all students in the student table, ommiting any
 -- user-identifiable information. This view is only usable by instructors
-DROP VIEW IF EXISTS ClassDB.StudentActivityAnon;
-CREATE VIEW ClassDB.StudentActivityAnon AS
+CREATE OR REPLACE VIEW ClassDB.StudentActivityAnon AS
 (
-   SELECT LastDDLActivityAt, LastDDLOperation, LastDDLObject, DDLCount,
-          LastConnectionAt, ConnectionCount
+   SELECT DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAt,
+          ConnectionCount, LastConnectionAt
    FROM ClassDB.StudentActivityAll
    ORDER BY ConnectionCount
 );
@@ -73,7 +72,8 @@ DROP VIEW IF EXISTS ClassDB.StudentTable;
 CREATE VIEW ClassDB.StudentTable AS
 (
   SELECT table_schema, table_name, table_type
-  FROM information_schema.tables JOIN ClassDB.User ON table_schema = UserName
+  FROM information_schema.tables
+  JOIN ClassDB.Student ON table_schema = ClassDB.getSchemaName(UserName)
   ORDER BY table_schema
 );
 
@@ -87,7 +87,8 @@ DROP VIEW IF EXISTS ClassDB.StudentTableCount;
 CREATE VIEW ClassDB.StudentTableCount AS
 (
   SELECT table_schema, COUNT(*)
-  FROM information_schema.tables JOIN ClassDB.User ON table_schema = UserName
+  FROM information_schema.tables
+  JOIN ClassDB.Student ON table_schema = ClassDB.getSchemaName(UserName)
   GROUP BY table_schema
   ORDER BY table_schema
 );
@@ -103,11 +104,12 @@ CREATE OR REPLACE FUNCTION ClassDB.getUserActivitySummary(userName ClassDB.IDNam
    DEFAULT SESSION_USER::ClassDB.IDNameDomain)
 RETURNS TABLE
 (
-   LastDDLActivityAt TIMESTAMP, LastDDLOperation VARCHAR(64), LastDDLObject VARCHAR(256),
-   DDLCount INT, LastConnection TIMESTAMP, ConnectionCount INT
+    DDLCount INT, LastDDLOperation VARCHAR(64), LastDDLObject VARCHAR(256),
+   LastDDLActivityAt TIMESTAMP, ConnectionCount INT, LastConnection TIMESTAMP
 ) AS
 $$
-   SELECT LastDDLActivityAt, lastddloperation, lastddlobject, ddlcount, LastConnectionAt, connectioncount
+   SELECT ddlcount, lastddloperation, lastddlobject, LastDDLActivityAt,
+          connectioncount, LastConnectionAt
    FROM ClassDB.StudentActivityAll
    WHERE username = ClassDB.foldPgID($1);
 $$ LANGUAGE sql
@@ -125,11 +127,12 @@ GRANT EXECUTE ON FUNCTION ClassDB.getUserActivitySummary(ClassDB.IDNameDomain) T
 CREATE OR REPLACE FUNCTION public.getMyActivitySummary()
 RETURNS TABLE
 (
-   LastDDLActivity TIMESTAMP, LastDDLOperation VARCHAR(64), LastDDLObject VARCHAR(256),
-   DDLCount INT, LastConnection TIMESTAMP, ConnectionCount INT
+   DDLCount INT, LastDDLOperation VARCHAR(64), LastDDLObject VARCHAR(256),
+   LastDDLActivity TIMESTAMP, ConnectionCount INT, LastConnection TIMESTAMP
 ) AS
 $$
-   SELECT lastddlactivityat, lastddloperation, lastddlobject, ddlcount, lastconnectionat, connectioncount
+   SELECT ddlcount, lastddloperation, lastddlobject,  lastddlactivityat,
+          connectioncount, lastconnectionat
    FROM ClassDB.getUserActivitySummary();
 $$ LANGUAGE sql
    STABLE
@@ -140,7 +143,8 @@ ALTER FUNCTION public.getMyActivitySummary() OWNER TO ClassDB;
 --Proxy view for public.getMyActivitySummary(). Designed to make access easier for students
 CREATE VIEW public.MyActivitySummary AS
 (
-   SELECT lastddlactivity, lastddloperation, lastddlobject, ddlcount, lastconnection, connectioncount
+   SELECT ddlcount, lastddloperation, lastddlobject,  lastddlactivityat,
+          connectioncount, lastconnectionat
    FROM public.getMyActivitySummary()
 );
 
