@@ -1,7 +1,8 @@
---addUserMgmt.sql - ClassDB
+--addClassDBRolesMgmt.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+--Data Science & Systems Lab (DASSL)
+--https://dassl.github.io/
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -45,7 +46,7 @@ CREATE FUNCTION
    classdb.createUser(userName VARCHAR(63), initialPwd VARCHAR(128)) RETURNS VOID AS
 $$
 BEGIN
-   IF classdb.isRoleDefined($1) THEN
+   IF classdb.isServerRoleDefined($1) THEN
       RAISE NOTICE 'User "%" already exists, password not modified', $1;
    ELSE
       EXECUTE
@@ -251,7 +252,7 @@ DROP FUNCTION IF EXISTS classdb.dropStudent(userName VARCHAR(63));
 CREATE FUNCTION classdb.dropStudent(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
-   IF classdb.isRoleDefined($1) AND
+   IF classdb.isServerRoleDefined($1) AND
       pg_catalog.pg_has_role(classdb.foldPgID($1), 'classdb_student', 'member')
    THEN
       EXECUTE format('REVOKE ClassDB_Student FROM %s', $1);
@@ -307,7 +308,7 @@ DROP FUNCTION IF EXISTS classdb.dropInstructor(userName VARCHAR(63));
 CREATE FUNCTION classdb.dropInstructor(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
-   IF classdb.isRoleDefined($1) AND
+   IF classdb.isServerRoleDefined($1) AND
       pg_catalog.pg_has_role(classdb.foldPgID($1), 'classdb_instructor', 'member')
    THEN
       EXECUTE format('REVOKE ClassDB_Instructor FROM %s', $1);
@@ -356,7 +357,7 @@ DROP FUNCTION IF EXISTS classdb.dropDBManager(userName VARCHAR(63));
 CREATE FUNCTION classdb.dropDBManager(userName VARCHAR(63)) RETURNS VOID AS
 $$
 BEGIN
-   IF classdb.isRoleDefined($1) AND
+   IF classdb.isServerRoleDefined($1) AND
       pg_catalog.pg_has_role(classdb.foldPgID($1), 'classdb_dbmanager', 'member')
    THEN
       EXECUTE format('REVOKE ClassDB_DBManager FROM %s', userName);
@@ -402,7 +403,7 @@ CREATE FUNCTION classdb.resetUserPassword(userName VARCHAR(63))
    RETURNS VOID AS
 $$
 BEGIN
-   IF classdb.isRoleDefined($1) THEN
+   IF classdb.isServerRoleDefined($1) THEN
       EXECUTE format('ALTER ROLE %s ENCRYPTED PASSWORD %L', userName, userName);
    ELSE
       RAISE NOTICE 'User "%" not found among registered users', userName;
