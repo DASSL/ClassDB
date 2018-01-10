@@ -87,7 +87,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 ALTER FUNCTION ClassDB.logDDLActivity() OWNER TO ClassDB;
-REVOKE ALL ON FUNCTION ClassDB.disableDDLActivityLogging() FROM PUBLIC;
+REVOKE ALL ON FUNCTION ClassDB.logDDLActivity() FROM PUBLIC;
 
 
 --Event triggers to update user last activity time on DDL events
@@ -124,6 +124,7 @@ $$;
 CREATE OR REPLACE FUNCTION ClassDB.enableDDLActivityLogging()
 RETURNS VOID AS
 $$
+BEGIN
    --Can only enable the trigger if it is defined, otherwise throw an exception
    IF ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
       ALTER EVENT TRIGGER triggerDDLCommandSqlDrop ENABLE;
@@ -136,7 +137,8 @@ $$
    ELSE
       RAISE EXCEPTION 'Cannot enable triggerDDLCommandEnd because it is undefined';
    END IF;
-$$ LANGUAGE sql
+END;
+$$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION ClassDB.enableDDLActivityLogging() FROM PUBLIC;
@@ -147,6 +149,7 @@ GRANT EXECUTE ON FUNCTION ClassDB.enableDDLActivityLogging()
 CREATE OR REPLACE FUNCTION ClassDB.disableDDLActivityLogging()
 RETURNS VOID AS
 $$
+BEGIN
    IF ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
       ALTER EVENT TRIGGER triggerDDLCommandSqlDrop DISABLE;
    ELSE
@@ -158,7 +161,8 @@ $$
    ELSE
       RAISE EXCEPTION 'Cannot enable triggerDDLCommandEnd because it is undefined';
    END IF;
-$$ LANGUAGE sql
+END;
+$$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION ClassDB.disableDDLActivityLogging() FROM PUBLIC;
