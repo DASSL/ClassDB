@@ -1,5 +1,6 @@
 Andrew Figueroa, Steven Rollo, Sean Murthy
-Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+Data Science & Systems Lab (DASSL)
+https://dassl.github.io/
 
 (C) 2017- DASSL. ALL RIGHTS RESERVED.
 Licensed to others under CC 4.0 BY-SA-NC:
