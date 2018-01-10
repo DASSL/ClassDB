@@ -29,9 +29,33 @@ BEGIN TRANSACTION;
 SET LOCAL client_min_messages TO WARNING;
 
 
+--Define a function to replicate PostgreSQL's folding behavior for SQL IDs
+-- This function is a duplicate of ClassDB.foldPgID(). Since students cannot access
+-- objects in the ClassDB schema, this version is required so that students can use
+-- the catalog management functions. Any change to foldPgID() must also be made to
+-- the version in addHelpers.sql
+CREATE OR REPLACE FUNCTION
+   public.foldPgID(identifier ClassDB.IDNameDomain)
+   RETURNS ClassDB.IDNameDomain AS
+$$
+SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
+                 SUBSTRING($1 from LENGTH($1) for 1) = '"'
+            THEN
+                 SUBSTRING($1 from 2 for LENGTH($1) - 2)
+            ELSE
+                 LOWER($1)
+       END;
+$$ LANGUAGE sql
+   STABLE;
+
+ALTER FUNCTION
+   public.foldPgID(ClassDB.IDNameDomain)
+   OWNER TO ClassDB;
+
+
 --Returns a list of tables and views in the current user's schema
 CREATE OR REPLACE FUNCTION public.listTables(schemaName ClassDB.IDNameDomain
-   DEFAULT SESSION_USER::ClassDB.IDNameDomain)
+   DEFAULT CURRENT_SCHEMA::ClassDB.IDNameDomain)
 RETURNS TABLE
 (  --Since these functions access the INFORMATION_SCHEMA, we use the standard
    --info schema types for the return table
@@ -41,20 +65,12 @@ RETURNS TABLE
 )
 AS $$
 BEGIN
-   --Check if the user is associated with the schema they are trying to list from.
-   -- This is required because a user's schema name is not always the same as their
-   -- user name.
-   IF ClassDB.getSchemaOwnerName(schemaName) <> SESSION_USER THEN
-      RAISE EXCEPTION 'Insufficient privileges: you do not have permission to access'
-         ' the requested schema';
-
    SELECT table_schema, table_name, table_type
    FROM INFORMATION_SCHEMA.TABLES
    WHERE table_schema = ClassDB.foldPgID(schemaName);
 END;
 $$ LANGUAGE plpgsql
-   STABLE
-   SECURITY DEFINER;
+   STABLE;
 
 ALTER FUNCTION Public.listTables(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
@@ -65,24 +81,15 @@ CREATE OR REPLACE FUNCTION public.describe(schemaName ClassDB.IDNameDomain, tabl
 RETURNS TABLE
 (
    "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
-   "Type" VARCHAR(100) --Use VARCHAR since we are going to modify the
-                       -- data returned from INFO_SCHEMA
+   "Type" VARCHAR --Use VARCHAR since we modify data returned from info schema
 )
 AS $$
-   --Check if the user is associated with the scheam they are trying to list from.
-   -- This is required because a user's schema name is not always the same as their
-   -- user name.
-   IF ClassDB.getSchemaOwnerName(schemaName) <> SESSION_USER THEN
-   RAISE EXCEPTION 'Insufficient privileges: you do not have permission to access'
-      ' the requested schema';
-
    SELECT column_name, data_type || COALESCE('(' || character_maximum_length || ')', '')
    FROM INFORMATION_SCHEMA.COLUMNS
    WHERE table_schema = ClassDB.foldPgID(schemaName)
    AND   table_name = ClassDB.foldPgID(tableName)
 $$ LANGUAGE plpgsql
-   STABLE
-   SECURITY DEFINER;
+   STABLE;
 
 ALTER FUNCTION public.describe(ClassDB.IDNameDomain, ClassDB.IDNameDomain) OWNER TO ClassDB;
 
@@ -92,16 +99,14 @@ CREATE OR REPLACE FUNCTION public.describe(tableName ClassDB.IDNameDomain)
 RETURNS TABLE
 (
    "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
-   "Type" VARCHAR(100) --Use VARCHAR since we are going to modify the
-                       -- data returned from INFO_SCHEMA
+   "Type" VARCHAR --Use VARCHAR since we modify data returned from info schema
 )
 AS $$
    SELECT "Column", "Type"
    FROM public.describe(
       ClassDB.getSchemaName(SESSION_USER::ClassDB.IDNameDomain), ClassDB.FoldPgID($1));
 $$ LANGUAGE sql
-   STABLE
-   SECURITY DEFINER;
+   STABLE;
 
 ALTER FUNCTION public.describe(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
