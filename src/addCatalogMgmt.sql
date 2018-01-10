@@ -65,7 +65,7 @@ BEGIN
    FROM INFORMATION_SCHEMA.TABLES
    WHERE table_schema = public.foldPgID(schemaName);
 END;
-$$ LANGUAGE plpgsql
+$$ LANGUAGE sql
    STABLE;
 
 ALTER FUNCTION public.listTables(VARCHAR(63)) OWNER TO ClassDB;
@@ -84,7 +84,7 @@ AS $$
    FROM INFORMATION_SCHEMA.COLUMNS
    WHERE table_schema = public.foldPgID(schemaName)
    AND   table_name = public.foldPgID(tableName)
-$$ LANGUAGE plpgsql
+$$ LANGUAGE sql
    STABLE;
 
 ALTER FUNCTION public.describe(VARCHAR(63), VARCHAR(63)) OWNER TO ClassDB;
