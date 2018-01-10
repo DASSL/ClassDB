@@ -51,21 +51,21 @@ DECLARE
    --Name of the db object that was targeted by the triggering statement
    objId VARCHAR(256);
 BEGIN
-	--Check if the calling event is sql_drop or ddl_command_end
-	IF TG_EVENT = 'ddl_command_end' THEN
+   --Check if the calling event is sql_drop or ddl_command_end
+   IF TG_EVENT = 'ddl_command_end' THEN
       SELECT object_identity --Get the statement target object
       INTO objId
-      FROM pg_event_trigger_ddl_commands() --Each of these functions can only
-                                           --be called for the appropriate event type
+      FROM pg_event_trigger_ddl_commands() --can only be called on non-DROP statements
       WHERE object_identity IS NOT NULL
       ORDER BY object_identity;
    ELSIF TG_EVENT = 'sql_drop' THEN
       SELECT object_identity --Same thing, but for drop statements
       INTO objId
-      FROM pg_event_trigger_dropped_objects()
+      FROM pg_event_trigger_dropped_objects() --can only be called on DROP statements
       WHERE object_identity IS NOT NULL
       ORDER BY object_identity;
    END IF;
+
    --Note: DROP statements cause this trigger to be executed twice,
    -- see https://www.postgresql.org/docs/9.6/static/event-trigger-matrix.html
    -- ddl_commend_end is triggered on all DDL statements. However,
@@ -86,8 +86,33 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION ClassDB.disableDDLActivityLogging() FROM PUBLIC;
 ALTER FUNCTION ClassDB.logDDLActivity() OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION ClassDB.disableDDLActivityLogging() FROM PUBLIC;
+
+
+--Event triggers to update user last activity time on DDL events
+-- the 'Drop' trigger is fired during the sql_drop event, which occurs when
+-- DROP statements are executed. The 'DDL' trigger is executed on ddl_command_end
+-- which is fired when any DDL statement finishes executing. Both triggers are
+-- needed to log all DDL statements, as not all infomation about DROP statements
+-- is provided by the ddl_command_end event
+DO
+$$
+BEGIN
+   --Only try and create the event triggers if they do not exist
+   IF NOT ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
+      CREATE EVENT TRIGGER triggerDDLCommandSqlDrop
+      ON sql_drop
+      EXECUTE PROCEDURE ClassDB.logDDLActivity();
+   END IF;
+
+   IF NOT ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandEnd') THEN
+      CREATE EVENT TRIGGER triggerDDLCommandEnd
+      ON ddl_command_end
+      EXECUTE PROCEDURE ClassDB.logDDLActivity();
+   END IF;
+END;
+$$;
 
 
 --The functions ClassDB.enableDDLActivityLogging() and ClassDB.disableDDLActivityLogging()
@@ -95,25 +120,22 @@ ALTER FUNCTION ClassDB.logDDLActivity() OWNER TO ClassDB;
 -- These triggers insert rows into ClassDB.DDLActivity any time a classDB user performs
 -- a DDL statement.
 --These functions must be owned by the superuser running this script, because only
--- superusers have the permissions to create or drop event triggers
+-- superusers have the permissions to create, drop or alter event triggers
 CREATE OR REPLACE FUNCTION ClassDB.enableDDLActivityLogging()
 RETURNS VOID AS
 $$
-   --Event triggers to update user last activity time on DDL events
-   -- the 'Drop' trigger is fired during the sql_drop event, which occurs when
-   -- DROP statements are executed. The 'DDL' trigger is executed on ddl_command_end
-   -- which is fired when any DDL statement finishes executing. Both triggers are
-   -- needed to log all DDL statements, as not all infomation about DROP statements
-   -- is provided by the ddl_command_end event
-   DROP EVENT TRIGGER IF EXISTS triggerDDLCommandSqlDrop;
-   CREATE EVENT TRIGGER triggerDDLCommandSqlDrop
-   ON sql_drop
-   EXECUTE PROCEDURE ClassDB.logDDLActivity();
+   --Can only enable the trigger if it is defined, otherwise throw an exception
+   IF ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
+      ALTER EVENT TRIGGER triggerDDLCommandSqlDrop ENABLE;
+   ELSE
+      RAISE EXCEPTION 'Cannot enable triggerDDLCommandSqlDrop because it is undefined';
+   END IF;
 
-   DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
-   CREATE EVENT TRIGGER triggerDDLCommandEnd
-   ON ddl_command_end
-   EXECUTE PROCEDURE ClassDB.logDDLActivity();
+   IF ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
+      ALTER EVENT TRIGGER triggerDDLCommandEnd ENABLE;
+   ELSE
+      RAISE EXCEPTION 'Cannot enable triggerDDLCommandEnd because it is undefined';
+   END IF;
 $$ LANGUAGE sql
    SECURITY DEFINER;
 
@@ -125,8 +147,17 @@ GRANT EXECUTE ON FUNCTION ClassDB.enableDDLActivityLogging()
 CREATE OR REPLACE FUNCTION ClassDB.disableDDLActivityLogging()
 RETURNS VOID AS
 $$
-   DROP EVENT TRIGGER IF EXISTS triggerDDLCommandSqlDrop;
-   DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
+   IF ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
+      ALTER EVENT TRIGGER triggerDDLCommandSqlDrop DISABLE;
+   ELSE
+      RAISE EXCEPTION 'Cannot enable triggerDDLCommandSqlDrop because it is undefined';
+   END IF;
+
+   IF ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
+      ALTER EVENT TRIGGER triggerDDLCommandEnd DISABLE;
+   ELSE
+      RAISE EXCEPTION 'Cannot enable triggerDDLCommandEnd because it is undefined';
+   END IF;
 $$ LANGUAGE sql
    SECURITY DEFINER;
 
