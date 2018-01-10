@@ -44,8 +44,8 @@ $$;
 --Define views to obtain info on known instructors, students, and DB managers
 -- these views obtain information from the previously defined ClassDB.User view
 CREATE OR REPLACE VIEW Instructor AS
-   SELECT UserName, FullName, SchemaName, ExtraInfo, IsStudent, IsDBManager, 
-          DDLCount, LastDDLObject, LastDDLActivityAtUTC, ConnectionCount, 
+   SELECT UserName, FullName, SchemaName, ExtraInfo, IsStudent, IsDBManager,
+          DDLCount, LastDDLObject, LastDDLActivityAtUTC, ConnectionCount,
           LastConnectionAtUTC
    FROM ClassDB.User
    WHERE IsInstructor;
@@ -118,7 +118,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 
---Change function ownership and set execution permissions
+--Change function ownership and set permissions
 ALTER FUNCTION
    ClassDB.createStudent(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
                          ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
@@ -165,7 +165,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 
---Change function ownership and set execution permissions
+--Change function ownership and set permissions
 ALTER FUNCTION ClassDB.revokeStudent(ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
@@ -186,11 +186,10 @@ CREATE OR REPLACE FUNCTION
                        newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL)
    RETURNS VOID AS
 $$
-DECLARE 
 BEGIN
     --revoke student role (also asserts that userName corresponds to a student)
     PERFORM ClassDB.revokeStudent($1);
-    
+
     --drop student
     PERFORM ClassDB.dropRole($1, $2, $3, $4, $5);
 END;
@@ -198,7 +197,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 
---Change function ownership and set execution permissions
+--Change function ownership and set permissions
 ALTER FUNCTION
    ClassDB.dropStudent(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
                        ClassDB.IDNameDomain)
@@ -230,7 +229,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 
---Change function ownership and set execution permissions
+--Change function ownership and set permissions
 ALTER FUNCTION ClassDB.dropAllStudents(VARCHAR, ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
@@ -270,7 +269,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 
---Change function ownership and set execution permissions
+--Change function ownership and set permissions
 ALTER FUNCTION
    ClassDB.createInstructor(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
                             ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
@@ -307,7 +306,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 
---Change function ownership and set execution permissions
+--Change function ownership and set permissions
 ALTER FUNCTION ClassDB.revokeInstructor(ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
@@ -331,7 +330,7 @@ $$
 BEGIN
     --revoke instructor role (also asserts that userName is an instructor)
     PERFORM ClassDB.revokeInstructor($1);
-    
+
     --drop instructor
     PERFORM ClassDB.dropRole($1, $2, $3, $4, $5);
 END;
@@ -339,7 +338,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 
---Change function ownership and set execution permissions
+--Change function ownership and set permissions
 ALTER FUNCTION
    ClassDB.dropInstructor(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
                           ClassDB.IDNameDomain)
@@ -371,7 +370,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 
---Change function ownership and set execution permissions
+--Change function ownership and set permissions
 ALTER FUNCTION ClassDB.dropAllInstructors(VARCHAR, ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
@@ -407,7 +406,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 
---Change function ownership and set execution permissions
+--Change function ownership and set permissions
 ALTER FUNCTION
    ClassDB.createDBManager(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
                            ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
@@ -440,7 +439,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 
---Change function ownership and set execution permissions
+--Change function ownership and set permissions
 ALTER FUNCTION ClassDB.revokeDBManager(ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
@@ -472,7 +471,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 
---Change function ownership and set execution permissions
+--Change function ownership and set permissions
 ALTER FUNCTION
    ClassDB.dropDBManager(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
                          ClassDB.IDNameDomain)
@@ -504,7 +503,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 
---Change function ownership and set execution permissions
+--Change function ownership and set permissions
 ALTER FUNCTION ClassDB.dropAllDBManagers(VARCHAR, ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
