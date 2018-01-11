@@ -41,11 +41,10 @@ $$;
 
 --Define views to obtain info on known instructors, students, and DB managers
 -- these views obtain information from the previously defined ClassDB.User view
-/*
-CREATE OR REPLACE VIEW Instructor AS
-   SELECT UserName, FullName, SchemaName, ExtraInfo, IsStudent, IsDBManager,
-          DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
-          ConnectionCount, LastConnectionAtUTC
+CREATE OR REPLACE VIEW ClassDB.Instructor AS
+   SELECT UserName, FullName, SchemaName, ExtraInfo, IsStudent, IsDBManager
+--TBD:    DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
+--TBD:    ConnectionCount, LastConnectionAtUTC
    FROM ClassDB.User
    WHERE IsInstructor;
 
@@ -54,10 +53,10 @@ REVOKE ALL PRIVILEGES ON ClassDB.Instructor FROM PUBLIC;
 GRANT SELECT ON ClassDB.Instructor TO ClassDB_Instructor, ClassDB_DBManager;
 
 
-CREATE OR REPLACE VIEW Student AS
-   SELECT UserName, FullName, SchemaName, ExtraInfo, IsInstructor, IsDBManager,
-          DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
-          ConnectionCount, LastConnectionAtUTC
+CREATE OR REPLACE VIEW ClassDB.Student AS
+   SELECT UserName, FullName, SchemaName, ExtraInfo, IsInstructor, IsDBManager
+--TBD:    DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
+--TBD:    ConnectionCount, LastConnectionAtUTC
    FROM ClassDB.User
    WHERE IsStudent;
 
@@ -66,17 +65,16 @@ REVOKE ALL PRIVILEGES ON ClassDB.Student FROM PUBLIC;
 GRANT SELECT ON ClassDB.Student TO ClassDB_Instructor, ClassDB_DBManager;
 
 
-CREATE OR REPLACE VIEW DBManager AS
-   SELECT UserName, FullName, SchemaName, ExtraInfo, IsInstructor, IsStudent,
-          DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
-          ConnectionCount, LastConnectionAtUTC
+CREATE OR REPLACE VIEW ClassDB.DBManager AS
+   SELECT UserName, FullName, SchemaName, ExtraInfo, IsInstructor, IsStudent
+--TBD:    DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
+--TBD:    ConnectionCount, LastConnectionAtUTC
    FROM ClassDB.User
    WHERE IsDBManager;
 
-ALTER VIEW ClassDB.Instructor OWNER TO ClassDB;
-REVOKE ALL PRIVILEGES ON ClassDB.Instructor FROM PUBLIC;
-GRANT SELECT ON ClassDB.Instructor TO ClassDB_Instructor, ClassDB_DBManager;
-*/
+ALTER VIEW ClassDB.DBManager OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.DBManager FROM PUBLIC;
+GRANT SELECT ON ClassDB.DBManager TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 
