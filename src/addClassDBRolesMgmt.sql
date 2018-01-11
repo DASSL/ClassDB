@@ -82,8 +82,8 @@ GRANT SELECT ON ClassDB.Instructor TO ClassDB_Instructor, ClassDB_DBManager;
 
 --Define three functions to test is a user is a member of ClassDB's student,
 -- instructor, or DB manager roles, respectively
---The result returned is equivalent to calling ClassDB.isMember with the 
--- appropriate group role, meaning that even if true, it is not necessarily a 
+--The result returned is equivalent to calling ClassDB.isMember with the
+-- appropriate group role, meaning that even if true, it is not necessarily a
 -- "known" role
 CREATE OR REPLACE FUNCTION ClassDB.isStudent(userName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
@@ -103,9 +103,9 @@ $$
 $$ LANGUAGE sql
    STABLE
    RETURNS NULL ON NULL INPUT;
-   
+
 ALTER FUNCTION ClassDB.isInstructor(ClassDB.IDNameDomain) OWNER TO ClassDB;
-   
+
 
 CREATE OR REPLACE FUNCTION ClassDB.isDBManager(userName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
@@ -149,9 +149,9 @@ BEGIN
    --grant instructors privileges to the student's schema
    EXECUTE FORMAT('GRANT USAGE ON SCHEMA %s TO ClassDB_Instructor', $3);
    EXECUTE FORMAT('GRANT SELECT ON ALL TABLES IN SCHEMA %s TO'
-                ||' ClassDB_Instructor', $3);
-   EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s GRANT'
-                ||' SELECT ON TABLES TO ClassDB_Instructor', $1, $3);
+                  ' ClassDB_Instructor', $3);
+   EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
+                  ' GRANT SELECT ON TABLES TO ClassDB_Instructor', $1, $3);
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
@@ -257,7 +257,8 @@ GRANT EXECUTE ON FUNCTION
 --Define a function to drop all students
 CREATE OR REPLACE FUNCTION
    ClassDB.dropAllStudents(objectsDisposition VARCHAR DEFAULT 'assign_i',
-                           newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL)
+                           newObjectsOwnerName ClassDB.IDNameDomain
+                                               DEFAULT NULL)
    RETURNS VOID AS
 $$
 BEGIN
@@ -287,7 +288,8 @@ CREATE OR REPLACE FUNCTION
    ClassDB.createInstructor(userName ClassDB.IDNameDomain,
                             fullName ClassDB.RoleBase.FullName%Type,
                             schemaName ClassDB.IDNameDomain DEFAULT NULL,
-                            extraInfo ClassDB.RoleBase.ExtraInfo%Type DEFAULT NULL,
+                            extraInfo ClassDB.RoleBase.ExtraInfo%Type
+                                      DEFAULT NULL,
                             okIfRoleExists BOOLEAN DEFAULT TRUE,
                             okIfSchemaExists BOOLEAN DEFAULT TRUE,
                             initialPwd VARCHAR(128) DEFAULT NULL)
@@ -310,27 +312,34 @@ $$ LANGUAGE plpgsql
 
 --Change function ownership and set permissions
 ALTER FUNCTION
-   ClassDB.createInstructor(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
-                            ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
+   ClassDB.createInstructor(ClassDB.IDNameDomain,
+                            ClassDB.RoleBase.FullName%Type,
+                            ClassDB.IDNameDomain,
+                            ClassDB.RoleBase.ExtraInfo%Type,
                             BOOLEAN, BOOLEAN, VARCHAR(128))
    OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION
-   ClassDB.createInstructor(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
-                            ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
+   ClassDB.createInstructor(ClassDB.IDNameDomain,
+                            ClassDB.RoleBase.FullName%Type,
+                            ClassDB.IDNameDomain,
+                            ClassDB.RoleBase.ExtraInfo%Type,
                             BOOLEAN, BOOLEAN, VARCHAR(128))
    FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION
-   ClassDB.createInstructor(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
-                            ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
+   ClassDB.createInstructor(ClassDB.IDNameDomain,
+                            ClassDB.RoleBase.FullName%Type,
+                            ClassDB.IDNameDomain,
+                            ClassDB.RoleBase.ExtraInfo%Type,
                             BOOLEAN, BOOLEAN, VARCHAR(128))
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 
 --Define function to unregister an instructor and undo instructor configurations
-CREATE OR REPLACE FUNCTION ClassDB.revokeInstructor(userName ClassDB.IDNameDomain)
+CREATE OR REPLACE FUNCTION
+   ClassDB.revokeInstructor(userName ClassDB.IDNameDomain)
    RETURNS VOID AS
 $$
 BEGIN
@@ -402,7 +411,8 @@ CREATE OR REPLACE FUNCTION
    ClassDB.createDBManager(userName ClassDB.IDNameDomain,
                            fullName ClassDB.RoleBase.FullName%Type,
                            schemaName ClassDB.IDNameDomain DEFAULT NULL,
-                           extraInfo ClassDB.RoleBase.ExtraInfo%Type DEFAULT NULL,
+                           extraInfo ClassDB.RoleBase.ExtraInfo%Type
+                                     DEFAULT NULL,
                            okIfRoleExists BOOLEAN DEFAULT TRUE,
                            okIfSchemaExists BOOLEAN DEFAULT TRUE,
                            initialPwd VARCHAR(128) DEFAULT NULL)
@@ -422,26 +432,30 @@ $$ LANGUAGE plpgsql
 --Change function ownership and set permissions
 ALTER FUNCTION
    ClassDB.createDBManager(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
-                           ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
+                           ClassDB.IDNameDomain,
+                           ClassDB.RoleBase.ExtraInfo%Type,
                            BOOLEAN, BOOLEAN, VARCHAR(128))
    OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION
    ClassDB.createDBManager(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
-                           ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
+                           ClassDB.IDNameDomain,
+                           ClassDB.RoleBase.ExtraInfo%Type,
                            BOOLEAN, BOOLEAN, VARCHAR(128))
    FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION
    ClassDB.createDBManager(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
-                           ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
+                           ClassDB.IDNameDomain,
+                           ClassDB.RoleBase.ExtraInfo%Type,
                            BOOLEAN, BOOLEAN, VARCHAR(128))
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 
 --Define function to unregister a DB manager and undo DB manager configurations
-CREATE OR REPLACE FUNCTION ClassDB.revokeDBManager(userName ClassDB.IDNameDomain)
+CREATE OR REPLACE FUNCTION
+   ClassDB.revokeDBManager(userName ClassDB.IDNameDomain)
    RETURNS VOID AS
 $$
 BEGIN

@@ -30,7 +30,7 @@ $$;
 --Define a temporary function to test if a schema is "defined"
 -- a schema is defined if a pg_catalog.pg_namespace row exists for schemaName
 -- use to test if a string represents the name of a schema in the current db
-CREATE OR REPLACE FUNCTION 
+CREATE OR REPLACE FUNCTION
    pg_temp.isSchemaDefined(schemaName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
 $$
@@ -46,11 +46,11 @@ $$ LANGUAGE plpgsql;
 
 
 --Define a temporary function to test an encrypted password set to a user
--- Encrypted passwords are MD5 hashes of the user's clear text password 
+-- Encrypted passwords are MD5 hashes of the user's clear text password
 -- concatenated with their user name
 --Calling with clearTextPwd set to NULL will check if user has no password
 --See: https://www.postgresql.org/docs/9.6/static/catalog-pg-authid.html
-CREATE OR REPLACE FUNCTION 
+CREATE OR REPLACE FUNCTION
    pg_temp.checkEncryptedPwd(userName ClassDB.IDNameDomain,
                              clearTextPwd VARCHAR(128))
    RETURNS BOOLEAN AS
@@ -76,7 +76,7 @@ SET LOCAL client_min_messages TO WARNING;
 
 --Define a temporary function to test the values of the extra info column in
 -- the ClassDB.RoleBase table for a given user
-CREATE OR REPLACE FUNCTION 
+CREATE OR REPLACE FUNCTION
    pg_temp.checkRoleInfo(userName ClassDB.IDNameDomain,
                          fullName ClassDB.RoleBase.FullName%Type,
                          extraInfo ClassDB.RoleBase.ExtraInfo%Type)
@@ -119,10 +119,10 @@ BEGIN
    PERFORM ClassDB.createDBManager('testStuDBM0', 'Wrong Name', NULL, NULL,
                                    FALSE, FALSE, 'testpass3');
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM ClassDB.createStudent('testStuDBM0', 'Test student/DB manager 0', 
+   PERFORM ClassDB.createStudent('testStuDBM0', 'Test student/DB manager 0',
                                  NULL, NULL, TRUE, TRUE, 'notPass');
    RESET client_min_messages;
-   
+
    --Updating with different schema: Create student, create schema, then update
    PERFORM ClassDB.createStudent('testStu4', 'Wrong Name');
    CREATE SCHEMA newTestStu4 AUTHORIZATION testStu4;
@@ -132,16 +132,16 @@ BEGIN
 
    --Test role membership (and existence)
    IF NOT(pg_has_role('teststu0', 'classdb_student', 'member')
-      AND pg_has_role('teststu1', 'classdb_student', 'member') 
-      AND pg_has_role('teststu2', 'classdb_student', 'member') 
-      AND pg_has_role('teststu3', 'classdb_student', 'member') 
-      AND pg_has_role('teststudbm0', 'classdb_student', 'member') 
-      AND pg_has_role('teststudbm0', 'classdb_dbmanager', 'member') 
+      AND pg_has_role('teststu1', 'classdb_student', 'member')
+      AND pg_has_role('teststu2', 'classdb_student', 'member')
+      AND pg_has_role('teststu3', 'classdb_student', 'member')
+      AND pg_has_role('teststudbm0', 'classdb_student', 'member')
+      AND pg_has_role('teststudbm0', 'classdb_dbmanager', 'member')
       AND pg_has_role('teststu4', 'classdb_student', 'member'))
    THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   
+
    --Test existence of all schemas
    IF NOT(pg_temp.isSchemaDefined('testStu0') AND pg_temp.isSchemaDefined('testStu1')
       AND pg_temp.isSchemaDefined('testStu2') AND pg_temp.isSchemaDefined('testStu3')
@@ -150,7 +150,7 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 2';
    END IF;
-   
+
    --Test password (hashes) set to students
    IF NOT(pg_temp.checkEncryptedPwd('testStu0', 'teststu0')
       AND pg_temp.checkEncryptedPwd('testStu1', 'teststu1')
@@ -161,7 +161,7 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
-   
+
    --Test role-schema correspondence with ClassDB function
    IF NOT(ClassDB.getSchemaName('testStu0') = 'teststu0'
       AND ClassDB.getSchemaName('testStu1') = 'teststu1'
@@ -172,7 +172,7 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
-   
+
    --Test extra info stored for each student
    IF NOT(pg_temp.checkRoleInfo('testStu0', 'Test student 0', NULL)
       AND pg_temp.checkRoleInfo('testStu1', 'Test student 1', '101')
@@ -183,20 +183,20 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 5';
    END IF;
-   
+
    --Test connection limit, statement timeout, and login privileges
    IF EXISTS(
       SELECT * FROM pg_catalog.pg_roles
       WHERE RolName IN ('teststu0', 'teststu1', 'teststu2', 'teststu3',
                         'teststudbm0', 'teststu4')
             AND
-               (NOT RolCanLogin OR RolConnLimit <> 5 OR 
+               (NOT RolCanLogin OR RolConnLimit <> 5 OR
                 array_to_string(RolConfig, '') NOT LIKE '%statement_timeout=2000%')
             )
    THEN
       RETURN 'FAIL Code 6';
    END IF;
-   
+
    --Cleanup
    DROP OWNED BY testStu0;
    DROP ROLE testStu0;
@@ -217,11 +217,11 @@ BEGIN
    DROP OWNED BY testStu4;
    DROP ROLE testStu4;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'teststu4';
-   
+
    DROP OWNED BY testStuDBM0;
    DROP ROLE testStuDBM0;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'teststudbm0';
-   
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
@@ -245,10 +245,10 @@ BEGIN
    PERFORM ClassDB.createDBManager('testInsDBM0', 'Wrong Name', NULL, NULL,
                                    FALSE, FALSE, 'testpass3');
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM ClassDB.createInstructor('testInsDBM0', 'Test instructor/DB manager 0', 
+   PERFORM ClassDB.createInstructor('testInsDBM0', 'Test instructor/DB manager 0',
                                  NULL, NULL, TRUE, TRUE, 'notPass');
    RESET client_min_messages;
-   
+
    --Updating with different schema: Create instructor, create schema, then update
    PERFORM ClassDB.createInstructor('testIns4', 'Wrong Name');
    CREATE SCHEMA newTestIns4 AUTHORIZATION testIns4;
@@ -258,16 +258,16 @@ BEGIN
 
    --Test role membership (and existence)
    IF NOT(pg_has_role('testins0', 'classdb_instructor', 'member')
-      AND pg_has_role('testins1', 'classdb_instructor', 'member') 
-      AND pg_has_role('testins2', 'classdb_instructor', 'member') 
-      AND pg_has_role('testins3', 'classdb_instructor', 'member') 
-      AND pg_has_role('testinsdbm0', 'classdb_instructor', 'member') 
-      AND pg_has_role('testinsdbm0', 'classdb_dbmanager', 'member') 
+      AND pg_has_role('testins1', 'classdb_instructor', 'member')
+      AND pg_has_role('testins2', 'classdb_instructor', 'member')
+      AND pg_has_role('testins3', 'classdb_instructor', 'member')
+      AND pg_has_role('testinsdbm0', 'classdb_instructor', 'member')
+      AND pg_has_role('testinsdbm0', 'classdb_dbmanager', 'member')
       AND pg_has_role('testins4', 'classdb_instructor', 'member'))
    THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   
+
    --Test existence of all schemas
    IF NOT(pg_temp.isSchemaDefined('testIns0') AND pg_temp.isSchemaDefined('testIns1')
       AND pg_temp.isSchemaDefined('testIns2') AND pg_temp.isSchemaDefined('testIns3')
@@ -276,7 +276,7 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 2';
    END IF;
-   
+
    --Test password (hashes) set to instructors
    IF NOT(pg_temp.checkEncryptedPwd('testIns0', 'testins0')
       AND pg_temp.checkEncryptedPwd('testIns1', 'testins1')
@@ -287,7 +287,7 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
-   
+
    --Test role-schema correspondence with ClassDB function
    IF NOT(ClassDB.getSchemaName('testIns0') = 'testins0'
       AND ClassDB.getSchemaName('testIns1') = 'testins1'
@@ -298,7 +298,7 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
-   
+
    --Test extra info stored for each instructor
    IF NOT(pg_temp.checkRoleInfo('testIns0', 'Test instructor 0', NULL)
       AND pg_temp.checkRoleInfo('testIns1', 'Test instructor 1', '101')
@@ -309,7 +309,7 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 5';
    END IF;
-   
+
    --Test login privilege
    IF EXISTS(
       SELECT * FROM pg_catalog.pg_roles
@@ -320,7 +320,7 @@ BEGIN
    THEN
       RETURN 'FAIL Code 6';
    END IF;
-   
+
    --Cleanup
    DROP OWNED BY testIns0;
    DROP ROLE testIns0;
@@ -341,11 +341,11 @@ BEGIN
    DROP OWNED BY testIns4;
    DROP ROLE testIns4;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'testins4';
-   
+
    DROP OWNED BY testInsDBM0;
    DROP ROLE testInsDBM0;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'testinsdbm0';
-   
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
@@ -369,10 +369,10 @@ BEGIN
    PERFORM ClassDB.createDBManager('testDBMStu0', 'Wrong Name', NULL, NULL,
                                    FALSE, FALSE, 'testpass3');
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM ClassDB.createStudent('testDBMStu0', 'Test DB manager/student 0', 
+   PERFORM ClassDB.createStudent('testDBMStu0', 'Test DB manager/student 0',
                                  NULL, NULL, TRUE, TRUE, 'notPass');
    RESET client_min_messages;
-   
+
    --Updating with different schema: Create DB manager, create schema, then update
    PERFORM ClassDB.createDBManager('testDBM4', 'Wrong Name');
    CREATE SCHEMA newTestDBM4 AUTHORIZATION testDBM4;
@@ -382,16 +382,16 @@ BEGIN
 
    --Test role membership (and existence)
    IF NOT(pg_has_role('testdbm0', 'classdb_dbmanager', 'member')
-      AND pg_has_role('testdbm1', 'classdb_dbmanager', 'member') 
-      AND pg_has_role('testdbm2', 'classdb_dbmanager', 'member') 
-      AND pg_has_role('testdbm3', 'classdb_dbmanager', 'member') 
-      AND pg_has_role('testdbmstu0', 'classdb_dbmanager', 'member') 
-      AND pg_has_role('testdbmstu0', 'classdb_student', 'member') 
+      AND pg_has_role('testdbm1', 'classdb_dbmanager', 'member')
+      AND pg_has_role('testdbm2', 'classdb_dbmanager', 'member')
+      AND pg_has_role('testdbm3', 'classdb_dbmanager', 'member')
+      AND pg_has_role('testdbmstu0', 'classdb_dbmanager', 'member')
+      AND pg_has_role('testdbmstu0', 'classdb_student', 'member')
       AND pg_has_role('testdbm4', 'classdb_dbmanager', 'member'))
    THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   
+
    --Test existence of all schemas
    IF NOT(pg_temp.isSchemaDefined('testDBM0') AND pg_temp.isSchemaDefined('testDBM1')
       AND pg_temp.isSchemaDefined('testDBM2') AND pg_temp.isSchemaDefined('testDBM3')
@@ -400,7 +400,7 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 2';
    END IF;
-   
+
    --Test password (hashes) set to DB managers
    IF NOT(pg_temp.checkEncryptedPwd('testDBM0', 'testdbm0')
       AND pg_temp.checkEncryptedPwd('testDBM1', 'testdbm1')
@@ -411,7 +411,7 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
-   
+
    --Test role-schema correspondence with ClassDB function
    IF NOT(ClassDB.getSchemaName('testDBM0') = 'testdbm0'
       AND ClassDB.getSchemaName('testDBM1') = 'testdbm1'
@@ -422,7 +422,7 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
-   
+
    --Test extra info stored for each DB manager
    IF NOT(pg_temp.checkRoleInfo('testDBM0', 'Test DB manager 0', NULL)
       AND pg_temp.checkRoleInfo('testDBM1', 'Test DB manager 1', '101')
@@ -433,7 +433,7 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 5';
    END IF;
-   
+
    --Test login privilege
    IF EXISTS(
       SELECT * FROM pg_catalog.pg_roles
@@ -444,7 +444,7 @@ BEGIN
    THEN
       RETURN 'FAIL Code 6';
    END IF;
-   
+
    --Cleanup
    DROP OWNED BY testDBM0;
    DROP ROLE testDBM0;
@@ -465,11 +465,11 @@ BEGIN
    DROP OWNED BY testDBM4;
    DROP ROLE testDBM4;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'testdbm4';
-   
+
    DROP OWNED BY testDBMStu0;
    DROP ROLE testDBMStu0;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'testdbmstu0';
-   
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
@@ -480,62 +480,62 @@ BEGIN
    --Create basic student, then revoke
    PERFORM ClassDB.createStudent('testStu0', 'Test student 0');
    PERFORM ClassDB.revokeStudent('testStu0');
-   
+
    --Create student/instructor, then revoke student
    PERFORM ClassDB.createInstructor('testInsStu0', 'Test instructor/student 0');
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createStudent('testInsStu0', 'Test instructor/student 0');
    PERFORM ClassDB.revokeStudent('testInsStu0');
    RESET client_min_messages;
-   
+
    --Test if roles still exists on server
-   IF NOT (ClassDB.isServerRoleDefined('testStu0') 
+   IF NOT (ClassDB.isServerRoleDefined('testStu0')
       AND ClassDB.isServerRoleDefined('testInsStu0'))
    THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   
+
    --Test if their schemas still exist
    IF NOT(pg_temp.isSchemaDefined('testStu0')
       AND pg_temp.isSchemaDefined('testInsStu0'))
    THEN
       RETURN 'FAIL: Code 2';
    END IF;
-   
+
    --Test if roles no longer have student role
-   IF ClassDB.isMember('testStu0', 'ClassDB_Student') 
+   IF ClassDB.isMember('testStu0', 'ClassDB_Student')
       OR ClassDB.isMember('testInsStu0', 'ClassDB_Student')
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
-   
+
    --Test if second user still has instructor role
    IF NOT ClassDB.isMember('testInsStu0', 'ClassDB_Instructor')
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
-   
+
    --Test that connection limit and statement timeout are reset, but login remains
    IF EXISTS(
       SELECT * FROM pg_catalog.pg_roles
       WHERE RolName IN ('teststu0', 'testinsstu0')
             AND
-               (NOT RolCanLogin OR RolConnLimit <> -1 OR 
+               (NOT RolCanLogin OR RolConnLimit <> -1 OR
                 array_to_string(RolConfig, '') LIKE '%statement_timeout=2000%')
             )
    THEN
       RETURN 'FAIL Code 5';
    END IF;
-   
+
    --Cleanup
    DROP OWNED BY testStu0;
    DROP ROLE testStu0;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'teststu0';
-   
+
    DROP OWNED BY testInsStu0;
    DROP ROLE testInsStu0;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'testinsStu0';
-   
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
@@ -546,41 +546,41 @@ BEGIN
    --Create basic instructor, then revoke
    PERFORM ClassDB.createInstructor('testIns0', 'Test instructor 0');
    PERFORM ClassDB.revokeInstructor('testIns0');
-   
+
    --Create DB manager/instructor, then revoke instructor
    PERFORM ClassDB.createDBManager('testDBMIns0', 'Test DB manager/instructor 0');
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createInstructor('testDBMIns0', 'Test DB manager/instructor 0');
    PERFORM ClassDB.revokeInstructor('testDBMIns0');
    RESET client_min_messages;
-   
+
    --Test if roles still exists on server
-   IF NOT (ClassDB.isServerRoleDefined('testIns0') 
+   IF NOT (ClassDB.isServerRoleDefined('testIns0')
       AND ClassDB.isServerRoleDefined('testDBMIns0'))
    THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   
+
    --Test if their schemas still exist
    IF NOT(pg_temp.isSchemaDefined('testIns0')
       AND pg_temp.isSchemaDefined('testDBMIns0'))
    THEN
       RETURN 'FAIL: Code 2';
    END IF;
-   
+
    --Test if roles no longer have instructor role
-   IF ClassDB.isMember('testIns0', 'ClassDB_Instructor') 
+   IF ClassDB.isMember('testIns0', 'ClassDB_Instructor')
       OR ClassDB.isMember('testDBMIns0', 'ClassDB_Instructor')
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
-   
+
    --Test if second user still has DBManager role
    IF NOT ClassDB.isMember('testDBMIns0', 'ClassDB_DBManager')
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
-   
+
    --Test that login privilege remains
    IF EXISTS(
       SELECT * FROM pg_catalog.pg_roles
@@ -590,16 +590,16 @@ BEGIN
    THEN
       RETURN 'FAIL Code 5';
    END IF;
-   
+
    --Cleanup
    DROP OWNED BY testIns0;
    DROP ROLE testIns0;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'testins0';
-   
+
    DROP OWNED BY testDBMIns0;
    DROP ROLE testDBMIns0;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'testdbmins0';
-   
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
@@ -610,41 +610,41 @@ BEGIN
    --Create basic DB manager, then revoke
    PERFORM ClassDB.createDBManager('testDBM0', 'Test DB manager 0');
    PERFORM ClassDB.revokeDBManager('testDBM0');
-   
+
    --Create DB manager/student, then revoke DB manager
    PERFORM ClassDB.createStudent('testStuDBM0', 'Test student/DB manager 0');
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createDBManager('testStuDBM0', 'Test student/DB manager 0');
    PERFORM ClassDB.revokeDBManager('testStuDBM0');
    RESET client_min_messages;
-   
+
    --Test if roles still exists on server
-   IF NOT (ClassDB.isServerRoleDefined('testDBM0') 
+   IF NOT (ClassDB.isServerRoleDefined('testDBM0')
       AND ClassDB.isServerRoleDefined('testStuDBM0'))
    THEN
       RETURN 'FAIL: Code 1';
    END IF;
-   
+
    --Test if their schemas still exist
    IF NOT(pg_temp.isSchemaDefined('testDBM0')
       AND pg_temp.isSchemaDefined('testStuDBM0'))
    THEN
       RETURN 'FAIL: Code 2';
    END IF;
-   
+
    --Test if roles no longer have DB manager role
-   IF ClassDB.isMember('testDBM0', 'ClassDB_DBManager') 
+   IF ClassDB.isMember('testDBM0', 'ClassDB_DBManager')
       OR ClassDB.isMember('testStuDBM0', 'ClassDB_DBManager')
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
-   
+
    --Test if second user still has student role
    IF NOT ClassDB.isMember('testStuDBM0', 'ClassDB_Student')
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
-   
+
    --Test that login privilege remains
    IF EXISTS(
       SELECT * FROM pg_catalog.pg_roles
@@ -654,16 +654,16 @@ BEGIN
    THEN
       RETURN 'FAIL Code 5';
    END IF;
-   
+
    --Cleanup
    DROP OWNED BY testDBM0;
    DROP ROLE testDBM0;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'testdbm0';
-   
+
    DROP OWNED BY testStuDBM0;
    DROP ROLE testStuDBM0;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'teststudbm0';
-   
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
