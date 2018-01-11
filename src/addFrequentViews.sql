@@ -139,7 +139,6 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 
 ALTER FUNCTION public.getMyActivitySummary() OWNER TO ClassDB;
-GRANT EXECUTE ON FUNCTION public.getMyActivitySummary() TO PUBLIC;
 
 --Proxy view for public.getMyActivitySummary(). Designed to make access easier for students
 CREATE OR REPLACE VIEW public.MyActivitySummary AS
@@ -186,7 +185,6 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 
 ALTER FUNCTION public.getMyDDLActivity() OWNER TO ClassDB;
-GRANT EXECUTE ON FUNCTION public.getMyDDLActivity() TO PUBLIC;
 
 --This view wraps getMyDDLActivity() for easier student access
 CREATE OR REPLACE VIEW public.MyDDLActivity AS
@@ -232,7 +230,6 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 
 ALTER FUNCTION public.getMyConnectionActivity() OWNER TO ClassDB;
-GRANT EXECUTE ON FUNCTION public.getMyConnectionActivity() TO PUBLIC;
 
 --This view wraps getMyConnectionActivity for easier student access
 CREATE OR REPLACE VIEW public.MyConnectionActivity AS
@@ -243,6 +240,7 @@ CREATE OR REPLACE VIEW public.MyConnectionActivity AS
 
 ALTER VIEW public.MyConnectionActivity OWNER TO ClassDB;
 GRANT SELECT ON public.MyConnectionActivity TO PUBLIC;
+
 
 --This function returns all activity for a specified user
 CREATE OR REPLACE FUNCTION ClassDB.getUserActivity(userName ClassDB.IDNameDomain
