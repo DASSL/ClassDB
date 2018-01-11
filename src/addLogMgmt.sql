@@ -98,15 +98,12 @@ BEGIN
    -- defer to our 'best-guess' and finally, the current date if preceeding values are null
 	lastConDate := COALESCE(startDate, lastConDate, CURRENT_DATE);
 
-   RAISE NOTICE '%', lastConDate;
-
 	--We want to import all logs between the lastConDate and current date
 	WHILE lastConDate <= CURRENT_DATE LOOP
 	   --Get the full path to the log, assumes a log file name of postgresql-%m.%d.csv
 	   -- the log_directory setting holds the log path
       logPath := (SELECT setting FROM pg_settings WHERE "name" = 'log_directory') ||
          '/postgresql-' || to_char(lastConDate, 'MM.DD') || '.csv';
-      RAISE NOTICE '%', logPath;
       --Use copy to fill the temp import table
       EXECUTE format('COPY classdb.postgresLog FROM ''%s'' WITH csv', logPath);
       lastConDate := lastConDate + 1; --Check the next day
