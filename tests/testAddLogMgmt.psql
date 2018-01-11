@@ -15,16 +15,19 @@
 
 --This script uses psql's \c command to change connections. You will have to
 -- input the password for each role manually during the switch
+-- Currently, each user is given a password of ' ' (a single space) to make switching
+-- connections less labor intensive
 
---The following tests are performed. An error code of ERROR X.Y indicates that test
--- y in section x failed
-
---A) Checks as instructor
+--The following tests are performed. An error code of ERROR X indicates that test x
+-- failed
 
 \set ON_ERROR_STOP on
 
 --Remember the current user so we can switch back at the end
-\set psqlCurrentUser SELECT CURRENT_USER
+-- Currently, this is assuming the starting superuser account is 'postgres'
+-- you must change this if you want to switch back to a different superuser account
+-- at the end of the script
+\set psqlCurrentUser postgres
 
 SET SESSION client_min_messages TO WARNING;
 
@@ -41,18 +44,38 @@ $$;
 DO
 $$
 BEGIN
-   --Create users to test connection logging
-   PERFORM ClassDB.createStudent('conStudent01', 'con test student 01', NULL, NULL, TRUE, TRUE, ' ');
-   PERFORM ClassDB.createStudent('conStudent02', 'con test student 02', NULL, NULL, TRUE, TRUE, ' ');
-   PERFORM ClassDB.createInstructor('conInstructor01', 'con test instructor 01', NULL, NULL, TRUE, TRUE, ' ');
-   PERFORM ClassDB.createDBManager('conDBManager01', 'con test db manager 01', NULL, NULL, TRUE, TRUE, ' ');
+   RAISE NOTICE 'Testing ClassDB connection logging';
+
+   --Create ClassDB users to test connection logging
+   --Each user is given a passowrd of ' ' (single space) to make switching connections
+   -- less labor intensive
+   RAISE NOTICE 'Creating test users';
+   PERFORM ClassDB.createStudent('conStudent01', 'con test student 01',
+      NULL, NULL, TRUE, TRUE, ' ');
+   PERFORM ClassDB.createStudent('conStudent02', 'con test student 02',
+      NULL, NULL, TRUE, TRUE, ' ');
+   PERFORM ClassDB.createInstructor('conInstructor01', 'con test instructor 01',
+      NULL, NULL, TRUE, TRUE, ' ');
+   PERFORM ClassDB.createDBManager('conDBManager01', 'con test db manager 01',
+      NULL, NULL, TRUE, TRUE, ' ');
+
+   --Create a non-ClassDB user ensure their conenctions are not logged
+   CREATE USER conNonClassDB ENCRYPTED PASSWORD 'passwd';
+   EXECUTE FORMAT('GRANT CONNECT ON DATABASE %I TO conNonClassDB', CURRENT_DATABASE());
 
    --Fill up the log with any existing connections
+   RAISE NOTICE 'Importing any existing connections in the logs';
    PERFORM ClassDB.importLog();
+
+   RAISE NOTICE 'Creating new connections to the server. Please enter a single space '
+                'when prompted for a test user''s password. You must also enter the password '
+                'for :psqlCurrentUser to return to your superuser account.';
 END;
 $$;
 
 --Switch to different user to get some conenction in the log
+-- the '-' tells psql to connect to the current database with the supplied
+-- user name
 \c  - constudent01
 
 \c - constudent02
@@ -60,6 +83,8 @@ $$;
 \c - condbmanager01
 
 \c - coninstructor01
+
+\c - conNonClassDB
 
 \c - :psqlCurrentUser
 
@@ -71,6 +96,7 @@ DECLARE
    newLogSize INT;
 BEGIN
    --Get the initial size of the connection log
+   RAISE NOTICE 'Checking for new connections';
    SELECT COUNT(*)
    INTO initialLogSize
    FROM ClassDB.ConnectionActivity;
@@ -82,9 +108,10 @@ BEGIN
    FROM ClassDB.ConnectionActivity;
 
    --Check if the number of new connections in the log equals the number of connections
-   -- we made in the test
+   -- from ClasDB users made in the test
+   RAISE NOTICE 'Checking if the correct number of new connections were logged';
    IF newLogSize - initialLogSize <> 4 THEN
-      RAISE EXCEPTION 'ERROR CODE A.1';
+      RAISE EXCEPTION 'ERROR CODE 1';
    END IF;
 
    --Drop users & related objects
@@ -97,6 +124,9 @@ BEGIN
    DROP SCHEMA conStudent02 CASCADE;
    DROP SCHEMA conInstructor01 CASCADE;
    DROP SCHEMA conDBManager01 CASCADE;
+
+   DROP OWNED BY conNonClassDB;
+   DROP USER conNonClassDB CASCADE;
 
    RAISE NOTICE 'Success!';
 END;
