@@ -34,7 +34,7 @@ SET LOCAL client_min_messages TO WARNING;
 -- objects in the ClassDB schema, this version is required so that students can use
 -- the catalog management functions. Any change to foldPgID() must also be made to
 -- the version in addHelpers.sql
-CREATE OR REPLACE FUNCTION public.foldPgID(identifier VARCHAR(63))
+CREATE OR REPLACE FUNCTION public.foldPgID(identifier VARCHAR(65))
 RETURNS VARCHAR(63) AS
 $$
 SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
@@ -45,12 +45,13 @@ SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
                  LOWER($1)
        END;
 $$ LANGUAGE sql
-   STABLE;
+   IMMUTABLE
+   RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION public.foldPgID(VARCHAR(63)) OWNER TO ClassDB;
 
 
---Returns a list of tables and views in the current user's schema
+--Returns a list of tables and views in the invoker's current schema
 CREATE OR REPLACE FUNCTION public.listTables(schemaName VARCHAR(63) DEFAULT CURRENT_SCHEMA)
 RETURNS TABLE
 (  --Since these functions access the INFORMATION_SCHEMA, we use the standard
@@ -62,7 +63,7 @@ RETURNS TABLE
 AS $$
    SELECT table_schema, table_name, table_type
    FROM INFORMATION_SCHEMA.TABLES
-   WHERE table_schema = public.foldPgID(schemaName);
+   WHERE table_schema = COALESCE(public.foldPgID(schemaName), CURRENT_SCHEMA);
 $$ LANGUAGE sql
    STABLE;
 
@@ -88,7 +89,7 @@ $$ LANGUAGE sql
 ALTER FUNCTION public.describe(VARCHAR(63), VARCHAR(63)) OWNER TO ClassDB;
 
 
---Returns a list of columns in the specified table or view in the current user's schema
+--Returns a list of columns in the specified table or view in the invoker's current schema
 CREATE OR REPLACE FUNCTION public.describe(tableName VARCHAR(63))
 RETURNS TABLE
 (
@@ -98,7 +99,7 @@ RETURNS TABLE
 AS $$
    --We have to explicitly cast "Name" to "VARCHAR" here as well
    SELECT "Column", "Type"
-   FROM public.describe(CURRENT_SCHEMA::VARCHAR(63), ClassDB.FoldPgID($1));
+   FROM public.describe(CURRENT_SCHEMA::VARCHAR, public.FoldPgID($1));
 $$ LANGUAGE sql
    STABLE;
 
