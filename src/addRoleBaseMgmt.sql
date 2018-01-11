@@ -192,13 +192,17 @@ CREATE OR REPLACE FUNCTION
                       initialPwd VARCHAR(128) DEFAULT NULL)
    RETURNS VOID AS
 $$
-DECLARE currentSchemaOwnerName ClassDB.IDNameDomain;
+DECLARE
+   isTeamStored BOOLEAN;
+   schemaNameStored ClassDB.IDNameDomain;
+   currentSchemaOwnerName ClassDB.IDNameDomain;
 BEGIN
 
    --validate inputs:
    -- neither roleName nor fullName may be empty or NULL
    -- isTeam may not be NULL
    -- schemaName may not be empty
+   -- stored and new values of isTeam and schemaName should match for known roles
 
    $1 = TRIM($1);
    IF ($1 = '' OR $1 IS NULL) THEN
@@ -219,7 +223,35 @@ BEGIN
       RAISE EXCEPTION 'Invalid argument: schemaName is empty';
    END IF;
 
-   --create a server role
+   --if known role, get the stored and values for isTeam and schemaName
+   -- the local variables will have NULL if role is not known
+   SELECT R.IsTeam, R.SchemaName INTO isTeamStored, schemaNameStored
+   FROM ClassDB.RoleBase R
+   WHERE R.RoleName = ClassDB.foldPgID($1);
+
+   --validate isTeam
+   IF isTeamStored <> $3 THEN
+      RAISE EXCEPTION
+         'Invalid argument: role "%" is known to be a %; it cannot be changed to a %',
+         $1,
+         CASE WHEN isTeamStored THEN 'team' ELSE 'user' END,
+         CASE WHEN $3 THEN 'team' ELSE 'user' END;
+   END IF;
+
+   --validate schema
+   -- first get the intended name of role-specific schema: role name is the default
+   $4 = COALESCE($4, $1);
+   IF schemaNameStored <> ClassDB.foldPgID($4) THEN
+      RAISE EXCEPTION
+         'Invalid argument: role "%" is known to have schema "%"; '
+         'it cannot be changed to "%"',
+         $1, schemaNameStored, $4;
+   END IF;
+
+
+   -------- server role management --------------------------------------
+
+   --create a server role if necessary
    IF ClassDB.isServerRoleDefined($1) THEN
       IF $6 THEN
          RAISE NOTICE 'Server role "%" already exists, password not modified', $1;
@@ -235,7 +267,17 @@ BEGIN
                     );
    END IF;
 
-   --give the executing user (should be 'classdb') same rights as the role in question
+   --give the server role LOGIN capability if it is a user
+   --do not remove LOGIN for a team, because instructors may have their reasons
+   -- to make a LOGIN server role a team
+   IF NOT($3 OR ClassDB.canLogin($1)) THEN
+      EXECUTE FORMAT('ALTER ROLE %s LOGIN', $1);
+   END IF;
+
+
+   -------- schema management --------------------------------------
+
+   --give the executing user (should be 'classdb') same rights as role in question
    -- this grant is needed to make the role the owner of its own schema, as well
    -- as to reassign and drop objects later in function dropRole
    -- this grant is also required in case the role was created outside ClassDB
@@ -243,11 +285,9 @@ BEGIN
       EXECUTE FORMAT('GRANT %s TO CURRENT_USER', $1);
    END IF;
 
-   --get name of role-specific schema: the role name is the default schema name
-   $4 = COALESCE($4, $1);
-
    --find the current owner of the schema, if the schema already exists
    -- value will be NULL if and only if the schema does not exist
+   -- the return value will already be case-folded
    currentSchemaOwnerName = ClassDB.getSchemaOwnerName($4);
 
    --if schema does not exist, create it and give ownership to role in question
@@ -256,7 +296,7 @@ BEGIN
    IF currentSchemaOwnerName IS NULL THEN
       EXECUTE FORMAT('CREATE SCHEMA %s AUTHORIZATION %s', $4, $1);
    ELSIF $7 THEN
-      IF (ClassDB.foldPgID(currentSchemaOwnerName) <> ClassDB.foldPgID($1)) THEN
+      IF (currentSchemaOwnerName <> ClassDB.foldPgID($1)) THEN
          RAISE EXCEPTION
             'Schema "%" already exists, but is owned by (another) role "%"',
             $4, currentSchemaOwnerName;
@@ -265,9 +305,11 @@ BEGIN
       RAISE EXCEPTION 'Invalid argument: Schema "%" already exists', $4;
    END IF;
 
+
+   -------- record management --------------------------------------
+
    --record the role
    -- if role is already known, set full name and extra info to new values
-   -- cannot change value of IsTeam and SchemaName for known roles
    -- cannot use ON CONFLICT because table has no PK or constraint
    --  seems the unique index can't be used despite the example in Postgres docs
    --  for ON CONFLICT ON CONSTRAINT: see the last-but-one example at
@@ -279,15 +321,6 @@ BEGIN
    ELSE
       INSERT INTO ClassDB.RoleBase
       VALUES(ClassDB.foldPgID($1), $2, $3, ClassDB.foldPgID($4), $5);
-   END IF;
-
-   --give the server role LOGIN capability if it is a user
-   --do not remove LOGIN for a team, because instructors may have their reasons
-   -- to make a LOGIN server role a team
-   --this assignment is best made at this point in code because RoleBase.isTeam
-   -- is reliable only at this point
-   IF (ClassDB.isUser($1) AND NOT ClassDB.canLogin($1)) THEN
-      EXECUTE FORMAT('ALTER ROLE %s LOGIN', $1);
    END IF;
 
 END;
