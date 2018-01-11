@@ -23,6 +23,9 @@
 -- though students cannot directly access the schema.
 -- These views pull data from both the ClassDB student table and info schema.
 
+
+BEGIN TRANSACTION;
+
 --Make sure the current user has sufficient privilege to run this script
 -- privileges required: superuser
 DO
@@ -35,13 +38,12 @@ BEGIN
 END
 $$;
 
-
 --This view shows the activity summary of all students in the User table. This view
 -- is only usable by instructors
 CREATE OR REPLACE VIEW ClassDB.StudentActivityAll AS
 (
-  SELECT UserName, DDLCount, LastDDLOperation, LastDDLObject,
-         ClassDB.changeTimeZone(LastDDLActivityAtUTC) LastActivityAt,
+  SELECT UserName, DDLCount, LastDDLObject,
+         ClassDB.changeTimeZone(LastDDLActivityAtUTC) LastDDLActivityAt,
          ConnectionCount, ClassDB.changeTimeZone(LastConnectionAtUTC) LastConnectionAt
   FROM ClassDB.Student
   ORDER BY UserName
@@ -55,7 +57,7 @@ GRANT SELECT ON ClassDB.StudentActivityAll TO ClassDB_Instructor;
 -- user-identifiable information. This view is only usable by instructors
 CREATE OR REPLACE VIEW ClassDB.StudentActivityAnon AS
 (
-   SELECT DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAt,
+   SELECT DDLCount, LastDDLObject, LastDDLActivityAt,
           ConnectionCount, LastConnectionAt
    FROM ClassDB.StudentActivityAll
    ORDER BY ConnectionCount
@@ -68,8 +70,7 @@ GRANT SELECT ON ClassDB.StudentActivityAnon TO ClassDB_Instructor;
 --This view shows all tables and views currently owned by by students. Note that
 -- this is accomplished by listing all tables/views in student schemas. This view is
 -- only accessible by instructors.
-DROP VIEW IF EXISTS ClassDB.StudentTable;
-CREATE VIEW ClassDB.StudentTable AS
+CREATE OR REPLACE VIEW ClassDB.StudentTable AS
 (
   SELECT table_schema, table_name, table_type
   FROM information_schema.tables
@@ -83,8 +84,7 @@ GRANT SELECT ON ClassDB.StudentTable TO ClassDB_Instructor;
 
 --This view lists the current number of tables and views owned by each student. This
 -- view is only accessible by instructors.
-DROP VIEW IF EXISTS ClassDB.StudentTableCount;
-CREATE VIEW ClassDB.StudentTableCount AS
+CREATE OR REPLACE VIEW ClassDB.StudentTableCount AS
 (
   SELECT table_schema, COUNT(*)
   FROM information_schema.tables
@@ -104,11 +104,11 @@ CREATE OR REPLACE FUNCTION ClassDB.getUserActivitySummary(userName ClassDB.IDNam
    DEFAULT SESSION_USER::ClassDB.IDNameDomain)
 RETURNS TABLE
 (
-    DDLCount INT, LastDDLOperation VARCHAR(64), LastDDLObject VARCHAR(256),
-   LastDDLActivityAt TIMESTAMP, ConnectionCount INT, LastConnection TIMESTAMP
+   DDLCount BIGINT, LastDDLObject VARCHAR(256),
+   LastDDLActivityAt TIMESTAMP, ConnectionCount BIGINT, LastConnectionAt TIMESTAMP
 ) AS
 $$
-   SELECT ddlcount, lastddloperation, lastddlobject, LastDDLActivityAt,
+   SELECT ddlcount, lastddlobject, LastDDLActivityAt,
           connectioncount, LastConnectionAt
    FROM ClassDB.StudentActivityAll
    WHERE username = ClassDB.foldPgID($1);
@@ -127,28 +127,30 @@ GRANT EXECUTE ON FUNCTION ClassDB.getUserActivitySummary(ClassDB.IDNameDomain) T
 CREATE OR REPLACE FUNCTION public.getMyActivitySummary()
 RETURNS TABLE
 (
-   DDLCount INT, LastDDLOperation VARCHAR(64), LastDDLObject VARCHAR(256),
-   LastDDLActivity TIMESTAMP, ConnectionCount INT, LastConnection TIMESTAMP
+   DDLCount BIGINT, LastDDLObject VARCHAR(256),
+   LastDDLActivityAt TIMESTAMP, ConnectionCount BIGINT, LastConnectionAt TIMESTAMP
 ) AS
 $$
-   SELECT ddlcount, lastddloperation, lastddlobject,  lastddlactivityat,
-          connectioncount, lastconnectionat
+   SELECT ddlcount, lastddlobject,  lastddlactivityat,
+          connectioncount, LastConnectionAt
    FROM ClassDB.getUserActivitySummary();
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
 
 ALTER FUNCTION public.getMyActivitySummary() OWNER TO ClassDB;
+GRANT EXECUTE ON FUNCTION public.getMyActivitySummary() TO PUBLIC;
 
 --Proxy view for public.getMyActivitySummary(). Designed to make access easier for students
-CREATE VIEW public.MyActivitySummary AS
+CREATE OR REPLACE VIEW public.MyActivitySummary AS
 (
-   SELECT ddlcount, lastddloperation, lastddlobject,  lastddlactivityat,
+   SELECT ddlcount, lastddlobject,  lastddlactivityat,
           connectioncount, lastconnectionat
    FROM public.getMyActivitySummary()
 );
 
 ALTER VIEW public.MyActivitySummary OWNER TO ClassDB;
+GRANT SELECT ON public.MyActivitySummary TO PUBLIC;
 
 
 --This function returns all DDL activity for a specified user
@@ -156,7 +158,7 @@ CREATE OR REPLACE FUNCTION ClassDB.getUserDDLActivity(userName ClassDB.IDNameDom
    DEFAULT SESSION_USER::ClassDB.IDNameDomain)
 RETURNS TABLE
 (
-   StatementStartedAt TIMESTAMP, DDLOperation VARCHAR(64), DDLObject VARCHAR(256)
+   StatementStartedAt TIMESTAMP, DDLOperation VARCHAR, DDLObject VARCHAR(256)
 ) AS
 $$
    SELECT ClassDB.changeTimeZone(StatementStartedAtUTC), DDLOperation, DDLObject
@@ -184,15 +186,17 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 
 ALTER FUNCTION public.getMyDDLActivity() OWNER TO ClassDB;
+GRANT EXECUTE ON FUNCTION public.getMyDDLActivity() TO PUBLIC;
 
 --This view wraps getMyDDLActivity() for easier student access
-CREATE VIEW public.MyDDLActivity AS
+CREATE OR REPLACE VIEW public.MyDDLActivity AS
 (
    SELECT StatementStartedAt, DDLOperation, DDLObject
    FROM public.getMyDDLActivity()
 );
 
 ALTER VIEW public.MyDDLActivity OWNER TO ClassDB;
+GRANT SELECT ON public.MyDDLActivity TO PUBLIC;
 
 
 --This function returns all connection activity for a specified user
@@ -228,16 +232,17 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 
 ALTER FUNCTION public.getMyConnectionActivity() OWNER TO ClassDB;
+GRANT EXECUTE ON FUNCTION public.getMyConnectionActivity() TO PUBLIC;
 
 --This view wraps getMyConnectionActivity for easier student access
-CREATE VIEW public.MyConnectionActivity AS
+CREATE OR REPLACE VIEW public.MyConnectionActivity AS
 (
    SELECT AcceptedAt
    FROM public.getMyConnectionActivity()
 );
 
 ALTER VIEW public.MyConnectionActivity OWNER TO ClassDB;
-
+GRANT SELECT ON public.MyConnectionActivity TO PUBLIC;
 
 --This function returns all activity for a specified user
 CREATE OR REPLACE FUNCTION ClassDB.getUserActivity(userName ClassDB.IDNameDomain
@@ -276,10 +281,13 @@ $$ LANGUAGE sql
 ALTER FUNCTION public.getMyActivity() OWNER TO ClassDB;
 
 --This view wraps getMyActivity() for easier student access
-CREATE VIEW public.MyActivity AS
+CREATE OR REPLACE VIEW public.MyActivity AS
 (
    SELECT ActivityAt, ActivityType, DDLOperation, DDLObject
-   FROM ClassDB.getUserActivity();
+   FROM public.getMyActivity()
 );
 
 ALTER VIEW public.MyActivity OWNER TO ClassDB;
+GRANT SELECT ON public.MyActivity TO PUBLIC;
+
+COMMIT;
