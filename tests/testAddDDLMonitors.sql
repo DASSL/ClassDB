@@ -19,11 +19,25 @@
 -- y in section x failed
 
 --A) Checks as super-user
---1) Check that all student DDL statements are logged
---2) Check that DDL Operation names are logged correctly
---3) Check that DDL Objects names are logged correctly
+-- 1) Check that all student DDL statements are logged
+-- 2) Check that DDL Operation names are logged correctly
+-- 3) Check that DDL Objects names are logged correctly
 
 --B) Checks as instructor
+-- 1) Check that all student DDL statements are logged
+-- 2) Check that DDL Operation names are logged correctly
+-- 3) Check that DDL Objects names are logged correctly
+-- 4) Check that instructor DDL operations are logged
+
+--C) Checks for operations from multiple users
+-- 1) Check that all ClassDB user types have DDL operations logged, and non-ClassDB
+--     users are omitted
+-- 2) Check that CREATE TABLE statements are logged
+-- 3) Check that ALTER TABLE statements are logged
+-- 4) Check that CREATE VIEW statements are logged
+-- 5) Check that ALTER VIEW statements are logged
+-- 6) Check that DROP VIEW statements are logged
+-- 7) Check that DROP TABLE statements are logged
 
 START TRANSACTION;
 

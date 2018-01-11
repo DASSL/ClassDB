@@ -39,10 +39,10 @@ DO
 $$
 BEGIN
    --Create users to test connection logging
-   PERFORM ClassDB.createStudent('conStudent01', 'con test student 01');
-   PERFORM ClassDB.createStudent('conStudent02', 'con test student 02');
-   PERFORM ClassDB.createInstructor('conInstructor01', 'con test instructor 01');
-   PERFORM ClassDB.createDBManager('conDBManager01', 'con test db manager 01');
+   PERFORM ClassDB.createStudent('conStudent01', 'con test student 01', NULL, NULL, TRUE, TRUE, ' ');
+   PERFORM ClassDB.createStudent('conStudent02', 'con test student 02', NULL, NULL, TRUE, TRUE, ' ');
+   PERFORM ClassDB.createInstructor('conInstructor01', 'con test instructor 01', NULL, NULL, TRUE, TRUE, ' ');
+   PERFORM ClassDB.createDBManager('conDBManager01', 'con test db manager 01', NULL, NULL, TRUE, TRUE, ' ');
 
    --Fill up the log with any existing connections
    PERFORM ClassDB.importLog();
@@ -83,14 +83,16 @@ BEGIN
    END IF;
 
    --Drop users & related objects
-   --Currently broken
-   --PERFORM ClassDB.dropStudent('conStudent01', true);
-   --PERFORM ClassDB.dropStudent('conStudent02', true);
-   --PERFORM ClassDB.dropInstructor('conInstructor01', true);
-   --PERFORM ClassDB.dropDBManager('conDBManager01', true);
+   PERFORM ClassDB.dropStudent('conStudent01', true);
+   PERFORM ClassDB.dropStudent('conStudent02', true);
+   PERFORM ClassDB.dropInstructor('conInstructor01', true);
+   PERFORM ClassDB.dropDBManager('conDBManager01', true);
+
+   DROP SCHEMA conStudent01 CASCADE;
+   DROP SCHEMA conStudent01 CASCADE;
+   DROP SCHEMA conInstructor01 CASCADE;
+   DROP SCHEMA conDBManager01 CASCADE;
 
    RAISE NOTICE 'Success!';
-
-
 END;
 $$;
