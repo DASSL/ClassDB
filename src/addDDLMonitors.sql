@@ -103,6 +103,7 @@ BEGIN
    CREATE EVENT TRIGGER triggerDDLCommandSqlDrop
    ON sql_drop
    EXECUTE PROCEDURE ClassDB.logDDLActivity();
+   
    DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
    CREATE EVENT TRIGGER triggerDDLCommandEnd
    ON ddl_command_end
@@ -130,7 +131,6 @@ $$ LANGUAGE plpgsql
 REVOKE ALL ON FUNCTION ClassDB.enableDDLActivityLogging() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ClassDB.enableDDLActivityLogging()
    TO ClassDB_Instructor, ClassDB_DBManager;
-
 
 CREATE OR REPLACE FUNCTION ClassDB.disableDDLActivityLogging()
 RETURNS VOID AS
