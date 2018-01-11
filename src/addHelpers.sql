@@ -221,45 +221,6 @@ $$ LANGUAGE sql
 ALTER FUNCTION ClassDB.hasClassDBRole(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
 
---Define a function to test if a user is a member of the ClassDB student role
-CREATE OR REPLACE FUNCTION ClassDB.isStudent(userName ClassDB.IDNameDomain)
-   RETURNS BOOLEAN AS
-$$
-   SELECT pg_catalog.pg_has_role(ClassDB.foldPgID($1), 'classdb_student',
-                                 'member');
-$$ LANGUAGE sql
-   STABLE
-   RETURNS NULL ON NULL INPUT;
-
-ALTER FUNCTION ClassDB.isStudent(ClassDB.IDNameDomain) OWNER TO ClassDB;
-
-
---Define a function to test if a user is a member of the ClassDB instructor role
-CREATE OR REPLACE FUNCTION ClassDB.isInstructor(userName ClassDB.IDNameDomain)
-   RETURNS BOOLEAN AS
-$$
-   SELECT pg_catalog.pg_has_role(ClassDB.foldPgID($1), 'classdb_instructor',
-                                 'member');
-$$ LANGUAGE sql
-   STABLE
-   RETURNS NULL ON NULL INPUT;
-   
-ALTER FUNCTION ClassDB.isInstructor(ClassDB.IDNameDomain) OWNER TO ClassDB;
-   
-
---Define a function to test if a user is a member of the ClassDB DB manager role
-CREATE OR REPLACE FUNCTION ClassDB.isDBManager(userName ClassDB.IDNameDomain)
-   RETURNS BOOLEAN AS
-$$
-   SELECT pg_catalog.pg_has_role(ClassDB.foldPgID($1), 'classdb_dbmanager',
-                                 'member');
-$$ LANGUAGE sql
-   STABLE
-   RETURNS NULL ON NULL INPUT;
-
-ALTER FUNCTION ClassDB.isDBManager(ClassDB.IDNameDomain) OWNER TO ClassDB;
-
-
 --Define a function to test if a user is a superuser
 -- test current user if no user name is supplied
 CREATE OR REPLACE FUNCTION

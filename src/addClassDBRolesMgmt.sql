@@ -38,15 +38,14 @@ END
 $$;
 
 
---The Instructor, Student, and DBManager views are commented out as the User
--- view they rely on is not yet implemented
-/*
+
 --Define views to obtain info on known instructors, students, and DB managers
 -- these views obtain information from the previously defined ClassDB.User view
+/*
 CREATE OR REPLACE VIEW Instructor AS
    SELECT UserName, FullName, SchemaName, ExtraInfo, IsStudent, IsDBManager,
-          DDLCount, LastDDLObject, LastDDLActivityAtUTC, ConnectionCount,
-          LastConnectionAtUTC
+          DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
+          ConnectionCount, LastConnectionAtUTC
    FROM ClassDB.User
    WHERE IsInstructor;
 
@@ -57,8 +56,8 @@ GRANT SELECT ON ClassDB.Instructor TO ClassDB_Instructor, ClassDB_DBManager;
 
 CREATE OR REPLACE VIEW Student AS
    SELECT UserName, FullName, SchemaName, ExtraInfo, IsInstructor, IsDBManager,
-          DDLCount, LastDDLObject, LastDDLActivityAtUTC, ConnectionCount,
-          LastConnectionAtUTC
+          DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
+          ConnectionCount, LastConnectionAtUTC
    FROM ClassDB.User
    WHERE IsStudent;
 
@@ -69,8 +68,8 @@ GRANT SELECT ON ClassDB.Student TO ClassDB_Instructor, ClassDB_DBManager;
 
 CREATE OR REPLACE VIEW DBManager AS
    SELECT UserName, FullName, SchemaName, ExtraInfo, IsInstructor, IsStudent,
-          DDLCount, LastDDLObject, LastDDLActivityAtUTC, ConnectionCount,
-          LastConnectionAtUTC
+          DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
+          ConnectionCount, LastConnectionAtUTC
    FROM ClassDB.User
    WHERE IsDBManager;
 
@@ -78,6 +77,46 @@ ALTER VIEW ClassDB.Instructor OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.Instructor FROM PUBLIC;
 GRANT SELECT ON ClassDB.Instructor TO ClassDB_Instructor, ClassDB_DBManager;
 */
+
+
+
+--Define three functions to test is a user is a member of ClassDB's student,
+-- instructor, or DB manager roles, respectively
+--The result returned is equivalent to calling ClassDB.isMember with the 
+-- appropriate group role, meaning that even if true, it is not necessarily a 
+-- "known" role
+CREATE OR REPLACE FUNCTION ClassDB.isStudent(userName ClassDB.IDNameDomain)
+   RETURNS BOOLEAN AS
+$$
+   SELECT ClassDB.isMember($1, 'ClassDB_Student');
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.isStudent(ClassDB.IDNameDomain) OWNER TO ClassDB;
+
+
+CREATE OR REPLACE FUNCTION ClassDB.isInstructor(userName ClassDB.IDNameDomain)
+   RETURNS BOOLEAN AS
+$$
+   SELECT ClassDB.isMember($1, 'ClassDB_Instructor');
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
+   
+ALTER FUNCTION ClassDB.isInstructor(ClassDB.IDNameDomain) OWNER TO ClassDB;
+   
+
+CREATE OR REPLACE FUNCTION ClassDB.isDBManager(userName ClassDB.IDNameDomain)
+   RETURNS BOOLEAN AS
+$$
+   SELECT ClassDB.isMember($1, 'ClassDB_DBManager');
+$$ LANGUAGE sql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.isDBManager(ClassDB.IDNameDomain) OWNER TO ClassDB;
+
 
 
 --Define function to register a student and perform corresponding configuration
@@ -150,7 +189,7 @@ BEGIN
    --reset server-level client connection settings for the role to defaults
    -- no default option available for CONNECTION LIMIT (-1 disables the limit)
    EXECUTE FORMAT('ALTER ROLE %s SET statement_timeout TO DEFAULT', $1);
-   EXECUTE FORMAT('ALTER ROLE %s CONNECTION LIMIT TO -1', $1);
+   EXECUTE FORMAT('ALTER ROLE %s CONNECTION LIMIT -1', $1);
 
    --revoke privileges from instructors to the role's schema
    EXECUTE FORMAT('REVOKE USAGE ON SCHEMA %s FROM ClassDB_Instructor',
@@ -356,32 +395,6 @@ GRANT EXECUTE ON FUNCTION
 
 
 
---Define a function to drop all instructors
-CREATE OR REPLACE FUNCTION
-   ClassDB.dropAllInstructors(objectsDisposition VARCHAR DEFAULT 'assign_i',
-                              newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL)
-   RETURNS VOID AS
-$$
-BEGIN
-   PERFORM ClassDB.dropInstructor(I.RoleName, FALSE, TRUE, $1, $2)
-   FROM ClassDB.Instructor I;
-END;
-$$ LANGUAGE plpgsql
-   SECURITY DEFINER;
-
-
---Change function ownership and set permissions
-ALTER FUNCTION ClassDB.dropAllInstructors(VARCHAR, ClassDB.IDNameDomain)
-   OWNER TO ClassDB;
-
-REVOKE ALL ON FUNCTION ClassDB.dropAllInstructors(VARCHAR, ClassDB.IDNameDomain)
-   FROM PUBLIC;
-
-GRANT EXECUTE ON FUNCTION ClassDB.dropAllInstructors(VARCHAR, ClassDB.IDNameDomain)
-   TO ClassDB_Instructor, ClassDB_DBManager;
-
-
-
 --Define function to register a DB manager and perform corresponding configuration
 --Calls ClassDB.createRole with corresponding parameters
 --Grants appropriate privileges to newly established role and schema
@@ -487,31 +500,6 @@ GRANT EXECUTE ON FUNCTION
                          ClassDB.IDNameDomain)
    TO ClassDB_Instructor, ClassDB_DBManager;
 
-
-
---Define a function to drop all DB managers
-CREATE OR REPLACE FUNCTION
-   ClassDB.dropAllDBManagers(objectsDisposition VARCHAR DEFAULT 'assign_i',
-                             newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL)
-   RETURNS VOID AS
-$$
-BEGIN
-   PERFORM ClassDB.dropDBManager(D.RoleName, FALSE, TRUE, $1, $2)
-   FROM ClassDB.DBManager D;
-END;
-$$ LANGUAGE plpgsql
-   SECURITY DEFINER;
-
-
---Change function ownership and set permissions
-ALTER FUNCTION ClassDB.dropAllDBManagers(VARCHAR, ClassDB.IDNameDomain)
-   OWNER TO ClassDB;
-
-REVOKE ALL ON FUNCTION ClassDB.dropAllDBManagers(VARCHAR, ClassDB.IDNameDomain)
-   FROM PUBLIC;
-
-GRANT EXECUTE ON FUNCTION ClassDB.dropAllDBManagers(VARCHAR, ClassDB.IDNameDomain)
-   TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 COMMIT;
