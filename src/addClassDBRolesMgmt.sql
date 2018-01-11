@@ -20,8 +20,8 @@
 
 START TRANSACTION;
 
---Suppress NOTICE messages for this script only, this will not apply to functions
--- defined within. This hides messages that are unimportant, but possibly confusing
+--Suppress NOTICEs for this script only, this will not apply to functions
+-- defined within. This hides unimportant, but possibly confusing messages
 SET LOCAL client_min_messages TO WARNING;
 
 
@@ -139,7 +139,7 @@ BEGIN
    --get name of role's schema (possibly not the original value of schemaName)
    $3 = ClassDB.getSchemaName($1);
 
-   --grant DB privileges to student
+   --grant server-level student group role to new student
    EXECUTE FORMAT('GRANT ClassDB_Student TO %s', $1);
 
    --set server-level client connection settings for the student
@@ -183,7 +183,7 @@ CREATE OR REPLACE FUNCTION ClassDB.revokeStudent(userName ClassDB.IDNameDomain)
    RETURNS VOID AS
 $$
 BEGIN
-   --revoke student DB privileges
+   --revoke student server-level role
    PERFORM ClassDB.revokeClassDBRole($1, 'ClassDB_Student');
 
    --reset server-level client connection settings for the role to defaults
@@ -280,7 +280,7 @@ GRANT EXECUTE ON FUNCTION ClassDB.dropAllStudents(VARCHAR, ClassDB.IDNameDomain)
 
 
 
---Define function to register an instructor and perform corresponding configuration
+--Define function to register an instructor and perform corresponding config
 --Calls ClassDB.createRole with corresponding parameters
 --Grants appropriate privileges to newly established role and schema
 CREATE OR REPLACE FUNCTION
@@ -297,7 +297,7 @@ BEGIN
    --record ClassDB role
    PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $7);
 
-   --grant DB privileges to instructor
+   --grant server-level instructor group role to new instructor
    EXECUTE FORMAT('GRANT ClassDB_Instructor TO %s', $1);
 
    --set privileges on future tables the instructor creates in 'public' schema
@@ -334,7 +334,7 @@ CREATE OR REPLACE FUNCTION ClassDB.revokeInstructor(userName ClassDB.IDNameDomai
    RETURNS VOID AS
 $$
 BEGIN
-   --revoke instructor DB privileges
+   --revoke server-level instructor group role
    PERFORM ClassDB.revokeClassDBRole($1, 'ClassDB_Instructor');
 
    --reset privileges on future tables the instructor creates in 'public' schema
@@ -395,7 +395,7 @@ GRANT EXECUTE ON FUNCTION
 
 
 
---Define function to register a DB manager and perform corresponding configuration
+--Define function to register a DB manager and perform corresponding config
 --Calls ClassDB.createRole with corresponding parameters
 --Grants appropriate privileges to newly established role and schema
 CREATE OR REPLACE FUNCTION
@@ -412,7 +412,7 @@ BEGIN
    --record ClassDB role
    PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $7);
 
-   --grant DB privileges to DB manager
+   --grant server-level DB manager group role to new DB manager
    EXECUTE FORMAT('GRANT ClassDB_DBManager TO %s', $1);
 END;
 $$ LANGUAGE plpgsql
@@ -445,7 +445,7 @@ CREATE OR REPLACE FUNCTION ClassDB.revokeDBManager(userName ClassDB.IDNameDomain
    RETURNS VOID AS
 $$
 BEGIN
-   --revoke DB manager DB privileges
+   --revoke server-level DB manager group role
    PERFORM ClassDB.revokeClassDBRole($1, 'ClassDB_DBManager');
 END;
 $$ LANGUAGE plpgsql
