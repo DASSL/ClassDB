@@ -21,6 +21,10 @@
 --The following tests are performed. An error code of ERROR X indicates that test x
 -- failed
 
+non-classDB
+--1) Test that connections from all ClassDB user types are recorded, and connections
+-- from non-ClassDB users are not
+
 \set ON_ERROR_STOP on
 
 --Remember the current user so we can switch back at the end
@@ -60,7 +64,7 @@ BEGIN
       NULL, NULL, TRUE, TRUE, ' ');
 
    --Create a non-ClassDB user ensure their conenctions are not logged
-   CREATE USER conNonClassDB ENCRYPTED PASSWORD 'passwd';
+   CREATE USER conNonClassDB ENCRYPTED PASSWORD ' ';
    EXECUTE FORMAT('GRANT CONNECT ON DATABASE %I TO conNonClassDB', CURRENT_DATABASE());
 
    --Fill up the log with any existing connections

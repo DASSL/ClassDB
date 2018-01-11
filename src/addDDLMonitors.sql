@@ -99,20 +99,14 @@ REVOKE ALL ON FUNCTION ClassDB.logDDLActivity() FROM PUBLIC;
 DO
 $$
 BEGIN
-   --Only try and create the event triggers if they do not exist
-   --IF NOT ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
    DROP EVENT TRIGGER IF EXISTS triggerDDLCommandSqlDrop;
-      CREATE EVENT TRIGGER triggerDDLCommandSqlDrop
-      ON sql_drop
-      EXECUTE PROCEDURE ClassDB.logDDLActivity();
-   --END IF;
-
-   --IF NOT ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandEnd') THEN
+   CREATE EVENT TRIGGER triggerDDLCommandSqlDrop
+   ON sql_drop
+   EXECUTE PROCEDURE ClassDB.logDDLActivity();
    DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
-      CREATE EVENT TRIGGER triggerDDLCommandEnd
-      ON ddl_command_end
-      EXECUTE PROCEDURE ClassDB.logDDLActivity();
-   --END IF;
+   CREATE EVENT TRIGGER triggerDDLCommandEnd
+   ON ddl_command_end
+   EXECUTE PROCEDURE ClassDB.logDDLActivity();
 END;
 $$;
 
@@ -127,18 +121,8 @@ CREATE OR REPLACE FUNCTION ClassDB.enableDDLActivityLogging()
 RETURNS VOID AS
 $$
 BEGIN
-   --Can only enable the trigger if it is defined, otherwise throw an exception
-   --IF ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
-      ALTER EVENT TRIGGER triggerDDLCommandSqlDrop ENABLE;
-   --ELSE
-      --RAISE EXCEPTION 'Cannot enable triggerDDLCommandSqlDrop because it is undefined';
-   --END IF;
-
-   --IF ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
-      ALTER EVENT TRIGGER triggerDDLCommandEnd ENABLE;
-   --ELSE
-      --RAISE EXCEPTION 'Cannot enable triggerDDLCommandEnd because it is undefined';
-   --END IF;
+   ALTER EVENT TRIGGER triggerDDLCommandSqlDrop ENABLE;
+   ALTER EVENT TRIGGER triggerDDLCommandEnd ENABLE;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
@@ -152,17 +136,8 @@ CREATE OR REPLACE FUNCTION ClassDB.disableDDLActivityLogging()
 RETURNS VOID AS
 $$
 BEGIN
-   IF ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
-      ALTER EVENT TRIGGER triggerDDLCommandSqlDrop DISABLE;
-   ELSE
-      RAISE EXCEPTION 'Cannot enable triggerDDLCommandSqlDrop because it is undefined';
-   END IF;
-
-   IF ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
-      ALTER EVENT TRIGGER triggerDDLCommandEnd DISABLE;
-   ELSE
-      RAISE EXCEPTION 'Cannot enable triggerDDLCommandEnd because it is undefined';
-   END IF;
+   ALTER EVENT TRIGGER triggerDDLCommandSqlDrop DISABLE;
+   ALTER EVENT TRIGGER triggerDDLCommandEnd DISABLE;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;

@@ -123,7 +123,6 @@ BEGIN
    TRUNCATE classdb.postgresLog;
 END;
 $$ LANGUAGE plpgsql
-   VOLATILE
    SECURITY DEFINER;
 
 --The COPY statement requires importLog() to be run as a superuser, with SECURITY
