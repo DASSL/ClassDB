@@ -25,6 +25,10 @@
 
 --B) Checks as instructor
 
+START TRANSACTION;
+
+SET LOCAL client_min_messages TO WARNING;
+
 --Tests for superuser privilege on current_user
 DO
 $$
@@ -57,8 +61,6 @@ BEGIN
 
    DROP TABLE MyTable;
 
-   END IF;
-
    RESET SESSION AUTHORIZATION;
 
    --Check that all DDL activities have been logged
@@ -90,9 +92,9 @@ BEGIN
 
    --Check that the right ops were logged
    IF NOT EXISTS(SELECT * FROM ClassDB.DDLActivity
-                 WHERE DDLOperation = 'DROP TABLE')
+                 WHERE DDLOperation = 'CREATE TABLE')
    OR NOT EXISTS(SELECT * FROM ClassDB.DDLActivity
-                 WHERE DDLOperation = 'CREATE TABLE') THEN
+                 WHERE DDLOperation = 'DROP TABLE') THEN
       RAISE EXCEPTION 'ERROR CODE B.2';
    END IF;
 
@@ -104,7 +106,57 @@ BEGIN
 
    RESET SESSION AUTHORIZATION;
 
+   SET SESSION AUTHORIZATION ddlStudent02;
+
+   CREATE TABLE MyTable
+   (
+      MyAttr INT
+   );
+
+   ALTER TABLE MyTable ADD COLUMN NewCol VARCHAR;
+
+   CREATE VIEW MyView AS
+   SELECT *
+   FROM MyTable;
+
+   ALTER VIEW MyView RENAME TO MyNewView;
+
+   DROP VIEW MyNewView;
+
+   DROP TABLE MyTable;
+
+   SET SESSION AUTHORIZATION ddlInstructor01;
+
+   --Check that all DDL activities have been logged
+   IF (SELECT COUNT(*) FROM ClassDB.DDLActivity) <> 8 THEN
+      RAISE EXCEPTION 'ERROR CODE C.1';
+   END IF;
+
+   --Check that the right ops were logged
+   IF NOT EXISTS(SELECT * FROM ClassDB.DDLActivity
+                 WHERE DDLOperation = 'CREATE TABLE') THEN
+      RAISE EXCEPTION 'ERROR CODE C.2';
+   ELSEIF NOT EXISTS(SELECT * FROM ClassDB.DDLActivity
+                     WHERE DDLOperation = 'ALTER TABLE') THEN
+      RAISE EXCEPTION 'ERROR CODE C.3';
+   ELSEIF NOT EXISTS(SELECT * FROM ClassDB.DDLActivity
+                     WHERE DDLOperation = 'CREATE VIEW') THEN
+      RAISE EXCEPTION 'ERROR CODE C.4';
+   ELSEIF NOT EXISTS(SELECT * FROM ClassDB.DDLActivity
+                     WHERE DDLOperation = 'ALTER VIEW') THEN
+      RAISE EXCEPTION 'ERROR CODE C.5';
+   ELSEIF NOT EXISTS(SELECT * FROM ClassDB.DDLActivity
+                     WHERE DDLOperation = 'DROP VIEW') THEN
+      RAISE EXCEPTION 'ERROR CODE C.6';
+   ELSEIF NOT EXISTS(SELECT * FROM ClassDB.DDLActivity
+                     WHERE DDLOperation = 'DROP TABLE') THEN
+      RAISE EXCEPTION 'ERROR CODE C.7';
+   END IF;
+
+   RESET SESSION AUTHORIZATION;
+
    --Drop users & related objects
+   --Currently broken
    --PERFORM ClassDB.dropStudent('ddlStudent01', true);
    --PERFORM ClassDB.dropStudent('ddlStudent02', true);
    --PERFORM ClassDB.dropInstructor('ddlInstructor01', true);
@@ -113,3 +165,5 @@ BEGIN
    RAISE NOTICE 'Success!';
 END;
 $$;
+
+COMMIT;
