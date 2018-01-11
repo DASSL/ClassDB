@@ -100,17 +100,19 @@ DO
 $$
 BEGIN
    --Only try and create the event triggers if they do not exist
-   IF NOT ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
+   --IF NOT ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
+   DROP EVENT TRIGGER IF EXISTS triggerDDLCommandSqlDrop;
       CREATE EVENT TRIGGER triggerDDLCommandSqlDrop
       ON sql_drop
       EXECUTE PROCEDURE ClassDB.logDDLActivity();
-   END IF;
+   --END IF;
 
-   IF NOT ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandEnd') THEN
+   --IF NOT ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandEnd') THEN
+   DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
       CREATE EVENT TRIGGER triggerDDLCommandEnd
       ON ddl_command_end
       EXECUTE PROCEDURE ClassDB.logDDLActivity();
-   END IF;
+   --END IF;
 END;
 $$;
 
@@ -126,17 +128,17 @@ RETURNS VOID AS
 $$
 BEGIN
    --Can only enable the trigger if it is defined, otherwise throw an exception
-   IF ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
+   --IF ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
       ALTER EVENT TRIGGER triggerDDLCommandSqlDrop ENABLE;
-   ELSE
-      RAISE EXCEPTION 'Cannot enable triggerDDLCommandSqlDrop because it is undefined';
-   END IF;
+   --ELSE
+      --RAISE EXCEPTION 'Cannot enable triggerDDLCommandSqlDrop because it is undefined';
+   --END IF;
 
-   IF ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
+   --IF ClassDB.isTriggerDefined('ClassDB', 'triggerDDLCommandSqlDrop') THEN
       ALTER EVENT TRIGGER triggerDDLCommandEnd ENABLE;
-   ELSE
-      RAISE EXCEPTION 'Cannot enable triggerDDLCommandEnd because it is undefined';
-   END IF;
+   --ELSE
+      --RAISE EXCEPTION 'Cannot enable triggerDDLCommandEnd because it is undefined';
+   --END IF;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
