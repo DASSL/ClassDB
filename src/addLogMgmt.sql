@@ -80,23 +80,33 @@ REVOKE ALL PRIVILEGES ON classdb.postgresLog FROM PUBLIC;
 -- starting with the supplied date (startDate)
 -- For each line containing connection information, the matching student's
 -- connection info is updated
-CREATE OR REPLACE FUNCTION classdb.importLog(startDate DATE DEFAULT current_date)
+CREATE OR REPLACE FUNCTION classdb.importLog(startDate DATE DEFAULT NULL)
    RETURNS VOID AS
 $$
 DECLARE
    logPath VARCHAR(4096); --Max file path length on Linux, > max length on Windows
+
    lastConDate DATE;
 BEGIN
-	--Set the date of last logged connection to either the latest connection in
-	-- classdb.ConnectionActivity, or startDate if that is NULL
-	lastConDate := COALESCE(date((SELECT MAX(AcceptedAt) FROM ClassDB.ConnectionActivity)), startDate);
+   --Get a 'best-guess' last import date based on the connection activity logs
+   --This is one of those places where you need double parens. One level for the function call,
+   -- one for the sub-query
+   lastConDate = date((SELECT MAX(AcceptedAtUTC) AT TIME ZONE TO_CHAR(CURRENT_TIMESTAMP, 'TZ')
+                       FROM ClassDB.ConnectionActivity));
+
+	--Set the date of last logged connection. We prefer the user-supplied parameter, but
+   -- defer to our 'best-guess' and finally, the current date if preceeding values are null
+	lastConDate := COALESCE(startDate, lastConDate, CURRENT_DATE);
+
+   RAISE NOTICE '%', lastConDate;
 
 	--We want to import all logs between the lastConDate and current date
-	WHILE lastConDate <= current_date LOOP
+	WHILE lastConDate <= CURRENT_DATE LOOP
 	   --Get the full path to the log, assumes a log file name of postgresql-%m.%d.csv
 	   -- the log_directory setting holds the log path
       logPath := (SELECT setting FROM pg_settings WHERE "name" = 'log_directory') ||
          '/postgresql-' || to_char(lastConDate, 'MM.DD') || '.csv';
+      RAISE NOTICE '%', logPath;
       --Use copy to fill the temp import table
       EXECUTE format('COPY classdb.postgresLog FROM ''%s'' WITH csv', logPath);
       lastConDate := lastConDate + 1; --Check the next day
@@ -107,9 +117,10 @@ BEGIN
    SELECT user_name, log_time AT TIME ZONE 'utc'
    FROM ClassDB.postgresLog
    WHERE ClassDB.isUser(user_name) --Check the connection is from a ClassDB user
-   AND (log_time AT TIME ZONE 'utc') > COALESCE(lastConnection, to_timestamp(0))
+   AND (log_time AT TIME ZONE 'utc') > COALESCE((SELECT MAX(AcceptedAtUTC) FROM ClassDB.ConnectionActivity), to_timestamp(0))
    AND message LIKE 'connection%' --Filter out extraneous log lines
-   AND database_name = current_database(); --Limit to log lines for current db only
+   AND database_name = current_database() --Limit to log lines for current db only
+   ORDER BY log_time;
 
    --Clear the log table
    TRUNCATE classdb.postgresLog;
@@ -119,15 +130,12 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 --The COPY statement requires importLog() to be run as a superuser, with SECURITY
--- DEFINER
+-- DEFINER. Thus importLog() is not given to ClassDB.
 --Revoke permissions on classdb.importLog(startDate DATE) from PUBLIC, but allow
 -- Instructors and DBManagers to use it
 REVOKE ALL ON FUNCTION
    ClassDB.importLog(DATE)
    FROM PUBLIC;
-
-ALTER FUNCTION ClassDB.importLog(DATE)
-   OWNER TO ClassDB;
 
 GRANT EXECUTE ON FUNCTION
    ClassDB.importLog(DATE)
