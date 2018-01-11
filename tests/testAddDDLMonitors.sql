@@ -27,8 +27,6 @@
 
 START TRANSACTION;
 
-SET LOCAL client_min_messages TO WARNING;
-
 --Tests for superuser privilege on current_user
 DO
 $$
@@ -42,28 +40,35 @@ $$;
 DO
 $$
 BEGIN
+
+   RAISE NOTICE 'Begining test of DDL Monitors';
+
    --Clear the DDL Activity log
    TRUNCATE ClassDB.DDLActivity;
 
-   --Create users to test DDL monitors
+   --Create ClassDB users to test DDL monitors
+   RAISE NOTICE 'Creating test users';
    PERFORM ClassDB.createStudent('ddlStudent01', 'ddl test student 01');
    PERFORM ClassDB.createStudent('ddlStudent02', 'ddl test student 02');
    PERFORM ClassDB.createInstructor('ddlInstructor01', 'ddl test instructor 01');
    PERFORM ClassDB.createDBManager('ddlDBManager01', 'ddl test db manager 01');
 
+   --Create a non-ClassDB user. Their DDL operations should not be logged
+   CREATE USER ddlNonClassDBUser;
+   CREATE SCHEMA AUTHORIZATION ddlNonClassDBUser;
+
    --Perform actions as student 1
    SET SESSION AUTHORIZATION ddlStudent01;
+   RAISE NOTICE 'Performing DDL operations as a student';
 
-   CREATE TABLE MyTable
-   (
-      MyAttr INT
-   );
-
+   CREATE TABLE MyTable(MyAttr INT);
    DROP TABLE MyTable;
 
    RESET SESSION AUTHORIZATION;
 
+
    --Check that all DDL activities have been logged
+   RAISE NOTICE 'Checking student DDL operations were logged';
    IF (SELECT COUNT(*) FROM ClassDB.DDLActivity) <> 2 THEN
       RAISE EXCEPTION 'ERROR CODE A.1';
    END IF;
@@ -82,8 +87,10 @@ BEGIN
       RAISE EXCEPTION 'ERROR CODE A.3';
    END IF;
 
+
    --Check if the instructor can read the DDLActivity table
    SET SESSION AUTHORIZATION ddlInstructor01;
+   RAISE NOTICE 'Checking instructor can read ClassDB.DDLActivity';
 
    --Check that all DDL activities have been logged
    IF (SELECT COUNT(*) FROM ClassDB.DDLActivity) <> 2 THEN
@@ -104,31 +111,57 @@ BEGIN
       RAISE EXCEPTION 'ERROR CODE B.3';
    END IF;
 
-   RESET SESSION AUTHORIZATION;
+   --Test DDL operations as instructor
+   RAISE NOTICE 'Performing DDL operations as instructor';
 
+   CREATE TABLE InstructorTable(ID INT);
+   DROP TABLE InstructorTable;
+
+   --Check that instructor operations were logged
+   RAISE NOTICE 'Checking instructor DDL operations were logged';
+   IF (SELECT COUNT(*) FROM ClassDB.DDLActivity) <> 4 THEN
+      RAISE EXCEPTION 'ERROR CODE B.4';
+   END IF;
+
+
+   --Perform DDL operations as second student
    SET SESSION AUTHORIZATION ddlStudent02;
+   RAISE NOTICE 'Performing DDL operations as a second student';
 
-   CREATE TABLE MyTable
-   (
-      MyAttr INT
-   );
-
+   CREATE TABLE MyTable(MyAttr INT);
    ALTER TABLE MyTable ADD COLUMN NewCol VARCHAR;
 
    CREATE VIEW MyView AS
    SELECT *
    FROM MyTable;
-
    ALTER VIEW MyView RENAME TO MyNewView;
 
    DROP VIEW MyNewView;
-
    DROP TABLE MyTable;
 
-   SET SESSION AUTHORIZATION ddlInstructor01;
 
-   --Check that all DDL activities have been logged
-   IF (SELECT COUNT(*) FROM ClassDB.DDLActivity) <> 8 THEN
+   --Test performing operations as DBManager
+   SET SESSION AUTHORIZATION ddlDBManager01;
+   RAISE NOTICE 'Performing DDL operations as DBManager';
+
+   CREATE TABLE MyTable(MyAttr INT);
+   ALTER TABLE MyTable ADD COLUMN NewCol VARCHAR;
+   DROP TABLE MyTable;
+
+
+   --Test performing operations as a non-ClassDB user
+   SET SESSION AUTHORIZATION ddlNonClassDBUser;
+   RAISE NOTICE 'Performing DDL operations as a non-ClassDB user';
+
+   CREATE TABLE ddlNonClassDBUser.MyTable(ID INT);
+   DROP TABLE ddlNonClassDBUser.MyTable;
+
+
+   --Check that all DDL operation types have been logged
+   SET SESSION AUTHORIZATION ddlInstructor01;
+   RAISE NOTICE 'Checking that DDL oprations from all ClassDB user types have been logged';
+
+   IF (SELECT COUNT(*) FROM ClassDB.DDLActivity) <> 13 THEN
       RAISE EXCEPTION 'ERROR CODE C.1';
    END IF;
 
@@ -155,15 +188,28 @@ BEGIN
 
    RESET SESSION AUTHORIZATION;
 
+
    --Drop users & related objects
-   --Currently broken
-   --PERFORM ClassDB.dropStudent('ddlStudent01', true);
-   --PERFORM ClassDB.dropStudent('ddlStudent02', true);
-   --PERFORM ClassDB.dropInstructor('ddlInstructor01', true);
-   --PERFORM ClassDB.dropDBManager('ddlDBManager01', true);
+   PERFORM ClassDB.dropStudent('ddlStudent01', true);
+   PERFORM ClassDB.dropStudent('ddlStudent02', true);
+   PERFORM ClassDB.dropInstructor('ddlInstructor01', true);
+   PERFORM ClassDB.dropDBManager('ddlDBManager01', true);
+
+   DROP SCHEMA ddlStudent01 CASCADE;
+   DROP SCHEMA ddlStudent02 CASCADE;
+   DROP SCHEMA ddlInstructor01 CASCADE;
+   DROP SCHEMA ddlDBManager01 CASCADE;
+
+   --Drop non-ClassDB user
+   DROP SCHEMA ddlNonClassDBUser CASCADE;
+   DROP USER ddlNonClassDBUser;
 
    RAISE NOTICE 'Success!';
+   RAISE NOTICE 'Displaying final contents of ClassDB.DDLActivity:';
 END;
 $$;
+
+SELECT *
+FROM ClassDB.DDLActivity;
 
 COMMIT;
