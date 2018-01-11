@@ -42,7 +42,7 @@ BEGIN
    DROP SCHEMA conInstructor01 CASCADE;
    DROP SCHEMA conDBManager01 CASCADE;
 
-   DROP OWNED BY conNonClassDB;
-   DROP USER conNonClassDB;
+   --DROP OWNED BY conNonClassDB;
+   --DROP USER conNonClassDB;
 END
 $$;

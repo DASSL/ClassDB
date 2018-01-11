@@ -20,8 +20,6 @@
 
 --The following tests are performed. An error code of ERROR X indicates that test x
 -- failed
-
-non-classDB
 --1) Test that connections from all ClassDB user types are recorded, and connections
 -- from non-ClassDB users are not
 
@@ -64,8 +62,8 @@ BEGIN
       NULL, NULL, TRUE, TRUE, ' ');
 
    --Create a non-ClassDB user ensure their conenctions are not logged
-   CREATE USER conNonClassDB ENCRYPTED PASSWORD ' ';
-   EXECUTE FORMAT('GRANT CONNECT ON DATABASE %I TO conNonClassDB', CURRENT_DATABASE());
+   --CREATE USER conNonClassDB ENCRYPTED PASSWORD ' ';
+   --EXECUTE FORMAT('GRANT CONNECT ON DATABASE %I TO conNonClassDB', CURRENT_DATABASE());
 
    --Fill up the log with any existing connections
    RAISE NOTICE 'Importing any existing connections in the logs';
@@ -88,7 +86,7 @@ $$;
 
 \c - coninstructor01
 
-\c - conNonClassDB
+--\c - conNonClassDB
 
 \c - :psqlCurrentUser
 
@@ -129,8 +127,8 @@ BEGIN
    DROP SCHEMA conInstructor01 CASCADE;
    DROP SCHEMA conDBManager01 CASCADE;
 
-   DROP OWNED BY conNonClassDB;
-   DROP USER conNonClassDB CASCADE;
+   --DROP OWNED BY conNonClassDB;
+   --DROP USER conNonClassDB CASCADE;
 
    RAISE NOTICE 'Success!';
 END;
