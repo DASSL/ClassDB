@@ -270,13 +270,16 @@ $$ LANGUAGE plpgsql
 
 
 --Change function ownership and set permissions
-ALTER FUNCTION ClassDB.dropAllStudents(VARCHAR, ClassDB.IDNameDomain)
+ALTER FUNCTION ClassDB.dropAllStudents(BOOLEAN, BOOLEAN, VARCHAR,
+                                       ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
-REVOKE ALL ON FUNCTION ClassDB.dropAllStudents(VARCHAR, ClassDB.IDNameDomain)
+REVOKE ALL ON FUNCTION ClassDB.dropAllStudents(BOOLEAN, BOOLEAN, VARCHAR,
+                                               ClassDB.IDNameDomain)
    FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION ClassDB.dropAllStudents(VARCHAR, ClassDB.IDNameDomain)
+GRANT EXECUTE ON FUNCTION ClassDB.dropAllStudents(BOOLEAN, BOOLEAN, VARCHAR,
+                                                  ClassDB.IDNameDomain)
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
