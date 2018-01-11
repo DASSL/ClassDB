@@ -256,13 +256,15 @@ GRANT EXECUTE ON FUNCTION
 
 --Define a function to drop all students
 CREATE OR REPLACE FUNCTION
-   ClassDB.dropAllStudents(objectsDisposition VARCHAR DEFAULT 'assign_i',
+   ClassDB.dropAllStudents(dropFromServer BOOLEAN DEFAULT FALSE,
+                           okIfRemainsClassDBRoleMember BOOLEAN DEFAULT TRUE,
+                           objectsDisposition VARCHAR DEFAULT 'assign_i',
                            newObjectsOwnerName ClassDB.IDNameDomain
                                                DEFAULT NULL)
    RETURNS VOID AS
 $$
 BEGIN
-   PERFORM ClassDB.dropStudent(S.RoleName, FALSE, TRUE, $1, $2)
+   PERFORM ClassDB.dropStudent(S.RoleName, $1, $2, $3, $4)
    FROM ClassDB.Student S;
 END;
 $$ LANGUAGE plpgsql
