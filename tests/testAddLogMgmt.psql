@@ -13,8 +13,6 @@
 
 --The following test script should be run as a superuser, otherwise tests will fail
 
---***WARNING*** - This script truncates ClassDB.ConnectionActivity
-
 --This script uses psql's \c command to change connections. You will have to
 -- input the password for each role manually during the switch
 
@@ -40,14 +38,14 @@ $$;
 DO
 $$
 BEGIN
-   --Clear the DDL Activity log
-   TRUNCATE ClassDB.ConnectionActivity;
-
    --Create users to test connection logging
    PERFORM ClassDB.createStudent('conStudent01', 'con test student 01');
    PERFORM ClassDB.createStudent('conStudent02', 'con test student 02');
    PERFORM ClassDB.createInstructor('conInstructor01', 'con test instructor 01');
    PERFORM ClassDB.createDBManager('conDBManager01', 'con test db manager 01');
+
+   --Fill up the log with any existing connections
+   PERFORM ClassDB.importLog();
 END;
 $$;
 
@@ -63,11 +61,24 @@ $$;
 --Check the logs
 DO
 $$
+DECLARE
+   initialLogSize INT;
+   newLogSize INT;
 BEGIN
+   --Get the initial size of the connection log
+   SELECT COUNT(*)
+   INTO initialLogSize
+   FROM ClassDB.ConnectionActivity;
+
    PERFORM ClassDB.importLog();
-   --There's no easy way to stop older connection from being imported in a script,
-   -- so I am temporarily just check for a minimum of 4 connections found
-   IF (SELECT COUNT(*) FROM ClassDB.ConnectionActivity) >= 4 THEN
+
+   SELECT COUNT(*)
+   INTO newLogSize
+   FROM ClassDB.ConnectionActivity;
+
+   --Check if the number of new connections in the log equals the number of connections
+   -- we made in the test
+   IF newLogSize - initialLogSize <> 4 THEN
       RAISE EXCEPTION 'ERROR CODE A.1';
    END IF;
 

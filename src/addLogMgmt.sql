@@ -91,7 +91,7 @@ BEGIN
    --Get a 'best-guess' last import date based on the connection activity logs
    --This is one of those places where you need double parens. One level for the function call,
    -- one for the sub-query
-   lastConDate = date((SELECT MAX(AcceptedAtUTC) AT TIME ZONE TO_CHAR(CURRENT_TIMESTAMP, 'TZ')
+   lastConDate = date((SELECT ClassDB.ChangeTimeZone(MAX(AcceptedAtUTC))
                        FROM ClassDB.ConnectionActivity));
 
 	--Set the date of last logged connection. We prefer the user-supplied parameter, but
