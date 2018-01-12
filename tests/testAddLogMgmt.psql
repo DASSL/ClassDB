@@ -67,7 +67,7 @@ BEGIN
 
    --Fill up the log with any existing connections
    RAISE NOTICE 'Importing any existing connections in the logs';
-   PERFORM ClassDB.importLog();
+   PERFORM ClassDB.importConnectionLog();
 
    RAISE NOTICE 'Creating new connections to the server. Please enter a single space '
                 'when prompted for a test user''s password. You must also enter the password '
@@ -103,7 +103,7 @@ BEGIN
    INTO initialLogSize
    FROM ClassDB.ConnectionActivity;
 
-   PERFORM ClassDB.importLog();
+   PERFORM ClassDB.importConnectionLog();
 
    SELECT COUNT(*)
    INTO newLogSize

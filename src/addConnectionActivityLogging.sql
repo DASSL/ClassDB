@@ -1,4 +1,4 @@
---addLogMgmt.sql - ClassDB
+--addConnectionActivityLogging.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL)
@@ -84,7 +84,7 @@ REVOKE ALL PRIVILEGES ON classdb.postgresLog FROM PUBLIC;
 -- starting with the supplied date (startDate)
 -- For each line containing connection information, the matching student's
 -- connection info is updated
-CREATE OR REPLACE FUNCTION classdb.importLog(startDate DATE DEFAULT NULL)
+CREATE OR REPLACE FUNCTION classdb.importConnectionLog(startDate DATE DEFAULT NULL)
    RETURNS VOID AS
 $$
 DECLARE
@@ -92,11 +92,12 @@ DECLARE
    lastConTimestampUTC TIMESTAMP; --Hold the latest time (UTC) a connection was logged
    lastConDateLocal DATE; --Hold the latest date (local time) a connection was logged
 BEGIN
-   --Get the timestamp (at UTC) of the latest connection activity entry
+   --Get the timestamp (at UTC) of the latest connection activity entry. Then
+   -- convert the timestamp to local time to get a 'best-guess' of the last log
+   -- file data that was imported
    lastConTimestampUTC = (SELECT MAX(AcceptedAtUTC)
                           FROM ClassDB.ConnectionActivity);
 
-   --Get a 'best-guess' last import date based on the last connection timestamp
    lastConDateLocal = date(ClassDB.ChangeTimeZone(lastConTimeStampUTC));
 
 	--Set the date of last logged connection. We prefer the user-supplied parameter, but
@@ -109,7 +110,7 @@ BEGIN
 	   -- the log_directory setting holds the log path
       logPath := (SELECT setting FROM pg_settings WHERE "name" = 'log_directory') ||
          '/postgresql-' || to_char(lastConDateLocal, 'MM.DD') || '.csv';
-      --Use copy to fill the temp import table
+      --Import entries from the day's server log into our log table
       EXECUTE format('COPY classdb.postgresLog FROM ''%s'' WITH csv', logPath);
       lastConDateLocal := lastConDateLocal + 1; --Check the next day
    END LOOP;
@@ -119,26 +120,24 @@ BEGIN
    -- latest connection, and are by ClassDB users to the current DB
    INSERT INTO ClassDB.ConnectionActivity
       SELECT user_name, log_time AT TIME ZONE 'utc'
-   FROM ClassDB.postgresLog
-   WHERE ClassDB.isUser(user_name) --Check the connection is from a ClassDB user
+      FROM ClassDB.postgresLog
+      WHERE ClassDB.isUser(user_name) --Check the connection is from a ClassDB user
       AND (log_time AT TIME ZONE 'utc') > --Check that the entry is new
          COALESCE(lastConTimeStampUTC, to_timestamp(0))
       AND message LIKE 'connection%' --Only pick connection-related entries
       AND database_name = CURRENT_DATABASE(); --Only pick entries from current DB
 
    --Clear the log table
-   TRUNCATE classdb.postgresLog;
+   TRUNCATE ClassDB.PostgresLog;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
---The COPY statement requires importLog() to be run as a superuser, with SECURITY
--- DEFINER. Thus importLog() is not given to ClassDB.
---Revoke permissions on classdb.importLog(startDate DATE) from PUBLIC, but allow
--- Instructors and DBManagers to use it
-REVOKE ALL ON FUNCTION ClassDB.importLog(DATE) FROM PUBLIC;
+--The COPY statement requires importConnectionLog() to be run as a superuser, with
+-- SECURITY DEFINER. Thus importConnectionLog() is not given to ClassDB.
+REVOKE ALL ON FUNCTION ClassDB.importConnectionLog(DATE) FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION ClassDB.importLog(DATE)
+GRANT EXECUTE ON FUNCTION ClassDB.importConnectionLog(DATE)
    TO ClassDB_Instructor, ClassDB_DBManager, ClassDB;
 
 COMMIT;
