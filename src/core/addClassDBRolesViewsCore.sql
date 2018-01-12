@@ -43,19 +43,32 @@ $$;
 -- the fields marked TBD are yet to be filled in: they are commented out so
 -- the view definition can be replaced later
 CREATE OR REPLACE VIEW ClassDB.User AS
-SELECT
-   RoleName AS UserName, FullName, SchemaName, ExtraInfo,
-   ClassDB.IsInstructor(RoleName) AS IsInstructor,
-   ClassDB.IsStudent(RoleName) AS IsStudent,
-   ClassDB.IsDBManager(RoleName) AS IsDBManager,
-   (ClassDB.IsInstructor(RoleName) OR ClassDB.IsStudent(RoleName) OR
-     ClassDB.IsDBManager(RoleName)) AS HasClassDBRole
-   --0 AS DDLCount,              --TBD
-   --NULL AS LastDDLObject,      --TBD
-   --NULL AS LastDDLActivityAt,  --TBD
-   --0 AS ConnectionCount,       --TBD
-   --NULL AS LastConnectionAtUTC --TBD
+  SELECT RoleName AS UserName, FullName, SchemaName, ExtraInfo,
+  ClassDB.IsInstructor(RoleName) AS IsInstructor, --True if user is instructor
+  ClassDB.IsStudent(RoleName) AS IsStudent, --True if user is student
+  ClassDB.IsDBManager(RoleName) AS IsDBManager, --True if user is DBManager
+  ClassDB.isUser(RoleName) AS HasClassDBRole, --True if user is any ClassDB role
+  DDLCount, LastDDLActivityAtUTC, LastDDLOperation, LastDDLObject,
+  ConnectionCount, LastConnectionAtUTC
 FROM ClassDB.RoleBase
+JOIN (
+  SELECT UserName,
+  COUNT(*) AS DDLCount, --The amount of DDLs the user has executed
+  MAX(StatementStartedAtUTC) AS LastDDLActivityAtUTC --The TIMESTAMP of when the user last preformed a DDL activity
+  FROM ClassDB.DDLActivity
+  GROUP BY UserName) AS DDLActivityAggregate on RoleBase.RoleName = DDLActivityAggregate.UserName
+JOIN (
+  SELECT UserName,
+  COUNT(*) AS ConnectionCount, --The total amout of times user has connected to ClassDB
+  MAX(AcceptedAtUTC) AS LastConnectionAtUTC --A TIMESTAMP of the last connection the User had to ClassDB
+  FROM ClassDB.ConnectionActivity
+  GROUP BY UserName) AS ConnectionActivity on RoleBase.RoleName = ConnectionActivity.UserName
+JOIN (
+  SELECT Distinct on (UserName) UserName,
+  DDLOperation AS LastDDLOperation, --The operation that the user last performed
+  DDLObject AS LastDDLObject  --The object that the user last performed the DDL activity on
+  FROM ClassDB.DDLActivity
+  ORDER BY UserName, StatementStartedAtUTC DESC) AS DDLActivityOrderBy on RoleBase.Rolename = DDLActivityOrderBy.UserName
 WHERE NOT IsTeam;
 
 ALTER VIEW ClassDB.User OWNER TO ClassDB;
