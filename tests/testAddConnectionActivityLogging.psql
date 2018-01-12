@@ -1,4 +1,4 @@
---testAddLogMgmt.sql - ClassDB
+--testAddConnectionActivityLogging.psql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL)

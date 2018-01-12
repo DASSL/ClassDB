@@ -1,4 +1,4 @@
---testAddLogMgmtCleanup.sql - ClassDB
+--testAddConnectionActivityLoggingCleanup.sql - ClassDB
 
 --Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL)
