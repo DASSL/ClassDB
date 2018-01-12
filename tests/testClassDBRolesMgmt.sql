@@ -127,7 +127,7 @@ BEGIN
    PERFORM ClassDB.createStudent('testStu4', 'Wrong Name');
    CREATE SCHEMA newTestStu4 AUTHORIZATION testStu4;
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM ClassDB.createStudent('testStu4', 'Test student 4', 'newTestStu4');
+   PERFORM ClassDB.createStudent('testStu4', 'Test student 4');
    RESET client_min_messages;
 
    --Test role membership (and existence)
@@ -253,7 +253,7 @@ BEGIN
    PERFORM ClassDB.createInstructor('testIns4', 'Wrong Name');
    CREATE SCHEMA newTestIns4 AUTHORIZATION testIns4;
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM ClassDB.createInstructor('testIns4', 'Test instructor 4', 'newTestIns4');
+   PERFORM ClassDB.createInstructor('testIns4', 'Test instructor 4');
    RESET client_min_messages;
 
    --Test role membership (and existence)
@@ -377,7 +377,7 @@ BEGIN
    PERFORM ClassDB.createDBManager('testDBM4', 'Wrong Name');
    CREATE SCHEMA newTestDBM4 AUTHORIZATION testDBM4;
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM ClassDB.createDBManager('testDBM4', 'Test DB manager 4', 'newTestDBM4');
+   PERFORM ClassDB.createDBManager('testDBM4', 'Test DB manager 4');
    RESET client_min_messages;
 
    --Test role membership (and existence)
@@ -503,14 +503,14 @@ BEGIN
    END IF;
 
    --Test if roles no longer have student role
-   IF ClassDB.isMember('testStu0', 'ClassDB_Student')
-      OR ClassDB.isMember('testInsStu0', 'ClassDB_Student')
+   IF ClassDB.isMember('testStu0', 'classdb_student')
+      OR ClassDB.isMember('testInsStu0', 'classdb_student')
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
 
    --Test if second user still has instructor role
-   IF NOT ClassDB.isMember('testInsStu0', 'ClassDB_Instructor')
+   IF NOT ClassDB.isMember('testInsStu0', 'classdb_instructor')
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
@@ -569,14 +569,14 @@ BEGIN
    END IF;
 
    --Test if roles no longer have instructor role
-   IF ClassDB.isMember('testIns0', 'ClassDB_Instructor')
-      OR ClassDB.isMember('testDBMIns0', 'ClassDB_Instructor')
+   IF ClassDB.isMember('testIns0', 'classdb_instructor')
+      OR ClassDB.isMember('testDBMIns0', 'classdb_instructor')
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
 
    --Test if second user still has DBManager role
-   IF NOT ClassDB.isMember('testDBMIns0', 'ClassDB_DBManager')
+   IF NOT ClassDB.isMember('testDBMIns0', 'classdb_dbmanager')
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
@@ -633,14 +633,14 @@ BEGIN
    END IF;
 
    --Test if roles no longer have DB manager role
-   IF ClassDB.isMember('testDBM0', 'ClassDB_DBManager')
-      OR ClassDB.isMember('testStuDBM0', 'ClassDB_DBManager')
+   IF ClassDB.isMember('testDBM0', 'classdb_dbmanager')
+      OR ClassDB.isMember('testStuDBM0', 'classdb_dbmanager')
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
 
    --Test if second user still has student role
-   IF NOT ClassDB.isMember('testStuDBM0', 'ClassDB_Student')
+   IF NOT ClassDB.isMember('testStuDBM0', 'classdb_student')
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
@@ -677,45 +677,45 @@ BEGIN
    PERFORM ClassDB.createStudent('testStu1', 'Test student 1');
    PERFORM ClassDB.createStudent('testStu2', 'Test student 2');
    PERFORM ClassDB.createStudent('testStu3', 'Test student 3');
-   
+
    --ExtraInfo and initialPwd provided, then create schema owned by student
    PERFORM ClassDB.createStudent('testStu4', 'Test student 4', NULL, '100',
                                  FALSE, FALSE, 'testpass');
    CREATE SCHEMA testSchema AUTHORIZATION testStu1;
-   
+
    --Multi-role user
    PERFORM ClassDB.createStudent('testStuDBM0', 'Test student/DB manager 0',
                                  NULL, NULL, FALSE, FALSE);
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createDBManager('testStuDBM0', 'Test student/DB manager 0');
    RESET client_min_messages;
-   
+
    --Drop first student
    PERFORM ClassDB.dropStudent('testStu0');
-   
+
    --Drop second student, including dropping from server
    PERFORM ClassDB.dropStudent('testStu1', TRUE);
-   
+
    --Drop server role for third student, then drop using ClassDB means
    DROP OWNED BY testStu2;
    DROP ROLE testStu2;
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.dropStudent('testStu2');
    RESET client_min_messages;
-   
+
    --Drop server role and owned objects for fourth student
    PERFORM ClassDB.dropStudent('testStu3', TRUE, TRUE, 'drop_c');
-   
+
    --Drop fifth student
    PERFORM ClassDB.dropStudent('testStu4');
-   
+
    --Drop multi-role student
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.dropStudent('testStuDBM0');
    RESET client_min_messages;
 
    --Check for correct existence of roles
-   IF    NOT ClassDB.isServerRoleDefined('testStu0') 
+   IF    NOT ClassDB.isServerRoleDefined('testStu0')
       OR ClassDB.isServerRoleDefined('testStu1')
       OR ClassDB.isServerRoleDefined('testStu2')
       OR ClassDB.isServerRoleDefined('testStu3')
@@ -725,7 +725,7 @@ BEGIN
       RETURN 'FAIL: Code 1';
    END IF;
 
-   --Check for existence of schemas 
+   --Check for existence of schemas
    IF    NOT pg_temp.isSchemaDefined('testStu0')
       OR NOT pg_temp.isSchemaDefined('testStu1')
       OR pg_temp.isSchemaDefined('testStu2')
@@ -743,15 +743,15 @@ BEGIN
       AND ClassDB.getSchemaOwnerName('testStu4') = 'classdb_instructor'
       AND ClassDB.getSchemaOwnerName('testSchema') = 'classdb_instructor'
       AND ClassDB.getSchemaOwnerName('testStuDBM0') = 'classdb_instructor')
-   THEN 
+   THEN
       RETURN 'FAIL: Code 3';
    END IF;
-   
+
    --Cleanup
    DROP ROLE testStu0, testStu4, testStuDBM0;
    DROP SCHEMA testStu0 ,testStu1, testStu4, testSchema, testStuDBM0;
    DELETE FROM ClassDB.RoleBase WHERE RoleName = 'teststudbm0';
-   
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
@@ -765,45 +765,45 @@ BEGIN
    PERFORM ClassDB.createInstructor('testIns1', 'Test instructor 1');
    PERFORM ClassDB.createInstructor('testIns2', 'Test instructor 2');
    PERFORM ClassDB.createInstructor('testIns3', 'Test instructor 3');
-   
+
    --ExtraInfo and initialPwd provided, then create schema owned by instructor
    PERFORM ClassDB.createInstructor('testIns4', 'Test instructor 4', NULL, '100',
                                  FALSE, FALSE, 'testpass');
    CREATE SCHEMA testSchema AUTHORIZATION testIns1;
-   
+
    --Multi-role user
    PERFORM ClassDB.createInstructor('testInsDBM0', 'Test instructor/DB manager 0',
                                  NULL, NULL, FALSE, FALSE);
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createDBManager('testInsDBM0', 'Test instructor/DB manager 0');
    RESET client_min_messages;
-   
+
    --Drop first instructor
    PERFORM ClassDB.dropInstructor('testIns0');
-   
+
    --Drop second instructor, including dropping from server
    PERFORM ClassDB.dropInstructor('testIns1', TRUE);
-   
+
    --Drop server role for third instructor, then drop using ClassDB means
    DROP OWNED BY testIns2;
    DROP ROLE testIns2;
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.dropInstructor('testIns2');
    RESET client_min_messages;
-   
+
    --Drop server role and owned objects for fourth instructor
    PERFORM ClassDB.dropInstructor('testIns3', TRUE, TRUE, 'drop_c');
-   
+
    --Drop fifth instructor
    PERFORM ClassDB.dropInstructor('testIns4');
-   
+
    --Drop multi-role instructor
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.dropInstructor('testInsDBM0');
    RESET client_min_messages;
-   
+
    --Check for correct existence of roles
-   IF    NOT ClassDB.isServerRoleDefined('testIns0') 
+   IF    NOT ClassDB.isServerRoleDefined('testIns0')
       OR ClassDB.isServerRoleDefined('testIns1')
       OR ClassDB.isServerRoleDefined('testIns2')
       OR ClassDB.isServerRoleDefined('testIns3')
@@ -813,7 +813,7 @@ BEGIN
       RETURN 'FAIL: Code 1';
    END IF;
 
-   --Check for existence of schemas 
+   --Check for existence of schemas
    IF    NOT pg_temp.isSchemaDefined('testIns0')
       OR NOT pg_temp.isSchemaDefined('testIns1')
       OR pg_temp.isSchemaDefined('testIns2')
@@ -831,15 +831,15 @@ BEGIN
       AND ClassDB.getSchemaOwnerName('testIns4') = 'classdb_instructor'
       AND ClassDB.getSchemaOwnerName('testSchema') = 'classdb_instructor'
       AND ClassDB.getSchemaOwnerName('testInsDBM0') = 'classdb_instructor')
-   THEN 
+   THEN
       RETURN 'FAIL: Code 3';
    END IF;
-   
+
    --Cleanup
    DROP ROLE testIns0, testIns4, testInsDBM0;
    DROP SCHEMA testIns0 ,testIns1, testIns4, testSchema, testInsDBM0;
    DELETE FROM ClassDB.RoleBase WHERE RoleName = 'testinsdbm0';
-   
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
@@ -853,45 +853,45 @@ BEGIN
    PERFORM ClassDB.createDBManager('testDBM1', 'Test DB manager 1');
    PERFORM ClassDB.createDBManager('testDBM2', 'Test DB manager 2');
    PERFORM ClassDB.createDBManager('testDBM3', 'Test DB manager 3');
-   
+
    --ExtraInfo and initialPwd provided, then create schema owned by DB manager
    PERFORM ClassDB.createDBManager('testDBM4', 'Test DB manager 4', NULL, '100',
                                  FALSE, FALSE, 'testpass');
    CREATE SCHEMA testSchema AUTHORIZATION testDBM1;
-   
+
    --Multi-role user
    PERFORM ClassDB.createDBManager('testDBMStu0', 'Test DB manager/student 0',
                                  NULL, NULL, FALSE, FALSE);
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createDBManager('testDBMStu0', 'Test DB manager/student 0');
    RESET client_min_messages;
-   
+
    --Drop first DB manager
    PERFORM ClassDB.dropDBManager('testDBM0');
-   
+
    --Drop second DB manager, including dropping from server
    PERFORM ClassDB.dropDBManager('testDBM1', TRUE);
-   
+
    --Drop server role for third DB manager, then drop using ClassDB means
    DROP OWNED BY testDBM2;
    DROP ROLE testDBM2;
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.dropDBManager('testDBM2');
    RESET client_min_messages;
-   
+
    --Drop server role and owned objects for fourth DB manager
    PERFORM ClassDB.dropDBManager('testDBM3', TRUE, TRUE, 'drop_c');
-   
+
    --Drop fifth DB manager
    PERFORM ClassDB.dropDBManager('testDBM4');
-   
+
    --Drop multi-role DB manager
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.dropDBManager('testDBMStu0');
    RESET client_min_messages;
 
    --Check for correct existence of roles
-   IF    NOT ClassDB.isServerRoleDefined('testDBM0') 
+   IF    NOT ClassDB.isServerRoleDefined('testDBM0')
       OR ClassDB.isServerRoleDefined('testDBM1')
       OR ClassDB.isServerRoleDefined('testDBM2')
       OR ClassDB.isServerRoleDefined('testDBM3')
@@ -901,7 +901,7 @@ BEGIN
       RETURN 'FAIL: Code 1';
    END IF;
 
-   --Check for existence of schemas 
+   --Check for existence of schemas
    IF    NOT pg_temp.isSchemaDefined('testDBM0')
       OR NOT pg_temp.isSchemaDefined('testDBM1')
       OR pg_temp.isSchemaDefined('testDBM2')
@@ -919,15 +919,15 @@ BEGIN
       AND ClassDB.getSchemaOwnerName('testDBM4') = 'classdb_instructor'
       AND ClassDB.getSchemaOwnerName('testSchema') = 'classdb_instructor'
       AND ClassDB.getSchemaOwnerName('testDBMStu0') = 'classdb_instructor')
-   THEN 
+   THEN
       RETURN 'FAIL: Code 3';
    END IF;
-   
+
    --Cleanup
    DROP ROLE testDBM0, testDBM4, testDBMStu0;
    DROP SCHEMA testDBM0 ,testDBM1, testDBM4, testSchema, testDBMStu0;
    DELETE FROM ClassDB.RoleBase WHERE RoleName = 'testdbmstu0';
-   
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
@@ -939,18 +939,18 @@ BEGIN
    --Create two test students
    PERFORM ClassDB.createStudent('testStu0', 'Test student 0');
    PERFORM ClassDB.createStudent('testStu1', 'Test student 1');
-   
+
    --Minimal drop
    PERFORM ClassDB.dropAllStudents();
-   
+
    --Check for correct existence of roles
-   IF    NOT ClassDB.isServerRoleDefined('testStu0') 
+   IF    NOT ClassDB.isServerRoleDefined('testStu0')
       OR NOT ClassDB.isServerRoleDefined('testStu1')
    THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
-   --Check for existence of schemas 
+   --Check for existence of schemas
    IF    NOT pg_temp.isSchemaDefined('testStu0')
       OR NOT pg_temp.isSchemaDefined('testStu1')
    THEN
@@ -960,35 +960,35 @@ BEGIN
    --Check for ownership of existing schemas
    IF NOT(ClassDB.getSchemaOwnerName('testStu0') = 'classdb_instructor'
       AND ClassDB.getSchemaOwnerName('testStu1') = 'classdb_instructor')
-   THEN 
+   THEN
       RETURN 'FAIL: Code 3';
    END IF;
-   
+
    --Initial cleanup
    DROP ROLE testStu0, testStu1;
    DROP SCHEMA testStu0, testStu1;
-   
+
    --Recreate two test students
    PERFORM ClassDB.createStudent('testStu0', 'Test student 0');
    PERFORM ClassDB.createStudent('testStu1', 'Test student 1');
-   
+
    --Drop from server and drop owned objects
    PERFORM ClassDB.dropAllStudents(TRUE, FALSE, 'drop_c');
-   
+
    --Check for correct existence of roles
-   IF    ClassDB.isServerRoleDefined('testStu0') 
+   IF    ClassDB.isServerRoleDefined('testStu0')
       OR ClassDB.isServerRoleDefined('testStu1')
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
 
-   --Check for existence of schemas 
+   --Check for existence of schemas
    IF    pg_temp.isSchemaDefined('testStu0')
       OR pg_temp.isSchemaDefined('testStu1')
    THEN
       RETURN 'FAIL: Code 5';
    END IF;
-   
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;

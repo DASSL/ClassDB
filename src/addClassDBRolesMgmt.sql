@@ -86,9 +86,9 @@ CREATE OR REPLACE FUNCTION ClassDB.isStudent(userName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
 $$
 BEGIN
-   IF NOT ClassDB.isRoleKnown($1) THEN
+   IF NOT ClassDB.isUser($1) THEN
       RETURN FALSE;
-   ELSIF NOT ClassDB.isMember($1, 'ClassDB_Student') THEN
+   ELSIF NOT ClassDB.isMember($1, 'classdb_student') THEN
       RETURN FALSE;
    ELSE
       RETURN TRUE;
@@ -111,9 +111,9 @@ CREATE OR REPLACE FUNCTION ClassDB.isInstructor(userName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
 $$
 BEGIN
-   IF NOT ClassDB.isRoleKnown($1) THEN
+   IF NOT ClassDB.isUser($1) THEN
       RETURN FALSE;
-   ELSIF NOT ClassDB.isMember($1, 'ClassDB_Instructor') THEN
+   ELSIF NOT ClassDB.isMember($1, 'classdb_instructor') THEN
       RETURN FALSE;
    ELSE
       RETURN TRUE;
@@ -136,9 +136,9 @@ CREATE OR REPLACE FUNCTION ClassDB.isDBManager(userName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
 $$
 BEGIN
-   IF NOT ClassDB.isRoleKnown($1) THEN
+   IF NOT ClassDB.isUser($1) THEN
       RETURN FALSE;
-   ELSIF NOT ClassDB.isMember($1, 'ClassDB_DBManager') THEN
+   ELSIF NOT ClassDB.isMember($1, 'classdb_dbmanager') THEN
       RETURN FALSE;
    ELSE
       RETURN TRUE;
@@ -221,10 +221,10 @@ GRANT EXECUTE ON FUNCTION
 CREATE OR REPLACE FUNCTION ClassDB.revokeStudent(userName ClassDB.IDNameDomain)
    RETURNS VOID AS
 $$
-BEGIN   
+BEGIN
    --revoke student server-level role
-   PERFORM ClassDB.revokeClassDBRole($1, 'ClassDB_Student');
-   
+   PERFORM ClassDB.revokeClassDBRole($1, 'classdb_student');
+
    IF ClassDB.isServerRoleDefined($1) THEN
       --reset server-level client connection settings for the role to defaults
       -- no default option available for CONNECTION LIMIT (-1 disables the limit)
@@ -390,7 +390,7 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
    --revoke server-level instructor group role
-   PERFORM ClassDB.revokeClassDBRole($1, 'ClassDB_Instructor');
+   PERFORM ClassDB.revokeClassDBRole($1, 'classdb_instructor');
 
    IF ClassDB.isServerRoleDefined($1) THEN
       --reset privileges on future tables the instructor creates in 'public' schema
@@ -508,7 +508,7 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
    --revoke server-level DB manager group role
-   PERFORM ClassDB.revokeClassDBRole($1, 'ClassDB_DBManager');
+   PERFORM ClassDB.revokeClassDBRole($1, 'classdb_dbmanager');
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
