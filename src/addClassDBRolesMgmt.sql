@@ -78,42 +78,83 @@ GRANT SELECT ON ClassDB.DBManager TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 
---Define three functions to test is a user is a member of ClassDB's student,
+--Define three functions to test if a user is a member of ClassDB's student,
 -- instructor, or DB manager roles, respectively
---The result returned is equivalent to calling ClassDB.isMember with the
--- appropriate group role, meaning that even if true, it is not necessarily a
--- "known" role
+--A return value of TRUE means that the role exists on the server, is "known" to
+-- ClassDB and has a corresponding student/instructor/DB manager server role
 CREATE OR REPLACE FUNCTION ClassDB.isStudent(userName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
 $$
-   SELECT ClassDB.isMember($1, 'ClassDB_Student');
-$$ LANGUAGE sql
+BEGIN
+   IF NOT ClassDB.isRoleKnown($1) THEN
+      RETURN FALSE;
+   ELSIF NOT ClassDB.isMember($1, 'ClassDB_Student') THEN
+      RETURN FALSE;
+   ELSE
+      RETURN TRUE;
+   END IF;
+END;
+$$ LANGUAGE plpgsql
    STABLE
    RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.isStudent(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
+REVOKE ALL ON FUNCTION ClassDB.isStudent(ClassDB.IDNameDomain)
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.isStudent(ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
 
 CREATE OR REPLACE FUNCTION ClassDB.isInstructor(userName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
 $$
-   SELECT ClassDB.isMember($1, 'ClassDB_Instructor');
-$$ LANGUAGE sql
+BEGIN
+   IF NOT ClassDB.isRoleKnown($1) THEN
+      RETURN FALSE;
+   ELSIF NOT ClassDB.isMember($1, 'ClassDB_Instructor') THEN
+      RETURN FALSE;
+   ELSE
+      RETURN TRUE;
+   END IF;
+END;
+$$ LANGUAGE plpgsql
    STABLE
    RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.isInstructor(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
+REVOKE ALL ON FUNCTION ClassDB.isInstructor(ClassDB.IDNameDomain)
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.isInstructor(ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
 
 CREATE OR REPLACE FUNCTION ClassDB.isDBManager(userName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
 $$
-   SELECT ClassDB.isMember($1, 'ClassDB_DBManager');
-$$ LANGUAGE sql
+BEGIN
+   IF NOT ClassDB.isRoleKnown($1) THEN
+      RETURN FALSE;
+   ELSIF NOT ClassDB.isMember($1, 'ClassDB_DBManager') THEN
+      RETURN FALSE;
+   ELSE
+      RETURN TRUE;
+   END IF;
+END;
+$$ LANGUAGE plpgsql
    STABLE
    RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.isDBManager(ClassDB.IDNameDomain) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION ClassDB.isDBManager(ClassDB.IDNameDomain)
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.isDBManager(ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 
