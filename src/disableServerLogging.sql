@@ -1,4 +1,4 @@
---enableServerLogging.sql - ClassDB
+--disableServerLogging.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL)
@@ -10,6 +10,8 @@
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
+--This script must be run as superuser.
+--This script only needs to be run once per server to disable connection logging.
 
 --Additonally, this script must be run using a client that will send each statement
 -- individually, such as psql.  Some clients, like pgAdmin 4, cannot run this script
