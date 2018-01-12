@@ -87,12 +87,6 @@ DROP OWNED BY ClassDB_Student;
 DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
 DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
 
---Drop all ClassDB owned functions from public schema
-DO
-$$
-BEGIN
-   EXECUTE (SELECT string_agg('DROP FUNCTION ' || ns.nspname || '.' || p.proname
-
 --Try to drop objects that are installed by ClassDB, but not owned by it
 -- Currently, these are all functions that must be owned by superusers
 DROP FUNCTION IF EXISTS classdb.listUserConnections(VARCHAR);
@@ -105,7 +99,6 @@ DROP OWNED BY ClassDB;
 
 --Delete the entire classdb schema in the current database
 DROP SCHEMA IF EXISTS ClassDB;
-
 
 --We now want to show our NOTICES, so switch display level back to default
 RESET client_min_messages;
