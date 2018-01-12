@@ -92,29 +92,19 @@ DO
 $$
 BEGIN
    EXECUTE (SELECT string_agg('DROP FUNCTION ' || ns.nspname || '.' || p.proname
-          || '(' || oidvectortypes(p.proargtypes) || ');', E'\n')
-   FROM pg_proc p JOIN pg_namespace ns ON p.pronamespace = ns.oid
-   WHERE ns.nspname = 'public');
-END;
-$$;
 
---Drop all ClassDB owned views from public
--- Note that this will drop any user objects that are derived from public ClassDB
--- objects, such as student owned views that that query MyActivity, MyActivitySummary, etc.
-DO
-$$
-BEGIN
-   EXECUTE (SELECT string_agg('DROP VIEW ' || "object" || ' CASCADE;', E'\n')
-   FROM ClassDB.listOwnedObjects('classdb')
-   WHERE "schema" = 'public'
-   AND kind ILIKE 'v%');
-END;
-$$;
+--Try to drop objects that are installed by ClassDB, but not owned by it
+-- Currently, these are all functions that must be owned by superusers
+DROP FUNCTION IF EXISTS classdb.listUserConnections(VARCHAR);
+DROP FUNCTION IF EXISTS classdb.enableDDLActivityLogging();
+DROP FUNCTION IF EXISTS classdb.disableDDLActivityLogging();
+DROP FUNCTION IF EXISTS classdb.importConnectionLog(date);
 
+--Try to drop all ClassDB owned functions in ClassDB schema
+DROP OWNED BY ClassDB;
 
 --Delete the entire classdb schema in the current database
--- no need to drop individual objects created in that schema
-DROP SCHEMA IF EXISTS ClassDB CASCADE;
+DROP SCHEMA IF EXISTS ClassDB;
 
 
 --We now want to show our NOTICES, so switch display level back to default
