@@ -221,23 +221,25 @@ GRANT EXECUTE ON FUNCTION
 CREATE OR REPLACE FUNCTION ClassDB.revokeStudent(userName ClassDB.IDNameDomain)
    RETURNS VOID AS
 $$
-BEGIN
+BEGIN   
    --revoke student server-level role
    PERFORM ClassDB.revokeClassDBRole($1, 'ClassDB_Student');
+   
+   IF ClassDB.isServerRoleDefined($1) THEN
+      --reset server-level client connection settings for the role to defaults
+      -- no default option available for CONNECTION LIMIT (-1 disables the limit)
+      EXECUTE FORMAT('ALTER ROLE %s SET statement_timeout TO DEFAULT', $1);
+      EXECUTE FORMAT('ALTER ROLE %s CONNECTION LIMIT -1', $1);
 
-   --reset server-level client connection settings for the role to defaults
-   -- no default option available for CONNECTION LIMIT (-1 disables the limit)
-   EXECUTE FORMAT('ALTER ROLE %s SET statement_timeout TO DEFAULT', $1);
-   EXECUTE FORMAT('ALTER ROLE %s CONNECTION LIMIT -1', $1);
-
-   --revoke privileges from instructors to the role's schema
-   EXECUTE FORMAT('REVOKE USAGE ON SCHEMA %s FROM ClassDB_Instructor',
-                  ClassDB.getSchemaName($1));
-   EXECUTE FORMAT('REVOKE SELECT ON ALL TABLES IN SCHEMA %s FROM'
-               ||' ClassDB_Instructor', ClassDB.getSchemaName($1));
-   EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s REVOKE'
-               ||' SELECT ON TABLES FROM ClassDB_Instructor', $1,
-                 ClassDB.getSchemaName($1));
+      --revoke privileges from instructors to the role's schema
+      EXECUTE FORMAT('REVOKE USAGE ON SCHEMA %s FROM ClassDB_Instructor',
+                     ClassDB.getSchemaName($1));
+      EXECUTE FORMAT('REVOKE SELECT ON ALL TABLES IN SCHEMA %s FROM'
+                  ||' ClassDB_Instructor', ClassDB.getSchemaName($1));
+      EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s REVOKE'
+                  ||' SELECT ON TABLES FROM ClassDB_Instructor', $1,
+                    ClassDB.getSchemaName($1));
+   END IF;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
@@ -303,7 +305,7 @@ CREATE OR REPLACE FUNCTION
    RETURNS VOID AS
 $$
 BEGIN
-   PERFORM ClassDB.dropStudent(S.RoleName, $1, $2, $3, $4)
+   PERFORM ClassDB.dropStudent(S.UserName, $1, $2, $3, $4)
    FROM ClassDB.Student S;
 END;
 $$ LANGUAGE plpgsql
@@ -390,9 +392,11 @@ BEGIN
    --revoke server-level instructor group role
    PERFORM ClassDB.revokeClassDBRole($1, 'ClassDB_Instructor');
 
-   --reset privileges on future tables the instructor creates in 'public' schema
-   EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA public REVOKE'
-               || ' SELECT ON TABLES FROM PUBLIC', $1);
+   IF ClassDB.isServerRoleDefined($1) THEN
+      --reset privileges on future tables the instructor creates in 'public' schema
+      EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA public REVOKE'
+                  || ' SELECT ON TABLES FROM PUBLIC', $1);
+   END IF;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
