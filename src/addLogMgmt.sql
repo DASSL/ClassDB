@@ -108,7 +108,7 @@ BEGIN
 	   --Get the full path to the log, assumes a log file name of postgresql-%m.%d.csv
 	   -- the log_directory setting holds the log path
       logPath := (SELECT setting FROM pg_settings WHERE "name" = 'log_directory') ||
-         '/postgresql-' || to_char(lastConDate, 'MM.DD') || '.csv';
+         '/postgresql-' || to_char(lastConDateLocal, 'MM.DD') || '.csv';
       --Use copy to fill the temp import table
       EXECUTE format('COPY classdb.postgresLog FROM ''%s'' WITH csv', logPath);
       lastConDateLocal := lastConDateLocal + 1; --Check the next day
