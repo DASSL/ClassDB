@@ -1,6 +1,6 @@
 --addClassDBRolesViewsCore.sql - ClassDB
 
---Andrew Figueroa, Kevin Kelly, Sean Murthy
+--Andrew Figueroa, Kevin Kelly, Steven Rollo Sean Murthy
 --Data Science & Systems Lab (DASSL)
 --https://dassl.github.io/
 
@@ -25,6 +25,19 @@ START TRANSACTION;
 --Suppress NOTICE messages for this script
 -- hides unimportant but possibly confusing msgs generated as the script executes
 SET LOCAL client_min_messages TO WARNING;
+
+--Make sure the current user has sufficient privilege to run this script
+-- privileges required: superuser
+DO
+$$
+BEGIN
+   IF NOT classdb.isSuperUser() THEN
+      RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
+                        ' superuser privileges';
+   END IF;
+END
+$$;
+
 
 --Define a view to return known users
 -- the fields marked TBD are yet to be filled in: they are commented out so
