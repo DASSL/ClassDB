@@ -15,8 +15,8 @@
 -- once per server, however.
 
 --Additonally, this script must be run using a client that will send each statement
--- individually, such as psql.  Some clients, like pgAdmin 4, cannot run this script
--- because they pack each statement into a single command string.  This causes
+-- individually - we recommend psql. Some clients, like pgAdmin 4, cannot run this
+-- script because they pack each statement into a single command string.  This causes
 -- ALTER SYSTEM statements to fail.
 
 --This script uses ALTER SYSTEM statements to change the Postgres server log settings for
