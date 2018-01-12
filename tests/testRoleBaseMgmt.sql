@@ -199,22 +199,40 @@ BEGIN
 --------------------------------------------------------------------------------
 
    --test dropping a role without dropping it from the server
-   --also test object assignment to another user
+   --also test object assignment to another user when ClassDB does not have the
+   --same rights as both the role to be dropped and the new object owner
+
+   --revoke u1 and s1 roles from ClassDB: dropRole should re-grant the roles
+   REVOKE u1, s1 FROM ClassDB;
+
+   --ClassDB does not have either role
+   RAISE INFO '%   isMember(ClassDB, u1: before dropRole)',
+   CASE ClassDB.isMember('classdb', 'u1') WHEN TRUE THEN 'FAIL: Code 24' ELSE 'PASS' END;
+
+   RAISE INFO '%   isMember(ClassDB, s1: before dropRole)',
+   CASE ClassDB.isMember('classdb', 's1') WHEN TRUE THEN 'FAIL: Code 25' ELSE 'PASS' END;
 
    --u1 is a known role
    RAISE INFO '%   isRoleKnown(u1: before dropRole)',
-   CASE ClassDB.isRoleKnown('u1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 24' END;
+   CASE ClassDB.isRoleKnown('u1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 26' END;
 
    --drop u1 from record, but let it remain a server role; assign objects to s1
    PERFORM ClassDB.dropRole('u1', FALSE, FALSE, 'assign', 's1');
 
    --u1 is no longer a known role
    RAISE INFO '%   isRoleKnown(u1: after dropRole)',
-   CASE ClassDB.isRoleKnown('u1') WHEN TRUE THEN 'FAIL: Code 25' ELSE 'PASS' END;
+   CASE ClassDB.isRoleKnown('u1') WHEN TRUE THEN 'FAIL: Code 27' ELSE 'PASS' END;
 
    --u1 is still a server role
    RAISE INFO '%   isServerRoleDefined(u1: after dropRole)',
-   CASE ClassDB.isServerRoleDefined('u1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 26' END;
+   CASE ClassDB.isServerRoleDefined('u1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 28' END;
+
+   --ClassDB should now have both u1 and s1 roles
+   RAISE INFO '%   isMember(ClassDB, u1: after dropRole)',
+   CASE ClassDB.isMember('classdb', 'u1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 29' END;
+
+   RAISE INFO '%   isMember(ClassDB, s1: after dropRole)',
+   CASE ClassDB.isMember('classdb', 's1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 30' END;
 
    --u1's schema exists but is now owned by s1
    RAISE INFO '%   dropRole(u1, FALSE, FALSE, assign, s1)',
@@ -222,7 +240,7 @@ BEGIN
                WHERE schema_name = 'u1' AND schema_owner = 's1'
               )
       WHEN TRUE THEN 'PASS'
-      ELSE 'FAIL: Code 27'
+      ELSE 'FAIL: Code 31'
    END;
 
 --------------------------------------------------------------------------------
@@ -232,18 +250,18 @@ BEGIN
 
    --t1 is a known role
    RAISE INFO '%   isRoleKnown(t1: before dropRole)',
-   CASE ClassDB.isRoleKnown('t1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 28' END;
+   CASE ClassDB.isRoleKnown('t1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 32' END;
 
    --drop u1 from record and from the server; assign objects to ClassDB_Instructor
    PERFORM ClassDB.dropRole('t1', TRUE);
 
    --t1 is no longer a known role
    RAISE INFO '%   isRoleKnown(u1: after dropRole)',
-   CASE ClassDB.isRoleKnown('t1') WHEN TRUE THEN 'FAIL: Code 29' ELSE 'PASS' END;
+   CASE ClassDB.isRoleKnown('t1') WHEN TRUE THEN 'FAIL: Code 33' ELSE 'PASS' END;
 
    --t1 is no longer a server role
    RAISE INFO '%   isServerRoleDefined(u1: after dropRole)',
-   CASE ClassDB.isServerRoleDefined('t1') WHEN TRUE THEN 'FAIL: Code 30' ELSE 'PASS' END;
+   CASE ClassDB.isServerRoleDefined('t1') WHEN TRUE THEN 'FAIL: Code 34' ELSE 'PASS' END;
 
    --t1's schema exists but is owned by classdb_instructor
    RAISE INFO '%   createRole(s1, s1 name, FALSE)',
@@ -251,35 +269,35 @@ BEGIN
                WHERE schema_name = 't1_schema' AND schema_owner = 'classdb_instructor'
               )
       WHEN TRUE THEN 'PASS'
-      ELSE 'FAIL: Code 31'
+      ELSE 'FAIL: Code 35'
    END;
 
 --------------------------------------------------------------------------------
 
    --test dropping a role while also dropping it from the server
-   --also drop roles objects
+   --also recursively drop all objects the role owns
 
    --s1 is a known role
    RAISE INFO '%   isRoleKnown(s1: before dropRole)',
-   CASE ClassDB.isRoleKnown('s1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 32' END;
+   CASE ClassDB.isRoleKnown('s1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 36' END;
 
    --drop s1 from record and the server, and drop all objects it owns
    PERFORM ClassDB.dropRole('s1', TRUE, FALSE, 'drop_c');
 
    --s1 is no longer a known role
    RAISE INFO '%   isRoleKnown(s1: after dropRole)',
-   CASE ClassDB.isRoleKnown('s1') WHEN TRUE THEN 'FAIL: Code 33' ELSE 'PASS' END;
+   CASE ClassDB.isRoleKnown('s1') WHEN TRUE THEN 'FAIL: Code 37' ELSE 'PASS' END;
 
    --s1 is no longer a server role
    RAISE INFO '%   isServerRoleDefined(s1: after dropRole)',
-   CASE ClassDB.isServerRoleDefined('s1') WHEN TRUE THEN 'FAIL: Code 34' ELSE 'PASS' END;
+   CASE ClassDB.isServerRoleDefined('s1') WHEN TRUE THEN 'FAIL: Code 38' ELSE 'PASS' END;
 
    --s1's schema does not exist
    RAISE INFO '%   dropRole(s1, TRUE, FALSE, drop_c)',
    CASE EXISTS(SELECT * FROM information_schema.schemata
                WHERE schema_owner = 's1'
               )
-      WHEN TRUE THEN 'FAIL: Code 35'
+      WHEN TRUE THEN 'FAIL: Code 39'
       ELSE 'PASS'
    END;
 
