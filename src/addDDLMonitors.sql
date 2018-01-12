@@ -96,20 +96,15 @@ REVOKE ALL ON FUNCTION ClassDB.logDDLActivity() FROM PUBLIC;
 -- which is fired when any DDL statement finishes executing. Both triggers are
 -- needed to log all DDL statements, as not all infomation about DROP statements
 -- is provided by the ddl_command_end event
-DO
-$$
-BEGIN
-   DROP EVENT TRIGGER IF EXISTS triggerDDLCommandSqlDrop;
-   CREATE EVENT TRIGGER triggerDDLCommandSqlDrop
-   ON sql_drop
-   EXECUTE PROCEDURE ClassDB.logDDLActivity();
+DROP EVENT TRIGGER IF EXISTS triggerDDLCommandSqlDrop;
+CREATE EVENT TRIGGER triggerDDLCommandSqlDrop
+ON sql_drop
+EXECUTE PROCEDURE ClassDB.logDDLActivity();
 
-   DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
-   CREATE EVENT TRIGGER triggerDDLCommandEnd
-   ON ddl_command_end
-   EXECUTE PROCEDURE ClassDB.logDDLActivity();
-END;
-$$;
+DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
+CREATE EVENT TRIGGER triggerDDLCommandEnd
+ON ddl_command_end
+EXECUTE PROCEDURE ClassDB.logDDLActivity();
 
 
 --The functions ClassDB.enableDDLActivityLogging() and ClassDB.disableDDLActivityLogging()
@@ -132,7 +127,7 @@ $$ LANGUAGE plpgsql
 -- permissions
 REVOKE ALL ON FUNCTION ClassDB.enableDDLActivityLogging() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ClassDB.enableDDLActivityLogging()
-   TO ClassDB_Instructor, ClassDB_DBManager;
+   TO ClassDB_Instructor, ClassDB_DBManager, ClassDB;
 
 CREATE OR REPLACE FUNCTION ClassDB.disableDDLActivityLogging()
 RETURNS VOID AS
@@ -146,6 +141,6 @@ $$ LANGUAGE plpgsql
 
 REVOKE ALL ON FUNCTION ClassDB.disableDDLActivityLogging() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ClassDB.disableDDLActivityLogging()
-   TO ClassDB_Instructor, ClassDB_DBManager;
+   TO ClassDB_Instructor, ClassDB_DBManager, ClassDB;
 
 COMMIT;
