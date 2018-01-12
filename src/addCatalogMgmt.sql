@@ -99,7 +99,7 @@ RETURNS TABLE
 AS $$
    --We have to explicitly cast "Name" to "VARCHAR" here as well
    SELECT "Column", "Type"
-   FROM public.describe(CURRENT_SCHEMA::VARCHAR(63), public.foldPgID($1));
+   FROM public.describe(CURRENT_SCHEMA::VARCHAR(63), $1);
 $$ LANGUAGE sql
    STABLE;
 
