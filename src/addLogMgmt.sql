@@ -93,15 +93,15 @@ DECLARE
    lastConDateLocal DATE; --Hold the latest date (local time) a connection was logged
 BEGIN
    --Get the timestamp (at UTC) of the latest connection activity entry
-   lastConTimestampUTC := SELECT MAX(AcceptedAtUTC)
-                          FROM ClassDB.ConnectionActivity;
+   lastConTimestampUTC = (SELECT MAX(AcceptedAtUTC)
+                          FROM ClassDB.ConnectionActivity);
 
    --Get a 'best-guess' last import date based on the last connection timestamp
-   lastConDateLocal := date(ClassDB.ChangeTimeZone(lastConTimeStampUTC));
+   lastConDateLocal = date(ClassDB.ChangeTimeZone(lastConTimeStampUTC));
 
 	--Set the date of last logged connection. We prefer the user-supplied parameter, but
    -- defer to our 'best-guess' and finally, the current date if preceeding values are null
-	lastConDateLocal := COALESCE(startDate, lastConDateLocal, CURRENT_DATE);
+	lastConDateLocal = COALESCE(startDate, lastConDateLocal, CURRENT_DATE);
 
 	--We want to import all logs between the lastConDate and current date
 	WHILE lastConDateLocal <= CURRENT_DATE LOOP
