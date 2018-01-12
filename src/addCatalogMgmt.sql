@@ -1,7 +1,8 @@
 --addCatalogMgmt.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+--Data Science & Systems Lab (DASSL)
+--https://dassl.github.io/
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -21,19 +22,38 @@
 -- INFORMATION_SCHEMA queries
 
 
-BEGIN TRANSACTION;
+START TRANSACTION;
 
 --Suppress NOTICE messages for this script only, this will not apply to functions
 -- defined within. This hides messages that are unimportant, but possibly confusing
 SET LOCAL client_min_messages TO WARNING;
 
 
---Returns a list of tables and views in the specified schema
---Defaults to current_user, as each student (the intended users of this function)
---will primarily use a schema named <current_user>
-DROP FUNCTION IF EXISTS public.listTables(VARCHAR(63));
-CREATE FUNCTION public.listTables(schemaName VARCHAR(63) DEFAULT current_user)
-   RETURNS TABLE
+--Define a function to replicate PostgreSQL's folding behavior for SQL IDs
+-- This function is a duplicate of ClassDB.foldPgID(). Since students cannot access
+-- objects in the ClassDB schema, this version is required so that students can use
+-- the catalog management functions. Any change to foldPgID() must also be made to
+-- the version in addHelpers.sql
+CREATE OR REPLACE FUNCTION public.foldPgID(identifier VARCHAR(65))
+RETURNS VARCHAR(63) AS
+$$
+SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
+                 SUBSTRING($1 from LENGTH($1) for 1) = '"'
+            THEN
+                 SUBSTRING($1 from 2 for LENGTH($1) - 2)
+            ELSE
+                 LOWER($1)
+       END;
+$$ LANGUAGE sql
+   IMMUTABLE
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION public.foldPgID(VARCHAR(63)) OWNER TO ClassDB;
+
+
+--Returns a list of tables and views in the invoker's current schema
+CREATE OR REPLACE FUNCTION public.listTables(schemaName VARCHAR(63) DEFAULT CURRENT_SCHEMA)
+RETURNS TABLE
 (  --Since these functions access the INFORMATION_SCHEMA, we use the standard
    --info schema types for the return table
    "Schema" INFORMATION_SCHEMA.SQL_IDENTIFIER,
@@ -41,97 +61,49 @@ CREATE FUNCTION public.listTables(schemaName VARCHAR(63) DEFAULT current_user)
    "Type" INFORMATION_SCHEMA.CHARACTER_DATA
 )
 AS $$
-   --foldedPgSchema replicates PostgreSQLs folding behvaior. This code is currently
-   -- duplicated to avoid the use of foldPgID since it is in the classdb schema.
-   WITH foldedPgSchema(foldedSchemaName) AS (
-      SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
-                  SUBSTRING($1 from LENGTH($1) for 1) = '"'
-             THEN
-                  SUBSTRING($1 from 2 for LENGTH($1) - 2)
-             ELSE
-                  LOWER($1)
-      END
-   )
    SELECT table_schema, table_name, table_type
-   FROM INFORMATION_SCHEMA.TABLES i JOIN foldedpgSchema fs ON
-      i.table_schema = fs.foldedSchemaName;
-$$
-LANGUAGE sql;
+   FROM INFORMATION_SCHEMA.TABLES
+   WHERE table_schema = COALESCE(public.foldPgID(schemaName), CURRENT_SCHEMA);
+$$ LANGUAGE sql
+   STABLE;
 
 ALTER FUNCTION public.listTables(VARCHAR(63)) OWNER TO ClassDB;
-GRANT EXECUTE ON FUNCTION public.listTables(VARCHAR(63)) TO PUBLIC;
-
-
---Returns a list of columns in the specified table or view in the current schema
-DROP FUNCTION IF EXISTS public.describe(VARCHAR(63));
-CREATE FUNCTION public.describe(tableName VARCHAR(63))
-RETURNS TABLE
-(
-   "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
-   "Type" VARCHAR(100) --Use VARCHAR since we are going to modify the
-                       -- data returned from INFO_SCHEMA
-)
-AS $$
-   --foldedPgTable and foldedPgSchema replicate PostgreSQLs folding behvaior.
-   -- This code is currently duplicated to avoid the use of foldPgID since it is
-   -- in the classdb schema.
-   WITH foldedPgTable(foldedTableName) AS (
-      SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
-                  SUBSTRING($1 from LENGTH($1) for 1) = '"'
-             THEN
-                  SUBSTRING($1 from 2 for LENGTH($1) - 2)
-             ELSE
-                  LOWER($1)
-      END
-   )
-   SELECT column_name, data_type || COALESCE('(' || character_maximum_length || ')', '')
-   FROM INFORMATION_SCHEMA.COLUMNS i
-   JOIN foldedPgTable ft ON table_name = ft.foldedTableName
-   WHERE table_schema = current_user;
-$$
-LANGUAGE sql;
 
 
 --Returns a list of columns in the specified table or view in the specified schema
--- This overide allows a schema name to be specified
-DROP FUNCTION IF EXISTS public.describe(VARCHAR(63), VARCHAR(63));
-CREATE FUNCTION public.describe(schemaName VARCHAR(63), tableName VARCHAR(63))
+-- This override allows a schema name to be specified
+CREATE OR REPLACE FUNCTION public.describe(schemaName VARCHAR(63), tableName VARCHAR(63))
 RETURNS TABLE
 (
    "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
-   "Type" VARCHAR(100) --Use VARCHAR since we are going to modify the
-                       -- data returned from INFO_SCHEMA
+   "Type" VARCHAR --Use VARCHAR since we modify data returned from info schema
 )
 AS $$
-   --foldedPgTable and foldedPgSchema replicate PostgreSQLs folding behvaior.
-   -- This code is currently duplicated to avoid the use of foldPgID since it is
-   -- in the classdb schema.
-   WITH foldedPgTable(foldedTableName) AS (
-      SELECT CASE WHEN SUBSTRING($2 from 1 for 1) = '"' AND
-                  SUBSTRING($2 from LENGTH($2) for 1) = '"'
-             THEN
-                  SUBSTRING($2 from 2 for LENGTH($2) - 2)
-             ELSE
-                  LOWER($2)
-      END
-   ), foldedPgSchema(foldedSchemaName) AS (
-      SELECT CASE WHEN SUBSTRING($1 from 1 for 1) = '"' AND
-                  SUBSTRING($1 from LENGTH($1) for 1) = '"'
-             THEN
-                  SUBSTRING($1 from 2 for LENGTH($1) - 2)
-             ELSE
-                  LOWER($1)
-      END
-   ) --This formats the output to look similar to psql's \d
    SELECT column_name, data_type || COALESCE('(' || character_maximum_length || ')', '')
-   FROM INFORMATION_SCHEMA.COLUMNS i JOIN foldedPgTable ft ON
-      table_name = ft.foldedTableName JOIN foldedPgSchema fs ON
-      table_schema = fs.foldedSchemaName;
-$$
-LANGUAGE sql;
+   FROM INFORMATION_SCHEMA.COLUMNS
+   WHERE table_schema = public.foldPgID(schemaName)
+   AND   table_name = public.foldPgID(tableName)
+$$ LANGUAGE sql
+   STABLE;
 
 ALTER FUNCTION public.describe(VARCHAR(63), VARCHAR(63)) OWNER TO ClassDB;
-GRANT EXECUTE ON FUNCTION public.describe(VARCHAR(63), VARCHAR(63)) TO PUBLIC;
+
+
+--Returns a list of columns in the specified table or view in the invoker's current schema
+CREATE OR REPLACE FUNCTION public.describe(tableName VARCHAR(63))
+RETURNS TABLE
+(
+   "Column" INFORMATION_SCHEMA.SQL_IDENTIFIER,
+   "Type" VARCHAR --Use VARCHAR since we modify data returned from info schema
+)
+AS $$
+   --We have to explicitly cast "Name" to "VARCHAR" here as well
+   SELECT "Column", "Type"
+   FROM public.describe(CURRENT_SCHEMA::VARCHAR(63), $1);
+$$ LANGUAGE sql
+   STABLE;
+
+ALTER FUNCTION public.describe(VARCHAR(63)) OWNER TO ClassDB;
 
 
 COMMIT;
