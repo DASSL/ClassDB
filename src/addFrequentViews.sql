@@ -42,7 +42,7 @@ $$;
 -- is only usable by instructors
 CREATE OR REPLACE VIEW ClassDB.StudentActivityAll AS
 (
-  SELECT UserName, DDLCount, LastDDLObject,
+  SELECT UserName, DDLCount, LastDDLOperation, LastDDLObject,
          ClassDB.changeTimeZone(LastDDLActivityAtUTC) LastDDLActivityAt,
          ConnectionCount, ClassDB.changeTimeZone(LastConnectionAtUTC) LastConnectionAt
   FROM ClassDB.Student
@@ -57,8 +57,9 @@ GRANT SELECT ON ClassDB.StudentActivityAll TO ClassDB_Instructor;
 -- user-identifiable information. This view is only usable by instructors
 CREATE OR REPLACE VIEW ClassDB.StudentActivityAnon AS
 (
-   SELECT DDLCount, LastDDLObject, LastDDLActivityAt,
-          ConnectionCount, LastConnectionAt
+   SELECT DDLCount, LastDDLOperation,
+          SUBSTRING(LastDDLObject, POSITION('.' IN lastddlobject)+1) LastDDLObject,
+          LastDDLActivityAt, ConnectionCount, LastConnectionAt
    FROM ClassDB.StudentActivityAll
    ORDER BY ConnectionCount
 );
@@ -104,13 +105,14 @@ CREATE OR REPLACE FUNCTION ClassDB.getUserActivitySummary(userName ClassDB.IDNam
    DEFAULT SESSION_USER::ClassDB.IDNameDomain)
 RETURNS TABLE
 (
-   DDLCount BIGINT, LastDDLObject VARCHAR(256),
+   DDLCount BIGINT, LastDDLOperation VARCHAR, LastDDLObject VARCHAR,
    LastDDLActivityAt TIMESTAMP, ConnectionCount BIGINT, LastConnectionAt TIMESTAMP
 ) AS
 $$
-   SELECT ddlcount, lastddlobject, LastDDLActivityAt,
-          connectioncount, LastConnectionAt
-   FROM ClassDB.StudentActivityAll
+   SELECT ddlcount, LastDDLOperation, lastddlobject,
+          ClassDB.changeTimeZone(LastDDLActivityAtUTC),
+          connectioncount, ClassDB.changeTimeZone(LastConnectionAtUTC)
+   FROM ClassDB.User
    WHERE username = ClassDB.foldPgID($1);
 $$ LANGUAGE sql
    STABLE
@@ -127,11 +129,11 @@ GRANT EXECUTE ON FUNCTION ClassDB.getUserActivitySummary(ClassDB.IDNameDomain) T
 CREATE OR REPLACE FUNCTION public.getMyActivitySummary()
 RETURNS TABLE
 (
-   DDLCount BIGINT, LastDDLObject VARCHAR(256),
+   DDLCount BIGINT, LastDDLOperation VARCHAR, LastDDLObject VARCHAR,
    LastDDLActivityAt TIMESTAMP, ConnectionCount BIGINT, LastConnectionAt TIMESTAMP
 ) AS
 $$
-   SELECT ddlcount, lastddlobject,  lastddlactivityat,
+   SELECT ddlcount, LastDDLOperation, lastddlobject,  lastddlactivityat,
           connectioncount, LastConnectionAt
    FROM ClassDB.getUserActivitySummary();
 $$ LANGUAGE sql
