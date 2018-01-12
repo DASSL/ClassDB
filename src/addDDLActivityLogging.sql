@@ -1,4 +1,4 @@
---addDDLMonitors.sql - ClassDB
+--addDDLActivityLogging.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL)
@@ -51,36 +51,37 @@ DECLARE
    --Name of the db object that was targeted by the triggering statement
    objId VARCHAR(256);
 BEGIN
-   --Check if the calling event is sql_drop or ddl_command_end
-   IF TG_EVENT = 'ddl_command_end' THEN
-      SELECT object_identity --Get the statement target object
-      INTO objId
-      FROM pg_event_trigger_ddl_commands() --can only be called on non-DROP statements
-      WHERE object_identity IS NOT NULL
-      ORDER BY object_identity;
-   ELSIF TG_EVENT = 'sql_drop' THEN
-      SELECT object_identity --Same thing, but for drop statements
-      INTO objId
-      FROM pg_event_trigger_dropped_objects() --can only be called on DROP statements
-      WHERE object_identity IS NOT NULL
-      ORDER BY object_identity;
-   END IF;
+   --We only want log DDL activity from ClassDB users
+   IF ClassDB.isUser(SESSION_USER::ClassDB.IDNameDomain) THEN
+      --Check if the calling event is sql_drop or ddl_command_end
+      IF TG_EVENT = 'ddl_command_end' THEN
+         SELECT object_identity --Get the statement target object
+         INTO objId
+         FROM pg_event_trigger_ddl_commands() --can only be called on non-DROP ops
+         WHERE object_identity IS NOT NULL
+         ORDER BY object_identity;
+      ELSIF TG_EVENT = 'sql_drop' THEN
+         SELECT object_identity --Same thing, but for drop statements
+         INTO objId
+         FROM pg_event_trigger_dropped_objects() --can only be called on DROP ops
+         WHERE object_identity IS NOT NULL
+         ORDER BY object_identity;
+      END IF;
 
-   --Note: DROP statements cause this trigger to be executed twice,
-   -- see https://www.postgresql.org/docs/9.6/static/event-trigger-matrix.html
-   -- ddl_commend_end is triggered on all DDL statements. However,
-   -- pg_event_trigger_ddl_commands().object_identity is NULL for DROP statements
-   -- Since ddl_command_end is sent after sql_drop, we don't update if objId
-   -- IS NULL, because that is the ddl_command_end event after sql_drop,
-   -- and we would log a duplicate DDL event with a NULL object ID
-
-   --Check if the triggering user is a ClassDB user
-   IF ClassDB.isUser(SESSION_USER::ClassDB.IDNameDomain) AND objId IS NOT NULL THEN
-      --Insert a new row into the DDL activity log, containing the user name,
-      -- DDL statement starting time stamp, DDL statement performed, and object
-      -- affected by the statement
-      INSERT INTO ClassDB.DDLActivity VALUES
-      (SESSION_USER, statement_timestamp() AT TIME ZONE 'utc', TG_TAG, objId);
+      --Note: DROP statements cause this trigger to be executed twice,
+      -- see https://www.postgresql.org/docs/9.6/static/event-trigger-matrix.html
+      -- ddl_commend_end is triggered on all DDL statements. However,
+      -- pg_event_trigger_ddl_commands().object_identity is NULL for DROP statements
+      -- Since ddl_command_end is sent after sql_drop, we don't update if objId
+      -- IS NULL, because that is the ddl_command_end event after sql_drop,
+      -- and we would log a duplicate DDL event with a NULL object ID
+      IF objId IS NOT NULL THEN
+         --Insert a new row into the DDL activity log, containing the user name,
+         -- DDL statement starting time stamp, DDL statement performed, and object
+         -- affected by the statement
+         INSERT INTO ClassDB.DDLActivity VALUES
+         (SESSION_USER, statement_timestamp() AT TIME ZONE 'utc', TG_TAG, objId);
+      END IF;
    END IF;
 END;
 $$ LANGUAGE plpgsql
