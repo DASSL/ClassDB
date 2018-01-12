@@ -11,8 +11,11 @@
 
 
 --This script undoes the changes ClassDB installation scripts made to current DB
--- not all changes can be undone
--- this script lists the changes an appropriate user has to perform separately
+-- The changes made by this script cannot be undone
+-- This script will inform the user if any manual actions need to be preformed
+-- before ClassDB can be removed from the database
+-- This script lists additional actions a user must take to completely remove
+-- ClassDB from other databse and the server
 
 --This script will NOT drop user roles
 -- BEFORE running this script: run appropriate classDB.dropXYZ functions in each
@@ -22,6 +25,10 @@
 
 
 START TRANSACTION;
+
+--Suppress NOTICE messages for this script only, this will not apply to functions
+-- defined within. This hides messages that are unimportant, but possibly confusing
+SET LOCAL client_min_messages TO WARNING;
 
 --Make sure the current user has sufficient privilege to run this script
 -- privileges required: superuser
@@ -45,10 +52,10 @@ $$
 BEGIN
    IF (SELECT COUNT(routine_name)
              FROM INFORMATION_SCHEMA.ROUTINES
-             WHERE routine_name IN ('listorphans', 'listownedobjects')
+             WHERE routine_name IN ('listorphanobjects', 'listownedobjects')
              AND specific_schema = 'classdb') = 2 THEN
 
-      IF EXISTS(SELECT * FROM classdb.listOrphans()) THEN
+      IF EXISTS(SELECT * FROM classdb.listOrphanObjects()) THEN
          RAISE EXCEPTION 'Orphan objects which belonged to Instructors or DBManagers still exist. '
                          'These must be reassigned or dropped before ClassDB can be removed '
                          'from the database. Execute classdb.listOrphans() to get a list of these '
@@ -57,11 +64,6 @@ BEGIN
    END IF;
 END
 $$;
-
-
---Suppress NOTICE messages for this script only, this will not apply to functions
--- defined within. This hides messages that are unimportant, but possibly confusing
-SET LOCAL client_min_messages TO WARNING;
 
 
 --REVOKE permissions on the current database from each ClassDB role
@@ -75,66 +77,47 @@ BEGIN
 END
 $$;
 
-
---Dynamically create a query to reassign all user schemas owned by classdb to
--- be owned by themselves, instead of ClassDB
--- One ALTER SCHEMA statement is generated per schema classdb owns
-DO
-$$
-DECLARE
-   queryText TEXT; --This will hold the dynamic ALTER SYSTEM statements
-BEGIN
-   --The query on pg_roles and pg_auth_members returns all users that belong to
-   -- a classdb user role (Instructor, DBManager, or Student)
-      SELECT string_agg
-      (
-         format
-         (
-            'ALTER SCHEMA %I OWNER TO %I;',
-            r1.rolname,
-            r1.rolname
-         ), ' '
-      )
-      FROM pg_auth_members am
-      JOIN pg_roles r1 ON am.member = r1.oid
-      JOIN pg_roles r2 ON am.roleid = r2.oid
-      --This join allows us to check that a schema matching the user's name exists,
-      -- and that it is owned by ClassDB
-      JOIN INFORMATION_SCHEMA.SCHEMATA iss ON iss.schema_name = r1.rolname
-      WHERE r2.rolname IN ('classdb_instructor', 'classdb_dbmanager', 'classdb_student')
-      AND iss.schema_owner = 'classdb'
-      INTO queryText;
-
-      --If there are no schemas to reassign, queryText will be NULL, so we just RAISE INFO
-      IF  queryText IS NOT NULL THEN
-         EXECUTE queryText;
-      ELSE
-         RAISE INFO 'No schemas are owned by ClassDB - skipping reassignment';
-      END IF;
-END
-$$;
-
-
 --Drop all remaining ClassDB objects/permissions in this database.
 DROP OWNED BY ClassDB_Instructor;
 DROP OWNED BY ClassDB_DBManager;
 DROP OWNED BY ClassDB_Student;
 
---event triggers
+--Remove event triggers
 DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
 DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
 
---Drop the metaFunctions from public, if they exist
-DROP FUNCTION IF EXISTS public.describe(VARCHAR(63), VARCHAR(63));
-DROP FUNCTION IF EXISTS public.listTables(VARCHAR(63));
+--Drop all ClassDB owned functions from public schema
+DO
+$$
+BEGIN
+   EXECUTE (SELECT string_agg('DROP FUNCTION ' || ns.nspname || '.' || p.proname
+          || '(' || oidvectortypes(p.proargtypes) || ');', E'\n')
+   FROM pg_proc p JOIN pg_namespace ns ON p.pronamespace = ns.oid
+   WHERE ns.nspname = 'public');
+END;
+$$;
+
+--Drop all ClassDB owned views from public
+-- Note that this will drop any user objects that are derived from public ClassDB
+-- objects, such as student owned views that that query MyActivity, MyActivitySummary, etc.
+DO
+$$
+BEGIN
+   EXECUTE (SELECT string_agg('DROP VIEW ' || "object" || ' CASCADE;', E'\n')
+   FROM ClassDB.listOwnedObjects('classdb')
+   WHERE "schema" = 'public'
+   AND kind ILIKE 'v%');
+END;
+$$;
+
 
 --Delete the entire classdb schema in the current database
 -- no need to drop individual objects created in that schema
 DROP SCHEMA IF EXISTS ClassDB CASCADE;
 
+
 --We now want to show our NOTICES, so switch display level back to default
 RESET client_min_messages;
-
 
 --create a list of things users have to do on their own
 -- commenting out the RAISE NOTICE statements because they cause syntax error
@@ -145,7 +128,7 @@ BEGIN
    RAISE NOTICE 'Drop user schemas or adjust their privilege';
    RAISE NOTICE 'Adjust privileges on PUBLIC schema if appropriate';
    RAISE NOTICE 'Run DROP DATABASE statement to remove the database if appropriate';
-   RAISE NOTICE 'Run prepareClassServer.sql after removing ClassDB '
+   RAISE NOTICE 'Run removeFromServer.sql after removing ClassDB '
                 'from other databases';
 END
 $$;

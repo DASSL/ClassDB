@@ -337,13 +337,13 @@ $$
    FROM pg_class c --Join pg_roles and pg_namespace to get the names of the role and schema
    JOIN pg_roles r ON r.oid = c.relowner
    JOIN pg_namespace n ON n.oid = c.relnamespace
-   WHERE r.rolname = $1
+   WHERE r.rolname = ClassDB.foldPgID($1)
    UNION ALL
    SELECT p.proname::VARCHAR(63), n.nspname::VARCHAR(63), 'Function'
    FROM pg_proc p
    JOIN pg_roles r ON r.oid = p.proowner
    JOIN pg_namespace n ON n.oid = p.pronamespace
-   WHERE r.rolname = $1;
+   WHERE r.rolname = ClassDB.foldPgID($1);
 $$ LANGUAGE sql
    STABLE
    RETURNS NULL ON NULL INPUT;
@@ -394,11 +394,11 @@ $$ LANGUAGE plpgsql
    STABLE
    RETURNS NULL ON NULL INPUT;
 
-ALTER FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain) OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
-REVOKE ALL ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain) FROM PUBLIC;
+REVOKE ALL ON FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain) FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain)
+GRANT EXECUTE ON FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain)
       TO ClassDB_Instructor, ClassDB_DBManager;
 
 
