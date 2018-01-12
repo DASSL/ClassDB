@@ -66,17 +66,16 @@ BEGIN
    INSERT INTO ClassDB.ConnectionActivity
    VALUES ('u1', CURRENT_TIMESTAMP);
 
-   --DDLActivity should have one row
+   --ConnectionActivity should have one row
    RAISE INFO '%   COUNT(ClassDB.ConnectionActivity)',
       CASE (SELECT COUNT(*) FROM ClassDB.ConnectionActivity)
          WHEN 1 THEN 'PASS'
          ELSE 'FAIL: Code 3'
       END;
 
-   --drop test user: recursively drop all owned objects
-   PERFORM ClassDB.dropRole('u1', TRUE, TRUE, 'drop_c');
-
 END
 $$;
 
-COMMIT;
+
+--ignore all test data
+ROLLBACK;
