@@ -54,21 +54,21 @@ FROM ClassDB.RoleBase
 LEFT OUTER JOIN (
   SELECT UserName,
   COUNT(*) AS DDLCount, --The amount of DDLs the user has executed
-  MAX(StatementStartedAtUTC) AS LastDDLActivityAtUTC --The TIMESTAMP of when the user last preformed a DDL activity
+  MAX(StatementStartedAtUTC) AS LastDDLActivityAtUTC --TIMESTAMP of user's last DDL op
   FROM ClassDB.DDLActivity
-  GROUP BY UserName) AS DDLActivityAggregate on RoleBase.RoleName = DDLActivityAggregate.UserName
+  GROUP BY UserName) AS DDLActivityAggregate on RoleName = DDLActivityAggregate.UserName
 LEFT OUTER JOIN (
   SELECT UserName,
-  COUNT(*) AS ConnectionCount, --The total amout of times user has connected to ClassDB
-  MAX(AcceptedAtUTC) AS LastConnectionAtUTC --A TIMESTAMP of the last connection the User had to ClassDB
+  COUNT(*) AS ConnectionCount, --Total amout of times user has connected to this DB
+  MAX(AcceptedAtUTC) AS LastConnectionAtUTC --TIMESTAMP of the last connection user made
   FROM ClassDB.ConnectionActivity
-  GROUP BY UserName) AS ConnectionActivity on RoleBase.RoleName = ConnectionActivity.UserName
+  GROUP BY UserName) AS ConnectionActivity on RoleName = ConnectionActivity.UserName
 LEFT OUTER JOIN (
   SELECT Distinct on (UserName) UserName,
   DDLOperation AS LastDDLOperation, --The operation that the user last performed
   DDLObject AS LastDDLObject  --The object that the user last performed the DDL activity on
   FROM ClassDB.DDLActivity
-  ORDER BY UserName, StatementStartedAtUTC DESC) AS DDLActivityOrderBy on RoleBase.Rolename = DDLActivityOrderBy.UserName
+  ORDER BY UserName, StatementStartedAtUTC DESC) AS DDLActOB on Rolename = DDLActOB.UserName
 WHERE NOT IsTeam;
 
 ALTER VIEW ClassDB.User OWNER TO ClassDB;
