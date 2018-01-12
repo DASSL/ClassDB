@@ -103,7 +103,7 @@ BEGIN
    CREATE EVENT TRIGGER triggerDDLCommandSqlDrop
    ON sql_drop
    EXECUTE PROCEDURE ClassDB.logDDLActivity();
-   
+
    DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
    CREATE EVENT TRIGGER triggerDDLCommandEnd
    ON ddl_command_end
@@ -128,6 +128,8 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
+--We don't grant these functions to ClassDB because they must be run with superuser
+-- permissions
 REVOKE ALL ON FUNCTION ClassDB.enableDDLActivityLogging() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ClassDB.enableDDLActivityLogging()
    TO ClassDB_Instructor, ClassDB_DBManager;
