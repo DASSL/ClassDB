@@ -51,19 +51,19 @@ CREATE OR REPLACE VIEW ClassDB.User AS
   DDLCount, LastDDLActivityAtUTC, LastDDLOperation, LastDDLObject,
   ConnectionCount, LastConnectionAtUTC
 FROM ClassDB.RoleBase
-JOIN (
+LEFT OUTER JOIN (
   SELECT UserName,
   COUNT(*) AS DDLCount, --The amount of DDLs the user has executed
   MAX(StatementStartedAtUTC) AS LastDDLActivityAtUTC --The TIMESTAMP of when the user last preformed a DDL activity
   FROM ClassDB.DDLActivity
   GROUP BY UserName) AS DDLActivityAggregate on RoleBase.RoleName = DDLActivityAggregate.UserName
-JOIN (
+LEFT OUTER JOIN (
   SELECT UserName,
   COUNT(*) AS ConnectionCount, --The total amout of times user has connected to ClassDB
   MAX(AcceptedAtUTC) AS LastConnectionAtUTC --A TIMESTAMP of the last connection the User had to ClassDB
   FROM ClassDB.ConnectionActivity
   GROUP BY UserName) AS ConnectionActivity on RoleBase.RoleName = ConnectionActivity.UserName
-JOIN (
+LEFT OUTER JOIN (
   SELECT Distinct on (UserName) UserName,
   DDLOperation AS LastDDLOperation, --The operation that the user last performed
   DDLObject AS LastDDLObject  --The object that the user last performed the DDL activity on
@@ -81,8 +81,8 @@ GRANT SELECT ON ClassDB.User TO ClassDB_Instructor, ClassDB_DBManager;
 -- these views obtain information from the previously defined ClassDB.User view
 CREATE OR REPLACE VIEW ClassDB.Instructor AS
    SELECT UserName, FullName, SchemaName, ExtraInfo, IsStudent, IsDBManager
---TBD:    DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
---TBD:    ConnectionCount, LastConnectionAtUTC
+          DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
+          ConnectionCount, LastConnectionAtUTC
    FROM ClassDB.User
    WHERE IsInstructor;
 
@@ -94,8 +94,8 @@ GRANT SELECT ON ClassDB.Instructor TO ClassDB_Instructor, ClassDB_DBManager;
 
 CREATE OR REPLACE VIEW ClassDB.Student AS
    SELECT UserName, FullName, SchemaName, ExtraInfo, IsInstructor, IsDBManager
---TBD:    DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
---TBD:    ConnectionCount, LastConnectionAtUTC
+          DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
+          ConnectionCount, LastConnectionAtUTC
    FROM ClassDB.User
    WHERE IsStudent;
 
@@ -107,8 +107,8 @@ GRANT SELECT ON ClassDB.Student TO ClassDB_Instructor, ClassDB_DBManager;
 
 CREATE OR REPLACE VIEW ClassDB.DBManager AS
    SELECT UserName, FullName, SchemaName, ExtraInfo, IsInstructor, IsStudent
---TBD:    DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
---TBD:    ConnectionCount, LastConnectionAtUTC
+          DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
+          ConnectionCount, LastConnectionAtUTC
    FROM ClassDB.User
    WHERE IsDBManager;
 
