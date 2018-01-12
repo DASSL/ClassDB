@@ -15,7 +15,7 @@
 
 --This script should be run after addRoleBaseMgmt.sql
 
---This script creates the tables,views, and triggers specific to user management
+--This script creates the tables, views, and triggers specific to user management
 -- (not for team management)
 
 START TRANSACTION;
@@ -88,7 +88,7 @@ GRANT SELECT ON ClassDB.ConnectionActivity TO ClassDB_Instructor, ClassDB_DBMana
 --Define a trigger function to raise an exception that an operation is disallowed
 -- used to prevent non-user inserts to, and any updates to, tables DDLActivity
 -- and ConnectionActivity
--- trigger functions cannot accept paramers, but the 0-based array TG_ARGV will
+-- trigger functions cannot accept parameters, but the 0-based array TG_ARGV will
 -- contain the arguments specified in the corresponding trigger definition
 -- OK to address non-existent entries in TG_ARGV: just returns NULL
 -- be careful editing this function: it is highly customized for ClassDB's needs
@@ -111,106 +111,60 @@ END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
-ALTER FUNCTION
-   ClassDB.revokeClassDBRole(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
-   OWNER TO ClassDB;
+ALTER FUNCTION ClassDB.rejectOperation() OWNER TO ClassDB;
 
-REVOKE ALL ON FUNCTION
-   ClassDB.revokeClassDBRole(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
-   FROM PUBLIC;
-
-
---Define a temporary function to determine if a trigger is defined
--- move the function to the ClassDB schema (and probably to addHelpers.sql) if
--- it is useful in other scripts
-CREATE OR REPLACE FUNCTION
-   pg_temp.isTriggerDefined(schemaName ClassDB.IDNameDomain,
-                            triggerName ClassDB.IDNameDomain
-                           )
-   RETURNS BOOLEAN AS
-$$
-   SELECT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TRIGGERS
-                  WHERE trigger_schema = ClassDB.foldPgID($1)
-                        AND trigger_name = ClassDB.foldPgID($2)
-                 );
-$$ LANGUAGE sql
-   STABLE
-   RETURNS NULL ON NULL INPUT;
+REVOKE ALL ON FUNCTION ClassDB.rejectOperation() FROM PUBLIC;
 
 
 
---Define triggers to prevent non-user INSERT, and any UPDATE, to tables DDLActivity
--- and ConnectionActivity
--- must check catalog to see if triggers are defined because CREATE TRIGGER
--- does not have the IF NOT EXISTS option
+--Define triggers to prevent INSERT for non-user roles, and any UPDATE, to
+-- tables DDLActivity and ConnectionActivity
+-- drop triggers prior to creation because there is no CREATE OR REPLACE TRIGGER
 DO
 $$
 BEGIN
 
-   --reject non-user insert into DDLActivity
-   IF NOT pg_temp.isTriggerDefined('classdb', 'RejectNonUserDDLActivityInsert')
-   THEN
-      CREATE TRIGGER RejectNonUserDDLActivityInsert
-      BEFORE INSERT ON ClassDB.DDLActivity
-      FOR EACH ROW
-      WHEN (NOT ClassDB.isUser(NEW.UserName))
-      EXECUTE PROCEDURE ClassDB.rejectOperation('INSERT', 'ClassDB.DDLActivity');
-   END IF;
+   --reject non-user inserts into DDLActivity
+   DROP TRIGGER IF EXISTS RejectNonUserDDLActivityInsert ON ClassDB.DDLActivity;
 
-   --reject non-user insert into DDLActivity
-   IF NOT
-      pg_temp.isTriggerDefined('classdb', 'RejectNonUserConnectionActivityInsert')
-   THEN
-      CREATE TRIGGER RejectNonUserConnectionActivityInsert
-      BEFORE INSERT ON ClassDB.ConnectionActivity
-      FOR EACH ROW
-      WHEN (NOT ClassDB.isUser(NEW.UserName))
-      EXECUTE PROCEDURE
-         ClassDB.rejectOperation('INSERT', 'ClassDB.ConnectionActivity');
-   END IF;
+   CREATE TRIGGER RejectNonUserDDLActivityInsert
+   BEFORE INSERT ON ClassDB.DDLActivity
+   FOR EACH ROW
+   WHEN (NOT ClassDB.isUser(NEW.UserName))
+   EXECUTE PROCEDURE ClassDB.rejectOperation('INSERT', 'ClassDB.DDLActivity');
+
+
+   --reject non-user inserts into ConnectionActivity
+   DROP TRIGGER IF EXISTS RejectNonUserConnectionActivityInsert
+   ON ClassDB.ConnectionActivity;
+
+   CREATE TRIGGER RejectNonUserConnectionActivityInsert
+   BEFORE INSERT ON ClassDB.ConnectionActivity
+   FOR EACH ROW
+   WHEN (NOT ClassDB.isUser(NEW.UserName))
+   EXECUTE PROCEDURE
+      ClassDB.rejectOperation('INSERT', 'ClassDB.ConnectionActivity');
+
 
    --reject all updates to DDLActivity
-   IF NOT pg_temp.isTriggerDefined('classdb', 'RejectDDLActivityUpdate') THEN
-      CREATE TRIGGER RejectDDLActivityUpdate
-      BEFORE UPDATE ON ClassDB.DDLActivity
-      EXECUTE PROCEDURE ClassDB.rejectOperation('UPDATE', 'ClassDB.DDLActivity');
-   END IF;
+   DROP TRIGGER IF EXISTS RejectDDLActivityUpdate ON ClassDB.DDLActivity;
+
+   CREATE TRIGGER RejectDDLActivityUpdate
+   BEFORE UPDATE ON ClassDB.DDLActivity
+   EXECUTE PROCEDURE ClassDB.rejectOperation('UPDATE', 'ClassDB.DDLActivity');
+
 
    --reject all updates to ConnectionActivity
-   IF NOT pg_temp.isTriggerDefined('classdb', 'RejectConnectionActivityUpdate')
-   THEN
-      CREATE TRIGGER RejectConnectionActivityUpdate
-      BEFORE UPDATE ON ClassDB.ConnectionActivity
-      EXECUTE PROCEDURE
-         ClassDB.rejectOperation('UPDATE', 'ClassDB.ConnectionActivity');
-   END IF;
+   DROP TRIGGER IF EXISTS RejectConnectionActivityUpdate
+   ON ClassDB.ConnectionActivity;
+
+   CREATE TRIGGER RejectConnectionActivityUpdate
+   BEFORE UPDATE ON ClassDB.ConnectionActivity
+   EXECUTE PROCEDURE
+      ClassDB.rejectOperation('UPDATE', 'ClassDB.ConnectionActivity');
 
 END
 $$;
-
-
-
---Define a view to return known users
--- the fields marked TBD are yet to be filled in: they are commented out so
--- the view definition can be replaced later
-CREATE OR REPLACE VIEW ClassDB.User AS
-SELECT
-   RoleName AS UserName, FullName, SchemaName, ExtraInfo,
-   ClassDB.isMember(RoleName, 'classdb_instructor') AS IsInstructor,
-   ClassDB.isMember(RoleName, 'classdb_student') AS IsStudent,
-   ClassDB.isMember(RoleName, 'classdb_dbmanager') AS IsDBManager,
-   ClassDB.hasClassDBRole(RoleName) AS HasClassDBRole
-   --0 AS DDLCount,              --TBD
-   --NULL AS LastDDLObject,      --TBD
-   --NULL AS LastDDLActivityAt,  --TBD
-   --0 AS ConnectionCount,       --TBD
-   --NULL AS LastConnectionAtUTC --TBD
-FROM ClassDB.RoleBase
-WHERE NOT IsTeam;
-
-ALTER VIEW ClassDB.User OWNER TO ClassDB;
-REVOKE ALL PRIVILEGES ON ClassDB.User FROM PUBLIC;
-GRANT SELECT ON ClassDB.User TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 
