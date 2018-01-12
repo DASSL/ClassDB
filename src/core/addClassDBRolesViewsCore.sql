@@ -10,6 +10,22 @@
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
+
+--This script requires the current user to be a superuser
+
+--This script should be run in every database to which ClassDB is to be added
+-- it should be run after running addClassDBRolesMgmt.sql
+
+--This script creates views for User, Student, Instructor, and DBManager
+-- views add derived attributes to the base data in the associated tables
+
+
+START TRANSACTION;
+
+--Suppress NOTICE messages for this script
+-- hides unimportant but possibly confusing msgs generated as the script executes
+SET LOCAL client_min_messages TO WARNING;
+
 --Define a view to return known users
 -- the fields marked TBD are yet to be filled in: they are commented out so
 -- the view definition can be replaced later
@@ -19,7 +35,8 @@ SELECT
    ClassDB.IsInstructor(RoleName) AS IsInstructor,
    ClassDB.IsStudent(RoleName) AS IsStudent,
    ClassDB.IsDBManager(RoleName) AS IsDBManager,
-   ClassDB.hasClassDBRole(RoleName) AS HasClassDBRole
+   (ClassDB.IsInstructor(RoleName) OR ClassDB.IsStudent(RoleName) OR
+     ClassDB.IsDBManager(RoleName)) AS HasClassDBRole
    --0 AS DDLCount,              --TBD
    --NULL AS LastDDLObject,      --TBD
    --NULL AS LastDDLActivityAt,  --TBD
@@ -31,6 +48,8 @@ WHERE NOT IsTeam;
 ALTER VIEW ClassDB.User OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.User FROM PUBLIC;
 GRANT SELECT ON ClassDB.User TO ClassDB_Instructor, ClassDB_DBManager;
+
+
 
 --Define views to obtain info on known instructors, students, and DB managers
 -- these views obtain information from the previously defined ClassDB.User view
@@ -46,6 +65,7 @@ REVOKE ALL PRIVILEGES ON ClassDB.Instructor FROM PUBLIC;
 GRANT SELECT ON ClassDB.Instructor TO ClassDB_Instructor, ClassDB_DBManager;
 
 
+
 CREATE OR REPLACE VIEW ClassDB.Student AS
    SELECT UserName, FullName, SchemaName, ExtraInfo, IsInstructor, IsDBManager
 --TBD:    DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
@@ -58,6 +78,7 @@ REVOKE ALL PRIVILEGES ON ClassDB.Student FROM PUBLIC;
 GRANT SELECT ON ClassDB.Student TO ClassDB_Instructor, ClassDB_DBManager;
 
 
+
 CREATE OR REPLACE VIEW ClassDB.DBManager AS
    SELECT UserName, FullName, SchemaName, ExtraInfo, IsInstructor, IsStudent
 --TBD:    DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAtUTC,
@@ -68,3 +89,6 @@ CREATE OR REPLACE VIEW ClassDB.DBManager AS
 ALTER VIEW ClassDB.DBManager OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.DBManager FROM PUBLIC;
 GRANT SELECT ON ClassDB.DBManager TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+COMMIT;
