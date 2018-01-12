@@ -22,7 +22,7 @@
 -- INFORMATION_SCHEMA queries
 
 
-BEGIN TRANSACTION;
+START TRANSACTION;
 
 --Suppress NOTICE messages for this script only, this will not apply to functions
 -- defined within. This hides messages that are unimportant, but possibly confusing
@@ -71,7 +71,7 @@ ALTER FUNCTION public.listTables(VARCHAR(63)) OWNER TO ClassDB;
 
 
 --Returns a list of columns in the specified table or view in the specified schema
--- This overide allows a schema name to be specified
+-- This override allows a schema name to be specified
 CREATE OR REPLACE FUNCTION public.describe(schemaName VARCHAR(63), tableName VARCHAR(63))
 RETURNS TABLE
 (
@@ -99,7 +99,7 @@ RETURNS TABLE
 AS $$
    --We have to explicitly cast "Name" to "VARCHAR" here as well
    SELECT "Column", "Type"
-   FROM public.describe(CURRENT_SCHEMA::VARCHAR(63), public.FoldPgID($1));
+   FROM public.describe(CURRENT_SCHEMA::VARCHAR(63), public.foldPgID($1));
 $$ LANGUAGE sql
    STABLE;
 
