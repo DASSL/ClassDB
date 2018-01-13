@@ -1,4 +1,4 @@
---addHelpers.sql - ClassDB
+--addHelpersCore.sql - ClassDB
 
 --Sean Murthy, Andrew Figueroa, Steven Rollo
 --Data Science & Systems Lab (DASSL)
