@@ -1,6 +1,6 @@
 --prepareDB.psql - ClassDB
 
---Steven Rollo, Sean Murthy
+--Steven Rollo, Andrew Figueroa, Sean Murthy
 --Data Science & Systems Lab (DASSL)
 --https://dassl.github.io/
 
@@ -25,3 +25,5 @@
 \i addHelpersCore.sql
 \i addRoleBaseMgmtCore.sql
 \i addClassDBRolesMgmtCore.sql
+\i addUserMgmtCore.sql
+\i addClassDBRolesViewsCore.sql
