@@ -1,7 +1,8 @@
 --prepareDB.psql - ClassDB
 
 --Steven Rollo, Sean Murthy
---Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+--Data Science & Systems Lab (DASSL)
+--https://dassl.github.io/
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -20,8 +21,7 @@
 -- command line switch, or the \i command inside an interactive session.
 
 \set ON_ERROR_STOP on
-\i initializeDB.sql
-\i addHelpers.sql
-\i addRoleBaseMgmt.sql
-\i addConnectionMgmt.sql
-\i addClassDBRolesMgmt.sql
+\i initializeDBCore.sql
+\i addHelpersCore.sql
+\i addRoleBaseMgmtCore.sql
+\i addClassDBRolesMgmtCore.sql
