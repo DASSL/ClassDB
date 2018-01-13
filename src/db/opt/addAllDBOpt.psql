@@ -1,6 +1,6 @@
 --addAllDBOpt.psql - ClassDB
 
---Steven Rollo, Andrew Figueroa, Sean Murthy
+--Steven Rollo, Andrew Figueroa, Sean Murthy, Kevin Kelly
 --Data Science & Systems Lab (DASSL)
 --https://dassl.github.io/
 
@@ -15,10 +15,13 @@
 --This script should be run in a database to which ClassDB is to be added
 -- the database should have already been created
 
---This script runs the ClassDB scripts optional to install to a ClassDB
--- database on a Postgres server.  This script uses psql meta-commands to do this,
--- so it can only be executed by psql.  This can be done using the -f
--- command line switch, or the \i command inside an interactive session.
+--This script runs other scripts that add optional ClassDB functionality to the current database
+
+--This script should be run after adding core ClassDB functionality
+
+-- This script uses psql meta-commands run other scripts and so it should be run using psql.
+--  the script can be run using the -f command line switch of psql or using the \i command
+--  inside a psql interactive session
 
 \set ON_ERROR_STOP on
 \i addCatalogMgmtOpt.sql
