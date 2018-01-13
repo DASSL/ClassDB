@@ -1,4 +1,4 @@
---addFrequentViews.sql - ClassDB
+--addFrequentViewsReco.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL)
