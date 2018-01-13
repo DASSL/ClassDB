@@ -1,7 +1,8 @@
---initializeDB.sql - ClassDB
+--initializeDBCore.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+--Data Science & Systems Lab (DASSL)
+--https://dassl.github.io/
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -30,7 +31,7 @@ DO
 $$
 BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
-                  WHERE rolname = current_user AND rolsuper = TRUE
+                  WHERE rolname = CURRENT_USER AND rolsuper = TRUE
                  ) THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a user '
                       'with superuser privileges';
@@ -86,20 +87,18 @@ END
 $$;
 
 
+--Grant ClassDB to the current user
+-- allows altering privileges of objects, even after being owned by ClassDB
+GRANT ClassDB TO CURRENT_USER;
+
 --Prevent users who are not instructors from modifying the public schema
 -- public schema contains objects and functions students can read
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 GRANT CREATE ON SCHEMA public TO ClassDB_Instructor;
 
 --Create a schema to hold app's admin info and assign privileges on that schema
-CREATE SCHEMA IF NOT EXISTS classdb;
-GRANT ALL PRIVILEGES ON SCHEMA classdb
-   TO ClassDB, ClassDB_Instructor, ClassDB_DBManager;
-
-
---Grant ClassDB to the current user
--- allows altering privilieges of objects, even after being owned by ClassDB
-GRANT ClassDB TO current_user;
+CREATE SCHEMA IF NOT EXISTS classdb AUTHORIZATION ClassDB;
+GRANT USAGE ON SCHEMA classdb TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 COMMIT;

@@ -1,8 +1,8 @@
---removeFromDB.sql - ClassDB
+--removeAllFromDB.sql - ClassDB
 
 --Sean Murthy, Steven Rollo
 --Data Science & Systems Lab (DASSL)
---https://dassl.github.io
+--https://dassl.github.io/
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC

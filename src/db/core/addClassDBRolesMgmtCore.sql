@@ -1,4 +1,4 @@
---addClassDBRolesMgmt.sql - ClassDB
+--addClassDBRolesMgmtCore.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL)
