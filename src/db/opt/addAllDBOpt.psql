@@ -23,5 +23,8 @@
 --  the script can be run using the -f command line switch of psql or using the \i command
 --  inside a psql interactive session
 
+--This script uses the \ir flag so that a relative path from where the script is located is
+-- used rather then the program's current directory
+
 \set ON_ERROR_STOP on
-\i addCatalogMgmtOpt.sql
+\ir addCatalogMgmtOpt.sql
