@@ -1,4 +1,4 @@
---addRoleBaseMgmt.sql - ClassDB
+--addRoleBaseMgmtCore.sql - ClassDB
 
 --Sean Murthy
 --Data Science & Systems Lab (DASSL)

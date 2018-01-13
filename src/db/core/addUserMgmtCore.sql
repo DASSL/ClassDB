@@ -1,4 +1,4 @@
---addUserMgmt.sql - ClassDB
+--addUserMgmtCore.sql - ClassDB
 
 --Sean Murthy
 --Data Science & Systems Lab (DASSL)

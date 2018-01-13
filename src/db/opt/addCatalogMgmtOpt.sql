@@ -1,4 +1,4 @@
---addCatalogMgmt.sql - ClassDB
+--addCatalogMgmtOpt.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL)
