@@ -11,12 +11,15 @@
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 
---This script undoes the changes ClassDB installation scripts made to current DB
--- The changes made by this script cannot be undone
--- This script will inform the user if any manual actions need to be preformed
--- before ClassDB can be removed from the database
--- This script lists additional actions a user must take to completely remove
--- ClassDB from other databse and the server
+--This script undoes the changes ClassDB installation scripts made to current DB.
+-- The changes made by this script cannot be undone.
+--This script will fail if any ClassDB object cannot be dropped due to user-created
+-- objects depending on them. We do not use DROP...CASCADE to avoid forcefully
+-- dropping user created objects. This script will display an exception containing
+-- the object that is preventing the uninstaller from proceeding
+--This script lists additional actions a user must take to completely remove.
+-- ClassDB from other databse and the server.
+
 
 --This script will NOT drop user roles
 -- BEFORE running this script: run appropriate classDB.dropXYZ functions in each
@@ -83,21 +86,22 @@ DROP OWNED BY ClassDB_Instructor;
 DROP OWNED BY ClassDB_DBManager;
 DROP OWNED BY ClassDB_Student;
 
---Remove event triggers
-DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
-DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
 
 --Try to drop objects that are installed by ClassDB, but not owned by it
--- Currently, these are all functions that must be owned by superusers
-DROP FUNCTION IF EXISTS classdb.listUserConnections(VARCHAR);
-DROP FUNCTION IF EXISTS classdb.enableDDLActivityLogging();
-DROP FUNCTION IF EXISTS classdb.disableDDLActivityLogging();
-DROP FUNCTION IF EXISTS classdb.importConnectionLog(date);
+-- For example, event triggers and functions requiring superuser permissions
+DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
+DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
+DROP FUNCTION IF EXISTS ClassDB.listUserConnections(VARCHAR);
+DROP FUNCTION IF EXISTS ClassDB.enableDDLActivityLogging();
+DROP FUNCTION IF EXISTS ClassDB.disableDDLActivityLogging();
+DROP FUNCTION IF EXISTS ClassDB.importConnectionLog(DATE);
 
 --Try to drop all ClassDB owned functions in ClassDB schema
 DROP OWNED BY ClassDB;
 
---Delete the entire classdb schema in the current database
+--Delete the entire classdb schema in the current database. While the ClassDB schema
+-- should be deleted by the previous DROP OWNED BY statement, we still try to DROP
+-- this ClassDB schema in case its ownership has changed
 DROP SCHEMA IF EXISTS ClassDB;
 
 --We now want to show our NOTICES, so switch display level back to default
