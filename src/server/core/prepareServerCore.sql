@@ -1,4 +1,4 @@
---prepareServer.sql - ClassDB
+--prepareServerCore.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL)

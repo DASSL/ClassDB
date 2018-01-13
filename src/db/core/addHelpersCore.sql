@@ -1,4 +1,4 @@
---addHelpers.sql - ClassDB
+--addHelpersCore.sql - ClassDB
 
 --Sean Murthy, Andrew Figueroa, Steven Rollo
 --Data Science & Systems Lab (DASSL)
@@ -422,6 +422,21 @@ ALTER FUNCTION
 --GRANT EXECUTE ON FUNCTION
 --   ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
 --TO ClassDB_Instructor;
+
+--Changes a timestamp in fromTimeZone to toTimeZone
+CREATE OR REPLACE FUNCTION ClassDB.changeTimeZone(ts TIMESTAMP,
+   toTimeZone VARCHAR DEFAULT TO_CHAR(CURRENT_TIMESTAMP, 'TZ'), fromTimeZone VARCHAR DEFAULT 'UTC')
+RETURNS TIMESTAMP AS
+$$
+   SELECT (ts AT TIME ZONE COALESCE(fromTimeZone, 'UTC')) AT TIME ZONE
+      COALESCE(toTimeZone, TO_CHAR(CURRENT_TIMESTAMP, 'TZ'));
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
+ALTER FUNCTION
+   ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
+   OWNER TO ClassDB;
+
 
 --Define a function to retrieve specific capabilities a user has
 -- use this function to get status of different capabilities in one call
