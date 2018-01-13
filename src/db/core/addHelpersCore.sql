@@ -73,6 +73,7 @@ BEGIN
                  )
    THEN
       CREATE DOMAIN ClassDB.IDNameDomain VARCHAR(63);
+      ALTER DOMAIN ClassDB.IDNameDomain OWNER TO ClassDB;
    END IF;
 END;
 $$;
