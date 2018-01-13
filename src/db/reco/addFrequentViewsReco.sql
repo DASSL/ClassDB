@@ -16,7 +16,7 @@
 --This script should be run in every database to which ClassDB is to be added
 -- it should be run after running addUserMgmt.sql
 
---This script creates several objects (we colletively refer to them as views) to
+--This script creates several objects (we collectively refer to them as views) to
 -- display summary data related to student activity in the current ClassDB database.
 -- Views that are accessible to students and require access to ClassDB.User are
 -- implmemted as functions. This allows the views to access the ClassDB schema
@@ -53,7 +53,7 @@ REVOKE ALL PRIVILEGES ON ClassDB.StudentActivityAll FROM PUBLIC;
 ALTER VIEW ClassDB.studentActivityAll OWNER TO ClassDB;
 GRANT SELECT ON ClassDB.StudentActivityAll TO ClassDB_Instructor;
 
---This view shows the activity of all students in the student table, ommiting any
+--This view shows the activity of all students in the student table, omitting any
 -- user-identifiable information. This view is only usable by instructors
 CREATE OR REPLACE VIEW ClassDB.StudentActivityAnon AS
 (
