@@ -401,27 +401,6 @@ REVOKE ALL ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain) FROM PUBLI
 GRANT EXECUTE ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain)
       TO ClassDB_Instructor, ClassDB_DBManager;
 
---Changes a timestamp in fromTimeZone to toTimeZone
-CREATE OR REPLACE FUNCTION ClassDB.changeTimeZone(ts TIMESTAMP,
-   toTimeZone VARCHAR DEFAULT TO_CHAR(CURRENT_TIMESTAMP, 'TZ'), fromTimeZone VARCHAR DEFAULT 'UTC')
-RETURNS TIMESTAMP AS
-$$
-   SELECT (ts AT TIME ZONE COALESCE(fromTimeZone, 'UTC')) AT TIME ZONE
-      COALESCE(toTimeZone, TO_CHAR(CURRENT_TIMESTAMP, 'TZ'));
-$$ LANGUAGE sql
-   SECURITY DEFINER;
-
-REVOKE ALL ON FUNCTION
-   ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
-   FROM PUBLIC;
-
-ALTER FUNCTION
-   ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
-   OWNER TO ClassDB;
---Not sure if we need this
---GRANT EXECUTE ON FUNCTION
---   ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
---TO ClassDB_Instructor;
 
 --Changes a timestamp in fromTimeZone to toTimeZone
 CREATE OR REPLACE FUNCTION ClassDB.changeTimeZone(ts TIMESTAMP,
