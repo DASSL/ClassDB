@@ -1,6 +1,6 @@
 --addClassDBRolesViewsCore.sql - ClassDB
 
---Andrew Figueroa, Kevin Kelly, Steven Rollo Sean Murthy
+--Andrew Figueroa, Kevin Kelly, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL)
 --https://dassl.github.io/
 
@@ -40,8 +40,6 @@ $$;
 
 
 --Define a view to return known users
--- the fields marked TBD are yet to be filled in: they are commented out so
--- the view definition can be replaced later
 CREATE OR REPLACE VIEW ClassDB.User AS
   SELECT RoleName AS UserName, FullName, SchemaName, ExtraInfo,
   ClassDB.IsInstructor(RoleName) AS IsInstructor, --True if user is instructor
@@ -59,7 +57,7 @@ LEFT OUTER JOIN (
   GROUP BY UserName) AS DDLActivityAggregate on RoleName = DDLActivityAggregate.UserName
 LEFT OUTER JOIN (
   SELECT UserName,
-  COUNT(*) AS ConnectionCount, --Total amout of times user has connected to this DB
+  COUNT(*) AS ConnectionCount, --Total amount of times user has connected to this DB
   MAX(AcceptedAtUTC) AS LastConnectionAtUTC --TIMESTAMP of the last connection user made
   FROM ClassDB.ConnectionActivity
   GROUP BY UserName) AS ConnectionActivity on RoleName = ConnectionActivity.UserName
