@@ -30,3 +30,4 @@
 \ir addConnectionActivityLoggingReco.sql
 \ir addConnectionMgmtReco.sql
 \ir addDDLActivityLoggingReco.sql
+\ir addFrequentViewsReco.sql
