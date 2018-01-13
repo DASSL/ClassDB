@@ -42,8 +42,8 @@ SET LOCAL client_min_messages TO WARNING;
 -- record in the student table. It also increments the student's total DDL
 -- statement count
 
---We use CREATE OR REPLACE for this function because it can't be dropped if the
--- event triggers already exist.  For example, when re-runing this script
+--This function requires CREATE OR REPLACE for this function because it can't be
+-- dropped if the event triggers already exist.  For example, when re-runing this script
 CREATE OR REPLACE FUNCTION ClassDB.logDDLActivity()
 RETURNS event_trigger AS
 $$
@@ -70,7 +70,7 @@ BEGIN
 
       --Note: DROP statements cause this trigger to be executed twice,
       -- see https://www.postgresql.org/docs/9.6/static/event-trigger-matrix.html
-      -- ddl_commend_end is triggered on all DDL statements. However,
+      -- ddl_command_end is triggered on all DDL statements. However,
       -- pg_event_trigger_ddl_commands().object_identity is NULL for DROP statements
       -- Since ddl_command_end is sent after sql_drop, we don't update if objId
       -- IS NULL, because that is the ddl_command_end event after sql_drop,
@@ -95,7 +95,7 @@ REVOKE ALL ON FUNCTION ClassDB.logDDLActivity() FROM PUBLIC;
 -- the 'Drop' trigger is fired during the sql_drop event, which occurs when
 -- DROP statements are executed. The 'DDL' trigger is executed on ddl_command_end
 -- which is fired when any DDL statement finishes executing. Both triggers are
--- needed to log all DDL statements, as not all infomation about DROP statements
+-- needed to log all DDL statements, as not all information about DROP statements
 -- is provided by the ddl_command_end event
 DROP EVENT TRIGGER IF EXISTS triggerDDLCommandSqlDrop;
 CREATE EVENT TRIGGER triggerDDLCommandSqlDrop

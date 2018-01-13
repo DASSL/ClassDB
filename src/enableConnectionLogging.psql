@@ -14,7 +14,7 @@
 --This script must be run before addConnectionActivityLogging.sql.
 -- This script only needs to be run once per server, however.
 
---Additonally, this script must be run using a client that will send each statement
+--Additionally, this script must be run using a client that will send each statement
 -- individually - we recommend psql. Some clients, like pgAdmin 4, cannot run this
 -- script because they pack each statement into a single command string.  This causes
 -- ALTER SYSTEM statements to fail.

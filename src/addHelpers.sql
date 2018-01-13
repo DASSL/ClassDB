@@ -412,10 +412,6 @@ $$
 $$ LANGUAGE sql
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION
-   ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
-   FROM PUBLIC;
-
 ALTER FUNCTION
    ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
    OWNER TO ClassDB;

@@ -17,7 +17,7 @@
 
 --This script adds the connection logging portion of the ClassDB user monitoring
 -- system.  It provides the classdb.importLog () function to import
--- to import the Postgres connection logs and record student connection data.
+-- the Postgres connection logs and record student connection data.
 
 
 START TRANSACTION;
@@ -59,7 +59,7 @@ CREATE TABLE ClassDB.PostgresLog
    transaction_id BIGINT,
    error_severity TEXT,
    sql_state_code TEXT,
-   message TEXT, --States if the log row is a connection event, or someting else
+   message TEXT, --States if the log row is a connection event, or something else
    detail TEXT,
    hint TEXT,
    internal_query TEXT,
@@ -101,7 +101,7 @@ BEGIN
    lastConDateLocal = date(ClassDB.ChangeTimeZone(lastConTimeStampUTC));
 
 	--Set the date of last logged connection. We prefer the user-supplied parameter, but
-   -- defer to our 'best-guess' and finally, the current date if preceeding values are null
+   -- defer to our 'best-guess' and finally, the current date if preceding values are null
 	lastConDateLocal = COALESCE(startDate, lastConDateLocal, CURRENT_DATE);
 
 	--We want to import all logs between the lastConDate and current date
