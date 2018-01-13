@@ -1,4 +1,4 @@
---prepareDBCore.psql - ClassDB
+--addAllDBOpt.psql - ClassDB
 
 --Steven Rollo, Andrew Figueroa, Sean Murthy
 --Data Science & Systems Lab (DASSL)
@@ -15,15 +15,10 @@
 --This script should be run in a database to which ClassDB is to be added
 -- the database should have already been created
 
---This script runs the ClassDB scripts necessary to install ClassDB to a single
+--This script runs the ClassDB scripts optional to install to a ClassDB
 -- database on a Postgres server.  This script uses psql meta-commands to do this,
 -- so it can only be executed by psql.  This can be done using the -f
 -- command line switch, or the \i command inside an interactive session.
 
 \set ON_ERROR_STOP on
-\i initializeDBCore.sql
-\i addHelpersCore.sql
-\i addRoleBaseMgmtCore.sql
-\i addClassDBRolesMgmtCore.sql
-\i addUserMgmtCore.sql
-\i addClassDBRolesViewsCore.sql
+\i addCatalogMgmtOpt.sql
