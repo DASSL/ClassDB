@@ -89,8 +89,8 @@ DROP OWNED BY ClassDB_Student;
 
 --Try to drop objects that are installed by ClassDB, but not owned by it
 -- For example, event triggers and functions requiring superuser permissions
-DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDDL;
-DROP EVENT TRIGGER IF EXISTS updateStudentActivityTriggerDrop;
+DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
+DROP EVENT TRIGGER IF EXISTS triggerDDLCommandSqlDrop;
 DROP FUNCTION IF EXISTS ClassDB.listUserConnections(VARCHAR);
 DROP FUNCTION IF EXISTS ClassDB.enableDDLActivityLogging();
 DROP FUNCTION IF EXISTS ClassDB.disableDDLActivityLogging();
