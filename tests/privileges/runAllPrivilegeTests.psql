@@ -1,0 +1,58 @@
+--runAllPrivilegeTests.psql
+
+--Andrew Figueroa, Steven Rollo
+--Data Science & Systems Lab (DASSL)
+--https://dassl.github.io/
+
+--(C) 2017- DASSL. ALL RIGHTS RESERVED.
+--Licensed to others under CC 4.0 BY-SA-NC
+--https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+--PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+
+--This psql script executes all of the privilege tests, pausing before each of
+-- the two sets: The first where all statements should succeed, and other
+-- where all statements should fail.
+
+
+--Remember the current user so we can switch back at the end
+-- Currently, this is assuming the starting superuser account is 'postgres'
+-- you must change this if you want to switch back to a different superuser account
+-- at the end of the script
+\set psqlCurrentUser postgres
+
+
+\echo 'The following tests should complete without any errors'
+\prompt 'Press enter to continue...' unusedInputVariable
+
+\i 0_setup.sql
+
+\connect - ptins0
+\i 1_instructorPass.sql
+
+\connect - ptstu0
+\i 2_studentPass.sql
+
+\connect - ptdbm0
+\i 3_dbmanagerPass.sql
+
+\connect - ptins1
+\i 4_instructorPass2.sql
+
+\echo 'README: If any previous test resulted in a warning, error, or exception, then privilege tests have failed'
+\echo 'All of the following tests should result in errors'
+\prompt 'Press enter to continue...' unusedInputVariable
+
+\i 5_instructorFail.sql
+
+\connect - ptstu1
+\i 6_studentFail.sql
+
+\connect - ptdbm1
+\i 7_dbmanagerFail.sql
+
+\echo 'Initiating cleanup'
+\prompt 'Press enter to continue...' unusedInputVariable
+
+\connect - :psqlCurrentUser
+\i 8_cleanup.sql
