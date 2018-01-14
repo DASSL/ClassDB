@@ -19,7 +19,7 @@
 --This script creates several objects (we collectively refer to them as views) to
 -- display summary data related to student activity in the current database.
 -- Views that are accessible to students and require access to ClassDB.User are
--- implememted as functions. This allows the views to access the ClassDB schema
+-- implemented as functions. This allows the views to access the ClassDB schema
 -- though students cannot directly access the schema.
 
 
@@ -104,7 +104,7 @@ GRANT SELECT ON ClassDB.StudentTable TO ClassDB_Instructor;
 -- this view is accessible only to instructors.
 CREATE OR REPLACE VIEW ClassDB.StudentTableCount AS
 (
-  SELECT UserName, COUNT(*)
+  SELECT UserName, COUNT(*) TableCount
   FROM ClassDB.StudentTable
   GROUP BY UserName
   ORDER BY UserName
