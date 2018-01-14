@@ -46,8 +46,9 @@ CREATE OR REPLACE VIEW ClassDB.User AS
   ClassDB.IsStudent(RoleName) AS IsStudent, --True if user is student
   ClassDB.IsDBManager(RoleName) AS IsDBManager, --True if user is DBManager
   ClassDB.isUser(RoleName) AS HasClassDBRole, --True if user is any ClassDB role
-  DDLCount, LastDDLActivityAtUTC, LastDDLOperation, LastDDLObject,
-  ConnectionCount, LastConnectionAtUTC
+  COALESCE(DDLCount, 0) AS DDLCount, LastDDLActivityAtUTC,
+  LastDDLOperation, LastDDLObject,
+  COALESCE(ConnectionCount, 0) AS ConnectionCount, LastConnectionAtUTC
 FROM ClassDB.RoleBase
 LEFT OUTER JOIN (
   SELECT UserName,
