@@ -17,14 +17,13 @@
 -- it should be run after running addUserMgmt.sql
 
 --This script creates several objects (we collectively refer to them as views) to
--- display summary data related to student activity in the current ClassDB database.
+-- display summary data related to student activity in the current database.
 -- Views that are accessible to students and require access to ClassDB.User are
--- implmemted as functions. This allows the views to access the ClassDB schema
+-- implemented as functions. This allows the views to access the ClassDB schema
 -- though students cannot directly access the schema.
--- These views pull data from both the ClassDB student table and info schema.
 
 
-BEGIN TRANSACTION;
+START TRANSACTION;
 
 --Make sure the current user has sufficient privilege to run this script
 -- privileges required: superuser
@@ -38,6 +37,8 @@ BEGIN
 END
 $$;
 
+
+
 --This view shows the activity summary of all students in the User table. This view
 -- is only usable by instructors
 CREATE OR REPLACE VIEW ClassDB.StudentActivityAll AS
@@ -49,9 +50,11 @@ CREATE OR REPLACE VIEW ClassDB.StudentActivityAll AS
   ORDER BY UserName
 );
 
-REVOKE ALL PRIVILEGES ON ClassDB.StudentActivityAll FROM PUBLIC;
 ALTER VIEW ClassDB.studentActivityAll OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.StudentActivityAll FROM PUBLIC;
 GRANT SELECT ON ClassDB.StudentActivityAll TO ClassDB_Instructor;
+
+
 
 --This view shows the activity of all students in the student table, omitting any
 -- user-identifiable information. This view is only usable by instructors
@@ -64,39 +67,53 @@ CREATE OR REPLACE VIEW ClassDB.StudentActivityAnon AS
    ORDER BY ConnectionCount
 );
 
-REVOKE ALL PRIVILEGES ON ClassDB.StudentActivityAnon FROM PUBLIC;
 ALTER VIEW ClassDB.studentActivityAnon OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.StudentActivityAnon FROM PUBLIC;
 GRANT SELECT ON ClassDB.StudentActivityAnon TO ClassDB_Instructor;
 
---This view shows all tables and views currently owned by by students. Note that
--- this is accomplished by listing all tables/views in student schemas. This view is
--- only accessible by instructors.
+
+
+--This view returns all tables and views owned by student users
+-- uses pg_catalog instead of INFORMATION_SCHEMA because the latter does not
+-- support the case where a table owner and the containing schema's owner are
+-- different.
+-- does not use view ClassDB.Student for efficiency: that view computes many
+-- things not required here, and using that would require a join
+-- this view is accessible only to instructors.
 CREATE OR REPLACE VIEW ClassDB.StudentTable AS
 (
-  SELECT table_schema, table_name, table_type
-  FROM information_schema.tables
-  JOIN ClassDB.Student ON table_schema = ClassDB.getSchemaName(UserName)
-  ORDER BY table_schema
+  SELECT tableowner UserName, schemaname SchemaName,
+         tablename TableName, 'TABLE' TableType
+  FROM pg_catalog.pg_tables
+  WHERE ClassDB.isStudent(tableowner::ClassDB.IDNameDomain)
+
+  UNION
+
+  SELECT viewowner, schemaname, viewname, 'VIEW'
+  FROM pg_catalog.pg_views
+  WHERE ClassDB.isStudent(viewowner::ClassDB.IDNameDomain)
 );
 
-REVOKE ALL PRIVILEGES ON ClassDB.StudentTable FROM PUBLIC;
 ALTER VIEW ClassDB.StudentTable OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.StudentTable FROM PUBLIC;
 GRANT SELECT ON ClassDB.StudentTable TO ClassDB_Instructor;
 
---This view lists the current number of tables and views owned by each student. This
--- view is only accessible by instructors.
+
+
+--This view returns the number of tables and views each student user owns
+-- this view is accessible only to instructors.
 CREATE OR REPLACE VIEW ClassDB.StudentTableCount AS
 (
-  SELECT table_schema, COUNT(*)
-  FROM information_schema.tables
-  JOIN ClassDB.Student ON table_schema = ClassDB.getSchemaName(UserName)
-  GROUP BY table_schema
-  ORDER BY table_schema
+  SELECT UserName, COUNT(*) TableCount
+  FROM ClassDB.StudentTable
+  GROUP BY UserName
+  ORDER BY UserName
 );
 
-REVOKE ALL PRIVILEGES ON ClassDB.StudentTableCount FROM PUBLIC;
 ALTER VIEW ClassDB.StudentTableCount OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.StudentTableCount FROM PUBLIC;
 GRANT SELECT ON ClassDB.StudentTableCount TO ClassDB_Instructor;
+
 
 
 --This function gets the user activity summary for a given user. This includes their latest
@@ -118,9 +135,11 @@ $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION ClassDB.getUserActivitySummary(ClassDB.IDNameDomain) FROM PUBLIC;
 ALTER FUNCTION ClassDB.getUserActivitySummary(ClassDB.IDNameDomain) OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION ClassDB.getUserActivitySummary(ClassDB.IDNameDomain) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ClassDB.getUserActivitySummary(ClassDB.IDNameDomain) TO ClassDB_Instructor;
+
+
 
 --This function lists the most recent activity of the executing user. This view is accessible
 -- by both students and instructors, which requires that it be placed in the public schema.
@@ -142,6 +161,8 @@ $$ LANGUAGE sql
 
 ALTER FUNCTION public.getMyActivitySummary() OWNER TO ClassDB;
 
+
+
 --Proxy view for public.getMyActivitySummary(). Designed to make access easier for students
 CREATE OR REPLACE VIEW public.MyActivitySummary AS
 (
@@ -152,6 +173,7 @@ CREATE OR REPLACE VIEW public.MyActivitySummary AS
 
 ALTER VIEW public.MyActivitySummary OWNER TO ClassDB;
 GRANT SELECT ON public.MyActivitySummary TO PUBLIC;
+
 
 
 --This function returns all DDL activity for a specified user
@@ -169,9 +191,11 @@ $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION ClassDB.getUserDDLActivity(ClassDB.IDNameDomain) FROM PUBLIC;
 ALTER FUNCTION ClassDB.getUserDDLActivity(ClassDB.IDNameDomain) OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION ClassDB.getUserDDLActivity(ClassDB.IDNameDomain) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ClassDB.getUserDDLActivity(ClassDB.IDNameDomain) TO ClassDB_Instructor;
+
+
 
 --This function returns all DDL activity for the current user
 CREATE OR REPLACE FUNCTION public.getMyDDLActivity()
@@ -188,6 +212,8 @@ $$ LANGUAGE sql
 
 ALTER FUNCTION public.getMyDDLActivity() OWNER TO ClassDB;
 
+
+
 --This view wraps getMyDDLActivity() for easier student access
 CREATE OR REPLACE VIEW public.MyDDLActivity AS
 (
@@ -197,6 +223,7 @@ CREATE OR REPLACE VIEW public.MyDDLActivity AS
 
 ALTER VIEW public.MyDDLActivity OWNER TO ClassDB;
 GRANT SELECT ON public.MyDDLActivity TO PUBLIC;
+
 
 
 --This function returns all connection activity for a specified user
@@ -214,9 +241,11 @@ $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION ClassDB.getUserConnectionActivity(ClassDB.IDNameDomain) FROM PUBLIC;
 ALTER FUNCTION ClassDB.getUserConnectionActivity(ClassDB.IDNameDomain) OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION ClassDB.getUserConnectionActivity(ClassDB.IDNameDomain) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ClassDB.getUserConnectionActivity(ClassDB.IDNameDomain) TO ClassDB_Instructor;
+
+
 
 --This function returns all connection activity for the current user
 CREATE OR REPLACE FUNCTION public.getMyConnectionActivity()
@@ -233,6 +262,8 @@ $$ LANGUAGE sql
 
 ALTER FUNCTION public.getMyConnectionActivity() OWNER TO ClassDB;
 
+
+
 --This view wraps getMyConnectionActivity for easier student access
 CREATE OR REPLACE VIEW public.MyConnectionActivity AS
 (
@@ -242,6 +273,7 @@ CREATE OR REPLACE VIEW public.MyConnectionActivity AS
 
 ALTER VIEW public.MyConnectionActivity OWNER TO ClassDB;
 GRANT SELECT ON public.MyConnectionActivity TO PUBLIC;
+
 
 
 --This function returns all activity for a specified user
@@ -261,9 +293,11 @@ $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
 
-REVOKE ALL ON FUNCTION ClassDB.getUserActivity(ClassDB.IDNameDomain) FROM PUBLIC;
 ALTER FUNCTION ClassDB.getUserActivity(ClassDB.IDNameDomain) OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION ClassDB.getUserActivity(ClassDB.IDNameDomain) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ClassDB.getUserActivity(ClassDB.IDNameDomain) TO ClassDB_Instructor;
+
+
 
 --This view returns all activity for the current user
 CREATE OR REPLACE FUNCTION public.getMyActivity()
@@ -280,6 +314,8 @@ $$ LANGUAGE sql
 
 ALTER FUNCTION public.getMyActivity() OWNER TO ClassDB;
 
+
+
 --This view wraps getMyActivity() for easier student access
 CREATE OR REPLACE VIEW public.MyActivity AS
 (
@@ -289,5 +325,6 @@ CREATE OR REPLACE VIEW public.MyActivity AS
 
 ALTER VIEW public.MyActivity OWNER TO ClassDB;
 GRANT SELECT ON public.MyActivity TO PUBLIC;
+
 
 COMMIT;
