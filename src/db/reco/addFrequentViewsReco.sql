@@ -225,17 +225,20 @@ GRANT SELECT ON public.MyActivitySummary TO PUBLIC;
 
 
 
---This function returns all DDL activity for a specified user
+--This function returns all DDL activity for a specified user. Passing NULL returns data
+-- for all users
 CREATE OR REPLACE FUNCTION ClassDB.getUserDDLActivity(userName ClassDB.IDNameDomain
-   DEFAULT SESSION_USER::ClassDB.IDNameDomain)
+   DEFAULT NULL)
 RETURNS TABLE
 (
-   StatementStartedAt TIMESTAMP, DDLOperation VARCHAR, DDLObject VARCHAR(256)
+   UserName ClassDB.IDNameDomain, StatementStartedAt TIMESTAMP, DDLOperation VARCHAR,
+   DDLObject VARCHAR(256)
 ) AS
 $$
-   SELECT ClassDB.changeTimeZone(StatementStartedAtUTC), DDLOperation, DDLObject
+   SELECT UserName, ClassDB.changeTimeZone(StatementStartedAtUTC), DDLOperation,
+          DDLObject
    FROM ClassDB.DDLActivity
-   WHERE username = ClassDB.foldPgID($1);
+   WHERE username LIKE COALESCE(ClassDB.foldPgID($1), '%');
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
@@ -254,7 +257,7 @@ RETURNS TABLE
 ) AS
 $$
    SELECT StatementStartedAt, DDLOperation, DDLObject
-   FROM ClassDB.getUserDDLActivity();
+   FROM ClassDB.getUserDDLActivity(SESSION_USER::ClassDB.IDNameDomain);
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
@@ -275,17 +278,18 @@ GRANT SELECT ON public.MyDDLActivity TO PUBLIC;
 
 
 
---This function returns all connection activity for a specified user
+--This function returns all connection activity for a specified user. Passing NULL returns
+-- data for all users
 CREATE OR REPLACE FUNCTION ClassDB.getUserConnectionActivity(userName ClassDB.IDNameDomain
-   DEFAULT SESSION_USER::ClassDB.IDNameDomain)
+   DEFAULT NULL)
 RETURNS TABLE
 (
-   AcceptedAt TIMESTAMP
+   UserName ClassDB.IDNameDomain, AcceptedAt TIMESTAMP
 ) AS
 $$
-   SELECT ClassDB.changeTimeZone(AcceptedAtUTC)
+   SELECT UserName, ClassDB.changeTimeZone(AcceptedAtUTC)
    FROM ClassDB.ConnectionActivity
-   WHERE username = ClassDB.foldPgID($1);
+   WHERE username LIKE COALESCE(ClassDB.foldPgID($1), '%');
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
@@ -304,7 +308,7 @@ RETURNS TABLE
 ) AS
 $$
    SELECT AcceptedAt
-   FROM ClassDB.getUserConnectionActivity()
+   FROM ClassDB.getUserConnectionActivity(SESSION_USER::ClassDB.IDNameDomain);
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
@@ -325,19 +329,21 @@ GRANT SELECT ON public.MyConnectionActivity TO PUBLIC;
 
 
 
---This function returns all activity for a specified user
+--This function returns all activity for a specified user. Passing NULL provides
+-- data for all users
 CREATE OR REPLACE FUNCTION ClassDB.getUserActivity(userName ClassDB.IDNameDomain
-   DEFAULT SESSION_USER::ClassDB.IDNameDomain)
+   DEFAULT NULL)
 RETURNS TABLE
 (
-   ActivityAt TIMESTAMP, ActivityType VARCHAR(10), DDLOperation VARCHAR(64), DDLObject VARCHAR(256)
+   UserName ClassDB.IDNameDomain, ActivityAt TIMESTAMP, ActivityType VARCHAR(10),
+   DDLOperation VARCHAR(64), DDLObject VARCHAR(256)
 ) AS
 $$
-   SELECT StatementStartedAt, 'DDL', DDLOperation, DDLObject
-   FROM ClassDB.getUserDDLActivity($1)
+   SELECT UserName, StatementStartedAt, 'DDL', DDLOperation, DDLObject
+   FROM ClassDB.getUserDDLActivity(COALESCE($1, '%'))
    UNION ALL
-   SELECT AcceptedAt, 'Connection', NULL, NULL
-   FROM ClassDB.getUserConnectionActivity($1)
+   SELECT UserName, AcceptedAt, 'Connection', NULL, NULL
+   FROM ClassDB.getUserConnectionActivity(COALESCE($1, '%'));
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
@@ -345,6 +351,87 @@ $$ LANGUAGE sql
 ALTER FUNCTION ClassDB.getUserActivity(ClassDB.IDNameDomain) OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION ClassDB.getUserActivity(ClassDB.IDNameDomain) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ClassDB.getUserActivity(ClassDB.IDNameDomain) TO ClassDB_Instructor;
+
+
+
+--This function returns all activity for a specified student. Passing NULL provides
+-- data for all students
+CREATE OR REPLACE FUNCTION ClassDB.getStudentActivity(userName ClassDB.IDNameDomain
+   DEFAULT NULL)
+RETURNS TABLE
+(
+   UserName ClassDB.IDNameDomain, ActivityAt TIMESTAMP, ActivityType VARCHAR(10),
+   DDLOperation VARCHAR(64), DDLObject VARCHAR(256)
+) AS
+$$
+   SELECT UserName, StatementStartedAt, 'DDL', DDLOperation, DDLObject
+   FROM ClassDB.getUserDDLActivity(COALESCE($1, '%'))
+   WHERE ClassDB.isStudent(UserName)
+   UNION ALL
+   SELECT UserName, AcceptedAt, 'Connection', NULL, NULL
+   FROM ClassDB.getUserConnectionActivity(COALESCE($1, '%'))
+   WHERE ClassDB.isStudent(UserName);
+$$ LANGUAGE sql
+   STABLE
+   SECURITY DEFINER;
+
+ALTER FUNCTION ClassDB.getStudentActivity(ClassDB.IDNameDomain) OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION ClassDB.getStudentActivity(ClassDB.IDNameDomain) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ClassDB.getStudentActivity(ClassDB.IDNameDomain) TO ClassDB_Instructor;
+
+
+
+--A view that wraps getStudentActivity() for easier access
+CREATE OR REPLACE VIEW ClassDB.StudentActivity AS
+(
+   SELECT UserName, ActivityAt , ActivityType, DDLOperation, DDLObject
+   FROM   ClassDB.getStudentActivity()
+);
+
+ALTER VIEW ClassDB.StudentActivity OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.StudentActivity FROM PUBLIC;
+GRANT SELECT ON ClassDB.StudentActivity TO ClassDB_Instructor;
+
+
+
+--This function returns all activity for a specified student. Returns anonymized data.
+-- Passing NULL provides data for all students
+CREATE OR REPLACE FUNCTION ClassDB.getStudentActivityAnon(userName ClassDB.IDNameDomain
+   DEFAULT NULL)
+RETURNS TABLE
+(
+   ActivityAt TIMESTAMP, ActivityType VARCHAR(10), DDLOperation VARCHAR(64),
+   DDLObject VARCHAR(256)
+) AS
+$$
+   SELECT StatementStartedAt, 'DDL', DDLOperation,
+          SUBSTRING(DDLObject, POSITION('.' IN DDLObject)+1) DDLObject
+   FROM ClassDB.getUserDDLActivity(COALESCE($1, '%'))
+   WHERE ClassDB.isStudent(UserName)
+   UNION ALL
+   SELECT AcceptedAt, 'Connection', NULL, NULL
+   FROM ClassDB.getUserConnectionActivity(COALESCE($1, '%'))
+   WHERE ClassDB.isStudent(UserName)
+$$ LANGUAGE sql
+   STABLE
+   SECURITY DEFINER;
+
+ALTER FUNCTION ClassDB.getStudentActivityAnon(ClassDB.IDNameDomain) OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION ClassDB.getStudentActivityAnon(ClassDB.IDNameDomain) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ClassDB.getStudentActivityAnon(ClassDB.IDNameDomain) TO ClassDB_Instructor;
+
+
+
+--A view that wraps getStudentActivityAnon() for easier access
+CREATE OR REPLACE VIEW ClassDB.StudentActivityAnon AS
+(
+   SELECT ActivityAt , ActivityType, DDLOperation, DDLObject
+   FROM   ClassDB.getStudentActivityAnon()
+);
+
+ALTER VIEW ClassDB.StudentActivityAnon OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.StudentActivityAnon FROM PUBLIC;
+GRANT SELECT ON ClassDB.StudentActivityAnon TO ClassDB_Instructor;
 
 
 
@@ -356,7 +443,7 @@ RETURNS TABLE
 ) AS
 $$
    SELECT ActivityAt, ActivityType, DDLOperation, DDLObject
-   FROM ClassDB.getUserActivity();
+   FROM ClassDB.getUserActivity(SESSION_USER::ClassDB.IDNameDomain);
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
