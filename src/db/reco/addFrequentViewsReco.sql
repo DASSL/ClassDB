@@ -38,41 +38,6 @@ END
 $$;
 
 
-
---This view shows the activity summary of all students in the User table. This view
--- is only usable by instructors
-CREATE OR REPLACE VIEW ClassDB.StudentActivityAll AS
-(
-  SELECT UserName, DDLCount, LastDDLOperation, LastDDLObject,
-         ClassDB.changeTimeZone(LastDDLActivityAtUTC) LastDDLActivityAt,
-         ConnectionCount, ClassDB.changeTimeZone(LastConnectionAtUTC) LastConnectionAt
-  FROM ClassDB.Student
-  ORDER BY UserName
-);
-
-ALTER VIEW ClassDB.studentActivityAll OWNER TO ClassDB;
-REVOKE ALL PRIVILEGES ON ClassDB.StudentActivityAll FROM PUBLIC;
-GRANT SELECT ON ClassDB.StudentActivityAll TO ClassDB_Instructor;
-
-
-
---This view shows the activity of all students in the student table, omitting any
--- user-identifiable information. This view is only usable by instructors
-CREATE OR REPLACE VIEW ClassDB.StudentActivityAnon AS
-(
-   SELECT DDLCount, LastDDLOperation,
-          SUBSTRING(LastDDLObject, POSITION('.' IN lastddlobject)+1) LastDDLObject,
-          LastDDLActivityAt, ConnectionCount, LastConnectionAt
-   FROM ClassDB.StudentActivityAll
-   ORDER BY ConnectionCount
-);
-
-ALTER VIEW ClassDB.studentActivityAnon OWNER TO ClassDB;
-REVOKE ALL PRIVILEGES ON ClassDB.StudentActivityAnon FROM PUBLIC;
-GRANT SELECT ON ClassDB.StudentActivityAnon TO ClassDB_Instructor;
-
-
-
 --This view returns all tables and views owned by student users
 -- uses pg_catalog instead of INFORMATION_SCHEMA because the latter does not
 -- support the case where a table owner and the containing schema's owner are
@@ -158,7 +123,7 @@ RETURNS TABLE
 ) AS
 $$
    SELECT UserName, DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAt,
-           ConnectionCount,LastConnectionAt
+          ConnectionCount, LastConnectionAt
    FROM ClassDB.getUserActivitySummary($1)
    WHERE ClassDB.isStudent(UserName);
 $$ LANGUAGE sql
@@ -168,6 +133,60 @@ $$ LANGUAGE sql
 ALTER FUNCTION ClassDB.getStudentActivitySummary(ClassDB.IDNameDomain) OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION ClassDB.getStudentActivitySummary(ClassDB.IDNameDomain) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ClassDB.getStudentActivitySummary(ClassDB.IDNameDomain) TO ClassDB_Instructor;
+
+
+
+--A view that wraps getStudentActivitySummary() for easier access
+CREATE OR REPLACE VIEW ClassDB.StudentActivitySummary AS
+(
+   SELECT UserName, DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAt,
+          ConnectionCount, LastConnectionAt
+   FROM   ClassDB.getStudentActivitySummary()
+);
+
+ALTER VIEW ClassDB.StudentActivitySummary OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.StudentActivitySummary FROM PUBLIC;
+GRANT SELECT ON ClassDB.StudentActivitySummary TO ClassDB_Instructor;
+
+
+
+-- return activity summaries for all students. This includes their latest
+-- DDL and connection activity, as well as their total number of DDL and
+-- Connection events
+CREATE OR REPLACE FUNCTION ClassDB.getStudentActivitySummaryAnon(
+   userName ClassDB.IDNameDomain DEFAULT NULL)
+RETURNS TABLE
+(
+   DDLCount BIGINT, LastDDLOperation VARCHAR,
+   LastDDLObject VARCHAR, LastDDLActivityAt TIMESTAMP, ConnectionCount BIGINT,
+   LastConnectionAt TIMESTAMP
+) AS
+$$
+   SELECT DDLCount, LastDDLOperation,
+          SUBSTRING(LastDDLObject, POSITION('.' IN lastddlobject)+1)  LastDDLObject,
+          LastDDLActivityAt, ConnectionCount, LastConnectionAt
+   FROM ClassDB.getStudentActivitySummary($1)
+$$ LANGUAGE sql
+   STABLE
+   SECURITY DEFINER;
+
+ALTER FUNCTION ClassDB.getStudentActivitySummaryAnon(ClassDB.IDNameDomain) OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION ClassDB.getStudentActivitySummaryAnon(ClassDB.IDNameDomain) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ClassDB.getStudentActivitySummaryAnon(ClassDB.IDNameDomain) TO ClassDB_Instructor;
+
+
+
+--A view that wraps getStudentActivitySummaryAnon() for easier access
+CREATE OR REPLACE VIEW ClassDB.StudentActivitySummaryAnon AS
+(
+   SELECT DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAt,
+          ConnectionCount, LastConnectionAt
+   FROM   ClassDB.getStudentActivitySummary()
+);
+
+ALTER VIEW ClassDB.StudentActivitySummaryAnon OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.StudentActivitySummaryAnon FROM PUBLIC;
+GRANT SELECT ON ClassDB.StudentActivitySummaryAnon TO ClassDB_Instructor;
 
 
 
