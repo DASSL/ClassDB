@@ -116,21 +116,25 @@ GRANT SELECT ON ClassDB.StudentTableCount TO ClassDB_Instructor;
 
 
 
---This function gets the user activity summary for a given user. This includes their latest
+--This function gets the user activity summary for a given user. A value of NULL will
+-- return activity summaries for all ClassDB users. This includes their latest
 -- DDL and connection activity, as well as their total number of DDL and Connection events
 CREATE OR REPLACE FUNCTION ClassDB.getUserActivitySummary(userName ClassDB.IDNameDomain
-   DEFAULT SESSION_USER::ClassDB.IDNameDomain)
+   DEFAULT NULL)
 RETURNS TABLE
 (
-   DDLCount BIGINT, LastDDLOperation VARCHAR, LastDDLObject VARCHAR,
-   LastDDLActivityAt TIMESTAMP, ConnectionCount BIGINT, LastConnectionAt TIMESTAMP
+   UserName ClassDB.IDNameDomain, DDLCount BIGINT, LastDDLOperation VARCHAR,
+   LastDDLObject VARCHAR, LastDDLActivityAt TIMESTAMP, ConnectionCount BIGINT,
+   LastConnectionAt TIMESTAMP
 ) AS
 $$
-   SELECT ddlcount, LastDDLOperation, lastddlobject,
+   --We COALESCE the input user name with '%' so that the function will either match
+   -- a single user name, or all user names
+   SELECT UserName, ddlcount, LastDDLOperation, lastddlobject,
           ClassDB.changeTimeZone(LastDDLActivityAtUTC),
           connectioncount, ClassDB.changeTimeZone(LastConnectionAtUTC)
    FROM ClassDB.User
-   WHERE username = ClassDB.foldPgID($1);
+   WHERE username LIKE COALESCE(ClassDB.foldPgID($1), '%');
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
@@ -138,6 +142,32 @@ $$ LANGUAGE sql
 ALTER FUNCTION ClassDB.getUserActivitySummary(ClassDB.IDNameDomain) OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION ClassDB.getUserActivitySummary(ClassDB.IDNameDomain) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ClassDB.getUserActivitySummary(ClassDB.IDNameDomain) TO ClassDB_Instructor;
+
+
+
+--This function gets the user activity summary for a given student. A value of NULL will
+-- return activity summaries for all students. This includes their latest
+-- DDL and connection activity, as well as their total number of DDL and Connection events
+CREATE OR REPLACE FUNCTION ClassDB.getStudentActivitySummary(userName ClassDB.IDNameDomain
+   DEFAULT NULL)
+RETURNS TABLE
+(
+   UserName ClassDB.IDNameDomain, DDLCount BIGINT, LastDDLOperation VARCHAR,
+   LastDDLObject VARCHAR, LastDDLActivityAt TIMESTAMP, ConnectionCount BIGINT,
+   LastConnectionAt TIMESTAMP
+) AS
+$$
+   SELECT UserName, DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAt,
+           ConnectionCount,LastConnectionAt
+   FROM ClassDB.getUserActivitySummary($1)
+   WHERE ClassDB.isStudent(UserName);
+$$ LANGUAGE sql
+   STABLE
+   SECURITY DEFINER;
+
+ALTER FUNCTION ClassDB.getStudentActivitySummary(ClassDB.IDNameDomain) OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION ClassDB.getStudentActivitySummary(ClassDB.IDNameDomain) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ClassDB.getStudentActivitySummary(ClassDB.IDNameDomain) TO ClassDB_Instructor;
 
 
 
@@ -154,7 +184,7 @@ RETURNS TABLE
 $$
    SELECT ddlcount, LastDDLOperation, lastddlobject,  lastddlactivityat,
           connectioncount, LastConnectionAt
-   FROM ClassDB.getUserActivitySummary();
+   FROM ClassDB.getUserActivitySummary(SESSION_USER::ClassDB.IDNameDomain);
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
