@@ -15,6 +15,11 @@
 -- where all statements should fail.
 
 
+--We want to allow errors to occur in order to allow all tests that should fail
+-- to be run, along with having the cleanup process complete
+\set ON_ERROR_STOP off
+
+
 --Remember the current user so we can switch back at the end
 -- Currently, this is assuming the starting superuser account is 'postgres'
 -- you must change this if you want to switch back to a different superuser account
@@ -25,34 +30,34 @@
 \echo 'The following tests should complete without any errors'
 \prompt 'Press enter to continue...' unusedInputVariable
 
-\i 0_setup.sql
+\ir 0_setup.sql
 
 \connect - ptins0
-\i 1_instructorPass.sql
+\ir 1_instructorPass.sql
 
 \connect - ptstu0
-\i 2_studentPass.sql
+\ir 2_studentPass.sql
 
 \connect - ptdbm0
-\i 3_dbmanagerPass.sql
+\ir 3_dbmanagerPass.sql
 
 \connect - ptins1
-\i 4_instructorPass2.sql
+\ir 4_instructorPass2.sql
 
 \echo 'README: If any previous test resulted in a warning, error, or exception, then privilege tests have failed'
 \echo 'All of the following tests should result in errors'
 \prompt 'Press enter to continue...' unusedInputVariable
 
-\i 5_instructorFail.sql
+\ir 5_instructorFail.sql
 
 \connect - ptstu1
-\i 6_studentFail.sql
+\ir 6_studentFail.sql
 
 \connect - ptdbm1
-\i 7_dbmanagerFail.sql
+\ir 7_dbmanagerFail.sql
 
 \echo 'Initiating cleanup'
 \prompt 'Press enter to continue...' unusedInputVariable
 
 \connect - :psqlCurrentUser
-\i 8_cleanup.sql
+\ir 8_cleanup.sql
