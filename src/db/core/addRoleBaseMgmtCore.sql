@@ -380,12 +380,6 @@ BEGIN
    --revoke the specified ClassDB role from the user
    EXECUTE FORMAT('REVOKE %s FROM %s', $2, $1);
 
-   --inform if user continues to be a member of other ClassDB roles
-   IF ClassDB.hasClassDBRole($1) THEN
-      RAISE NOTICE
-         'User "%" remains a member of one or more additional ClassDB roles', $1;
-   END IF;
-
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
