@@ -281,9 +281,7 @@ BEGIN
    -- this grant is needed to make the role the owner of its own schema, as well
    -- as to reassign and drop objects later in function dropRole
    -- this grant is also required in case the role was created outside ClassDB
-   IF NOT ClassDB.isMember(CURRENT_USER::ClassDB.IDNameDomain, $1) THEN
-      EXECUTE FORMAT('GRANT %s TO CURRENT_USER', $1);
-   END IF;
+   PERFORM ClassDB.grantRole($1);
 
    --find the current owner of the schema, if the schema already exists
    -- value will be NULL if and only if the schema does not exist
@@ -458,21 +456,27 @@ BEGIN
       END IF;
    END IF;
 
-   --the new owner's name cannot be empty or same as that of a ClassDB role
-   -- also, the new owner should already be defined in the server
-   --using an IF block instead of ELSIF for clarity
-   IF ($4 IN ('assign', 'xfer') AND $5 IS NOT NULL) THEN
+   --if assigning, new owner's name can't be empty or same as a ClassDB role's
+   -- SESSION_USER is the new owner if no new owner is specified
+   -- the new owner should already be defined in the server
+   IF $4 IN ('assign', 'xfer') THEN
       $5 = TRIM($5);
       IF ($5 = '') THEN
          RAISE EXCEPTION 'Invalid argument: new owner''s name is empty';
-      ELSIF(ClassDB.isClassDBRoleName($5) OR ClassDB.foldPgID($5) = 'classdb')
+      END IF;
+
+      newOwnerName = COALESCE($5, SESSION_USER);
+      IF(ClassDB.isClassDBRoleName(newOwnerName)
+         OR ClassDB.foldPgID(newOwnerName) = 'classdb'
+        )
       THEN
-         RAISE EXCEPTION 'Invalid argument: new owner cannot be "%"', $5;
-      ELSIF NOT ClassDB.isServerRoleDefined($5) THEN
-         RAISE EXCEPTION 'New owner role "%" is not defined', $5;
+         RAISE EXCEPTION 'Invalid argument: new owner cannot be "%"',
+                         newOwnerName;
+      ELSIF NOT ClassDB.isServerRoleDefined(newOwnerName) THEN
+         RAISE EXCEPTION 'New owner role "%" is not defined in the server',
+                         newOwnerName;
       END IF;
    END IF;
-
 
    --all good, enforce the disposition choice
    IF ($4 <> 'as_is') THEN
@@ -482,9 +486,7 @@ BEGIN
       -- this grant is also required in case the role was created outside ClassDB
       -- a similar grant is also required for the new object owner, and that is
       -- done later just before reassignment
-      IF NOT ClassDB.isMember(CURRENT_USER::ClassDB.IDNameDomain, $1) THEN
-         EXECUTE FORMAT('GRANT %s TO CURRENT_USER', $1);
-      END IF;
+      PERFORM ClassDB.grantRole($1);
 
       IF $4 IN ('drop', 'drop_c') THEN
          EXECUTE
@@ -493,21 +495,15 @@ BEGIN
                     CASE $4 WHEN 'drop' THEN 'RESTRICT' ELSE 'CASCADE' END
                   );
       ELSE
-         --make SESSION_USER the new owner if no new owner is specified
-         newOwnerName = COALESCE($5, SESSION_USER);
-
+         --grant the executing user the same rights as new owner and then
          --xfer ownership of objects owned by role in question to the new owner
-         -- grant the executing user the same rights as new owner prior to xfer
-         IF NOT ClassDB.isMember(CURRENT_USER::ClassDB.IDNameDomain, newOwnerName)
-         THEN
-            EXECUTE FORMAT('GRANT %s TO CURRENT_USER', newOwnerName);
-         END IF;
+         PERFORM ClassDB.grantRole(newOwnerName);
          EXECUTE FORMAT('REASSIGN OWNED BY %s TO %s', $1, newOwnerName);
 
-         --inform if a new owner was not provided
+         --inform if new owner's name wasn'o't supplied: must test parameter supplied
          IF $5 IS NULL THEN
-            RAISE NOTICE 'Objects owned by "%" are reassigned to "%"',
-                         $1, newOwnerName;
+            RAISE INFO 'Objects owned by "%" are reassigned to "%"',
+                       $1, newOwnerName;
          END IF;
       END IF;
 
