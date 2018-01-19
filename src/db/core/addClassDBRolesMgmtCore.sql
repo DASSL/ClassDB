@@ -223,7 +223,7 @@ CREATE OR REPLACE FUNCTION
    ClassDB.dropStudent(userName ClassDB.IDNameDomain,
                        dropFromServer BOOLEAN DEFAULT FALSE,
                        okIfRemainsClassDBRoleMember BOOLEAN DEFAULT TRUE,
-                       objectsDisposition VARCHAR DEFAULT 'assign_i',
+                       objectsDisposition VARCHAR DEFAULT 'assign',
                        newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL)
    RETURNS VOID AS
 $$
@@ -260,7 +260,7 @@ GRANT EXECUTE ON FUNCTION
 CREATE OR REPLACE FUNCTION
    ClassDB.dropAllStudents(dropFromServer BOOLEAN DEFAULT FALSE,
                            okIfRemainsClassDBRoleMember BOOLEAN DEFAULT TRUE,
-                           objectsDisposition VARCHAR DEFAULT 'assign_i',
+                           objectsDisposition VARCHAR DEFAULT 'assign',
                            newObjectsOwnerName ClassDB.IDNameDomain
                                                DEFAULT NULL)
    RETURNS VOID AS
@@ -381,7 +381,7 @@ CREATE OR REPLACE FUNCTION
    ClassDB.dropInstructor(userName ClassDB.IDNameDomain,
                           dropFromServer BOOLEAN DEFAULT FALSE,
                           okIfRemainsClassDBRoleMember BOOLEAN DEFAULT TRUE,
-                          objectsDisposition VARCHAR DEFAULT 'assign_i',
+                          objectsDisposition VARCHAR DEFAULT 'assign',
                           newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL)
    RETURNS VOID AS
 $$
@@ -493,7 +493,7 @@ CREATE OR REPLACE FUNCTION
    ClassDB.dropDBManager(userName ClassDB.IDNameDomain,
                          dropFromServer BOOLEAN DEFAULT FALSE,
                          okIfRemainsClassDBRoleMember BOOLEAN DEFAULT TRUE,
-                         objectsDisposition VARCHAR DEFAULT 'assign_i',
+                         objectsDisposition VARCHAR DEFAULT 'assign',
                          newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL)
    RETURNS VOID AS
 $$
