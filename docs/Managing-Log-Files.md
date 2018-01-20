@@ -45,10 +45,10 @@ First, you may manually delete old log files that have already been imported to 
 ```sql
 SHOW log_directory;
 ```
-The next query shows the latest connection timestamp imported from the logs. This date in this timestamp also corresponds to the last log file that was imported. Log files matching dates earlier than the one returned may be safely deleted.
+The next query shows the latest connection date imported from the logs. This date also corresponds to the last log file that was imported. Log files matching dates earlier than the one returned may be safely deleted.
 ```sql
-SELECT MAX(lastConnection)
-FROM classdb.student;
+date((SELECT ClassDB.ChangeTimeZone(MAX(AcceptedAtUTC))
+      FROM ClassDB.ConnectionActivity));
 ```
 
 Another method to reduce log size is to reduce the amount of information stored. For example, setting `log_error_verbosity` to `TERSE` will disable the logging of full statements on errors. This can greatly reduce the amount of data logged. For more information about logging configuration, see the [Postgres error reporting and logging documentation.](https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html)

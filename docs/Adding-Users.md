@@ -5,98 +5,125 @@
 
 _Authors: Andrew Figueroa, Sean Murthy_
 
-ClassDB provides three functions to add database users: one for each [user role ClassDB defines](Roles). The functions are located in the `classdb` schema and can be executed by Instructors and DBManagers.
+ClassDB provides three functions to add users to an instance of ClassDB; one for each [group role ClassDB defines](Roles). The functions are located in the `classdb` schema and can be executed by instructors and DB managers. All three functions have an identical set of parameters.
 
-Each user-creation function creates a user on the server in which ClassDB is installed and makes the new user a member of the corresponding role. It also creates a [`$user` schema](https://github.com/DASSL/ClassDB/wiki/Schemas "ClassDB Wiki - Schemas") for each user within the database where the function is executed, assigns appropriate privileges for the user on that schema, and appropriately registers them in an internal table ClassDB maintains.
+Successful execution of each user-creation function ensures that the user being created:
 
-Regardless of the role, every user name must be unique among all users on the server, even among users not created through ClassDB. By default, user names are not case sensitive internally, and are folded down to lowercase. A user name may be enclosed in double quotes to preserver case. See [Postgres documentation](https://www.postgresql.org/docs/9.6/static/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS) for details on user names and other PostgreSQL identifiers. In either case, clients will require the case to match what is stored internally.
+- Exists on the server in which ClassDB is installed
+- Has appropriate privileges for their group role
+- Has a schema that they own assigned to them
+- Is recorded internally by ClassDB.
 
-In all cases, an initial password may be optionally supplied. If the initial password is not supplied, it is set to the same value as the user name. Whether an explicit initial password is provided or a default initial password is used, every user should [change their password](Changing Passwords) soon after first log in.
+Depending on the function arguments given, and state of the server and database that an instance of ClassDB is running on, this may involve ClassDB creating a server role and database schema for the new user.
 
-## Instructors
+Regardless of the group role(s) they are a part of, every user name must be unique among all users/roles on the server, even among users/roles not created through ClassDB. By default, role names are not case sensitive internally, and are folded down to lowercase. A user name may be enclosed in double quotes to preserver case. See [Postgres documentation](https://www.postgresql.org/docs/9.6/static/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS) for details on user names and other PostgreSQL identifiers. In either case, clients will require the case to match what is stored internally.
 
-Function `createInstructor` creates an Instructor. This function takes three parameters:
+If the user being created does not exist on the server, then ClassDB will create a server role and set a password for the user. An initial password may be optionally supplied. If an initial password is not supplied, the user's password is set to the same value as the user name. Whether an explicit initial password is provided or a default initial password is used, every user should [change their password](Changing-Passwords) soon after first log in.
 
-- `instructorUserName` - **Required** - The username the instructor will use to connect to the server instance
-- `instructorName` - **Required** - The instructor's given name. This name is stored for later reference
-- `initialPwd` - **Optional** - The instructor's initial password
+To remove users that were added to ClassDB, see [Removing Users](Removing-Users). Otherwise, to only revoke the ClassDB group roles that have been assigned to them, see [Revoking Roles](Revoking-Roles).
 
-### Examples
-Execute the following query to create an instructor with username "caldwellj", given name "Jessica Caldwell", and the default initial password (their username).
+## Functions
 
-```
-SELECT classdb.createInstructor('caldwellj', 'Jessica Caldwell');
-```
-
-Execute the following query to create the same user as above, but with an initial password of "LV8jzugmfFBF":
+The following are partial definitions of the three functions used to create users. Data types of parameters have been modified from their internal referential representation to their effective types.
 
 ```
-SELECT classdb.createInstructor('caldwellj', 'Jessica Caldwell', 'LV8jzugmfFBF');
+ClassDB.createStudent(userName VARCHAR(63),
+                      fullName VARCHAR,
+                      schemaName VARCHAR(63) DEFAULT NULL,
+                      extraInfo VARCHAR DEFAULT NULL,
+                      okIfRoleExists BOOLEAN DEFAULT TRUE,
+                      okIfSchemaExists BOOLEAN DEFAULT TRUE,
+                      initialPwd VARCHAR(128) DEFAULT NULL)
+
+ClassDB.createInstructor(userName VARCHAR(63),
+                         fullName VARCHAR,
+                         schemaName VARCHAR(63) DEFAULT NULL,
+                         extraInfo VARCHAR DEFAULT NULL,
+                         okIfRoleExists BOOLEAN DEFAULT TRUE,
+                         okIfSchemaExists BOOLEAN DEFAULT TRUE,
+                         initialPwd VARCHAR(128) DEFAULT NULL)
+
+ClassDB.createDBManager(userName VARCHAR(63),
+                        fullName VARCHAR,
+                        schemaName VARCHAR(63) DEFAULT NULL,
+                        extraInfo VARCHAR DEFAULT NULL,
+                        okIfRoleExists BOOLEAN DEFAULT TRUE,
+                        okIfSchemaExists BOOLEAN DEFAULT TRUE,
+                        initialPwd VARCHAR(128) DEFAULT NULL)
 ```
 
-In both the examples shown above, the user name is not case sensitive. To make the user name case-sensitive instead, execute the following query. This instructor will need to use the exact string `CaldwellJ` as user name at log in:
+## Parameters
 
-```
-SELECT classdb.createInstructor('"CaldwellJ"', 'Jessica Caldwell', 'LV8jzugmfFBF');
-```
+| Parameter Name and Effective Data Type | Default Value                 | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+|----------------------------------------|-------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `userName`: `VARCHAR(63)`             | None - **required parameter** | The username that the user will use to connect to the server instance. This value should follow the rules for SQL Identifiers in Postgres.<br/><br/>If a no server role matches `userName`, then a server role is created with this name.<br/><br/>If a server role matching `userName` does exists on the server, then if `okIfRoleExists` is false, an EXCEPTION is raised. Otherwise, if `okIfRoleExists` is true, the function will raise a NOTICE, but continue creating the user.<br/><br/>Regardless of the value of `okIfRoleExists`, if the role already exists on the server, the password for the role is not changed.                                                                                     |
+| `fullName`: `VARCHAR`                 | None - **required parameter** | The user's given name, or some other identifying information that should be stored for later reference.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `schemaName`: `VARCHAR(63)`           | `NULL`                        | The name of the schema that should be assigned to the user being created. This value should follow the rules for SQL Identifiers in Postgres. If `NULL`, the default value, then `userName` is used as the schema name.<br/><br/>If a schema matching `schemaName` does not exists in the database ClassDB is installed in, it is created and ownership of the schema is assigned to the role matching `userName`.<br/><br/>If a schema matching `schemaName` does exist in the database, then if `okIfSchemaExists` is false, an EXCEPTION is raised. Otherwise, if `okifSchemaExists` is true, then it is verified that the user being created has ownership of that schema. If they do not, an EXCEPTION is raised. |
+| `extraInfo`: `VARCHAR`                | `NULL`                        | Any additional information that is desired to be stored.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `okIfRoleExists`: `BOOLEAN`           | `TRUE`                        | If `TRUE`, then no EXCEPTION is raised by the function if a role matching `userName` already exists on the server.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `okIfSchemaExists`: `BOOLEAN`         | `TRUE`                        | If `TRUE`, then no EXCEPTION is raised by the function if a schema matching `schemaName` already exists on the server AND the role matching `userName` is the owner of the schema.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `initialPwd`: `VARCHAR(128)`          | `NULL`                        | An initial password to set for the role. If `NULL`, the default value, then the folded value of `userName` is used as the initial password. This value is only used if a server role is created by ClassDB, so if the role already existed on the server, then the password for the role is not modified.                                                                                                                                                                                                                                                                                                                                                                                                               |
 
-## Students
-Function `createStudent` creates a Student. This function takes four parameters:
+## Examples
 
-- `studentUserName` - **Required** - The username the student will use to connect to the server instance
-- `studentName` - **Required** - The student's given name. This name is stored for later reference
-- `schoolID` - **Optional** - The school issued ID assigned to the Student. If provided, it is stored for later reference
-- `initialPwd` - **Optional** - The student's initial password
+To create an instructor with a username of "caldwellj" and a given name of "Jessica Caldwell", the following query can be run:
 
-### Examples
-Execute the following query to create a student with username "bell001", given name "Emmett Bell", no school-issued ID, and the default initial password (their username).
-
-```
-SELECT classdb.createStudent('bell001', 'Emmett Bell');
-```
-
-Execute the following query to create the same user as above, but with a school-issued ID "B584452" and the default initial password:
-
-```
-SELECT classdb.createStudent('bell001', 'Emmett Bell', 'B584452');
+```sql
+SELECT ClassDB.createInstructor('caldwellj', 'Jessica Caldwell');
 ```
 
-Execute the following query to create the same student, but with an initial password of "w18nwMcK&606":
+Assuming that the server-level role and database schema did not exist prior to running the query, the following will be true after executing:
 
-```
-SELECT classdb.createStudent('bell001', 'Emmett Bell', 'B584452', 'w18nwMcK&606');
-```
+- A server-level role 'caldwellj' was [created with LOGIN privileges](https://www.postgresql.org/docs/9.6/static/sql-createrole.html) and a password of 'caldwellj'
+- The role was granted the [`classdb_instructor` privilege](Roles)
+- A [schema](https://www.postgresql.org/docs/9.6/static/ddl-schemas.html) named 'caldwellj' was created in the database, and the recently created role 'caldwellj' was assigned ownership of this schema
+- The instructor is recorded within ClassDB, and will now show up [in corresponding views](https://github.com/DASSL/ClassDB/wiki/Viewing-Registered-Users)
 
-Finally, execute the following query to create the same student with the same explicit initial password, but not provide a school-issued ID:
+If we wanted to be sure that the server-level role and database schema did not exist prior to creating the user, the following query can be run instead:
 
-```
-SELECT classdb.createStudent('bell001', 'Emmett Bell', NULL, 'w18nwMcK&606');
-```
-
-## DBManagers
-
-Function `createDBManager` creates a DBManager. This function takes two parameters:
-
-- `managerUserName` - **Required** - The username the dbmanager will use to connect to the server instance
-- `initialPwd` - **Optional** - The dbmanager's initial password
-
-### Examples
-Execute the following query to create a dbmanager with username "martine", and the default initial password (their username).
-
-```
-SELECT classdb.createDBManager('martine');
+```sql
+SELECT ClassDB.createInstructor('caldwellj', 'Jessica Caldwell', NULL, NULL, FALSE, FALSE);
 ```
 
-Execute the following query to create the same user as above, but with an initial password of "Cid8&88#M8Y8":
+If the server role `caldwellj` or the database schema `caldwellj` already existed, then running the query would raise an EXCEPTION.
 
+To create a student named "Emmett Bell" with a username of "bell001", while storing their email address in extra info, the following query can be run:
+
+```sql
+SELECT ClassDB.createStudent('bell001', 'Emmett Bell', NULL, 'bell001@example.edu');
 ```
-SELECT classdb.createDBManager('martine', 'Cid8&88#M8Y8');
+To also assign them a default password of "changeMe" (all passwords are case-sensitive) while still allowing the server role and schema to exist prior, use:
+
+```sql
+SELECT ClassDB.createStudent('bell001', 'Emmett Bell', NULL, 'bell001@example.edu', TRUE, TRUE, 'changeMe');
 ```
 
-In both the examples shown above, the user name is not case sensitive. To make the user name case-sensitive instead, execute the following query. This dbmanager will need to use the exact string `Martine` as user name at log in:
+In the examples shown above, the userName parameter did not preserve case, so running:
 
+```sql
+SELECT ClassDB.createInstructor('CaldwellJ', 'Jessica Caldwell');
 ```
-SELECT classdb.createDBManager('"Martine"', 'Cid8&88#M8Y8');
+
+Would have still created a server role and database schema named `caldwellj`. This is due to folding that occurs with SQL identifiers. To preserve case, double quotes should be used inside of the outer single quotes:
+
+```sql
+SELECT ClassDB.createInstructor('"CladwellJ"', 'Jessica Caldwell');
 ```
+
+This would create a server role and database schema named `CaldwellJ`.
+
+Creating DB managers follows an identical pattern to creating instructors and students, just with the use of the `createDBManager()` function instead.
+
+It is possible to assign multiple group roles to a user. To do so, simply run the appropriate `createStudent()`, `createInstructor()`, or `createDBManager()` functions in any order. Note that it is necessary for the `okIfRoleExists` and `okIfSchemaExists` to be `TRUE` when assigning a second (or third) role.
+
+## Additional Info and Troubleshooting
+
+Internally, all three functions call the `ClassDB.createRole()` function, and then perform specific tasks for the group role that the user is being placed into. This `ClassDB.createRole()` function takes in a similar set of parameters from the three functions detailed above, but also adds an `isTeam` `BOOLEAN` parameter, which is always `FALSE` when creating users. The functionality behind this extra parameter is not yet implemented in ClassDB.
+
+Although `ClassDB.createRole()` is never directly called by the end-user, analyzing the checks it performs and the messages it outputs can be useful in evaluating ClassDB's behavior.  It can also be used to determine the possible cause of any errors that occur during user creation. In order to facilitate this process, a flowchart has been created that shows this sequence of checks and the events that occur as a result:
+
+_Click on image to view in full size_
+
+[![createRoleFlowchart](ClassDBRoleCreationProcess_small.png)](ClassDBRoleCreationProcess.png)
 
 ***
