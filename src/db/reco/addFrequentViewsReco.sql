@@ -57,6 +57,7 @@ CREATE OR REPLACE VIEW ClassDB.StudentTable AS
   SELECT ViewOwner, SchemaName, ViewName, 'VIEW'
   FROM pg_catalog.pg_views
   WHERE ClassDB.isStudent(viewowner::ClassDB.IDNameDomain)
+  ORDER BY UserName, SchemaName, TableName
 );
 
 ALTER VIEW ClassDB.StudentTable OWNER TO ClassDB;
@@ -100,7 +101,8 @@ $$
           ClassDB.changeTimeZone(LastDDLActivityAtUTC) LastDDLActivityAt,
           ConnectionCount, ClassDB.changeTimeZone(LastConnectionAtUTC) LastConnectionAt
    FROM ClassDB.User
-   WHERE username LIKE COALESCE(ClassDB.foldPgID($1), '%');
+   WHERE UserName LIKE COALESCE(ClassDB.foldPgID($1), '%')
+   ORDER BY UserName;
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
@@ -249,7 +251,8 @@ $$
    SELECT UserName, ClassDB.changeTimeZone(StatementStartedAtUTC) StatementStartedAt,
           DDLOperation, DDLObject
    FROM ClassDB.DDLActivity
-   WHERE UserName LIKE COALESCE(ClassDB.foldPgID($1), '%');
+   WHERE UserName LIKE COALESCE(ClassDB.foldPgID($1), '%')
+   ORDER BY UserName, StatementStartedAt DESC;
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
@@ -303,7 +306,8 @@ RETURNS TABLE
 $$
    SELECT UserName, ClassDB.changeTimeZone(AcceptedAtUTC) AcceptedAt
    FROM ClassDB.ConnectionActivity
-   WHERE UserName LIKE COALESCE(ClassDB.foldPgID($1), '%');
+   WHERE UserName LIKE COALESCE(ClassDB.foldPgID($1), '%')
+   ORDER BY UserName, AcceptedAt DESC;
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
@@ -359,12 +363,12 @@ RETURNS TABLE
    DDLOperation VARCHAR, DDLObject VARCHAR
 ) AS
 $$
-   SELECT UserName, StatementStartedAt, 'DDL', DDLOperation, DDLObject
+   SELECT UserName, StatementStartedAt AS ActivityAt, 'DDL', DDLOperation, DDLObject
    FROM ClassDB.getUserDDLActivity(COALESCE($1, '%'))
    UNION ALL
    SELECT UserName, AcceptedAt, 'Connection', NULL, NULL
    FROM ClassDB.getUserConnectionActivity(COALESCE($1, '%'))
-   ORDER BY UserName;
+   ORDER BY UserName, ActivityAt DESC;
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
