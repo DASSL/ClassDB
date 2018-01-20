@@ -79,7 +79,8 @@ LEFT OUTER JOIN
   FROM ClassDB.ConnectionActivity
   GROUP BY UserName
 ) AS C ON C.UserName = RoleName
-WHERE NOT IsTeam;
+WHERE NOT IsTeam
+ORDER BY UserName;
 
 
 ALTER VIEW ClassDB.User OWNER TO ClassDB;
