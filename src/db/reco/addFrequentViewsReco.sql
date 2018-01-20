@@ -191,7 +191,7 @@ CREATE OR REPLACE VIEW ClassDB.StudentActivitySummaryAnon AS
 (
    SELECT DDLCount, LastDDLOperation, LastDDLObject, LastDDLActivityAt,
           ConnectionCount, LastConnectionAt
-   FROM   ClassDB.getStudentActivitySummary()
+   FROM   ClassDB.getStudentActivitySummaryAnon()
 );
 
 ALTER VIEW ClassDB.StudentActivitySummaryAnon OWNER TO ClassDB;
@@ -363,7 +363,8 @@ $$
    FROM ClassDB.getUserDDLActivity(COALESCE($1, '%'))
    UNION ALL
    SELECT UserName, AcceptedAt, 'Connection', NULL, NULL
-   FROM ClassDB.getUserConnectionActivity(COALESCE($1, '%'));
+   FROM ClassDB.getUserConnectionActivity(COALESCE($1, '%'))
+   ORDER BY UserName;
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
