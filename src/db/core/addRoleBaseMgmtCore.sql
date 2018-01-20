@@ -500,10 +500,10 @@ BEGIN
          PERFORM ClassDB.grantRole(newOwnerName);
          EXECUTE FORMAT('REASSIGN OWNED BY %s TO %s', $1, newOwnerName);
 
-         --inform if new owner's name wasn'o't supplied: must test parameter supplied
+         --inform if new owner's name wasn't supplied: must test the parameter
          IF $5 IS NULL THEN
-            RAISE INFO 'Objects owned by "%" are reassigned to "%"',
-                       $1, newOwnerName;
+            RAISE NOTICE 'Objects owned by % are reassigned to %',
+                         $1, newOwnerName;
          END IF;
       END IF;
 
