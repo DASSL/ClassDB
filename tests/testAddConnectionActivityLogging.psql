@@ -1,0 +1,130 @@
+--testAddConnectionActivityLogging.psql - ClassDB
+
+--Andrew Figueroa, Steven Rollo, Sean Murthy
+--Data Science & Systems Lab (DASSL)
+--https://dassl.github.io
+
+--(C) 2017- DASSL. ALL RIGHTS RESERVED.
+--Licensed to others under CC 4.0 BY-SA-NC
+--https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+--PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+
+
+--The following test script should be run as a superuser, otherwise tests will fail
+
+--This script uses psql's \c command to change connections. You will have to
+-- input the password for each role manually during the switch
+-- Currently, each user is given a password of ' ' (a single space) to make switching
+-- connections less labor intensive
+
+--The following tests are performed. An error code of ERROR X indicates that test x
+-- failed
+--1) Test that connections from all ClassDB user types are recorded, and connections
+-- from non-ClassDB users are not
+
+\set ON_ERROR_STOP on
+
+--Remember the current user so we can switch back at the end
+-- Currently, this is assuming the starting superuser account is 'postgres'
+-- you must change this if you want to switch back to a different superuser account
+-- at the end of the script
+\set psqlCurrentUser postgres
+
+SET SESSION client_min_messages TO WARNING;
+
+--Tests for superuser privilege on current_user
+DO
+$$
+BEGIN
+   IF NOT classdb.isSuperUser() THEN
+      RAISE EXCEPTION 'Insufficient privileges: script must be run as a superuser';
+   END IF;
+END
+$$;
+
+DO
+$$
+BEGIN
+   RAISE NOTICE 'Testing ClassDB connection logging';
+
+   --Create ClassDB users to test connection logging
+   --Each user is given a passowrd of ' ' (single space) to make switching connections
+   -- less labor intensive
+   RAISE NOTICE 'Creating test users';
+   PERFORM ClassDB.createStudent('conStudent01', 'con test student 01',
+      NULL, NULL, TRUE, TRUE, ' ');
+   PERFORM ClassDB.createStudent('conStudent02', 'con test student 02',
+      NULL, NULL, TRUE, TRUE, ' ');
+   PERFORM ClassDB.createInstructor('conInstructor01', 'con test instructor 01',
+      NULL, NULL, TRUE, TRUE, ' ');
+   PERFORM ClassDB.createDBManager('conDBManager01', 'con test db manager 01',
+      NULL, NULL, TRUE, TRUE, ' ');
+
+   --Create a non-ClassDB user ensure their conenctions are not logged
+   --CREATE USER conNonClassDB ENCRYPTED PASSWORD ' ';
+   --EXECUTE FORMAT('GRANT CONNECT ON DATABASE %I TO conNonClassDB', CURRENT_DATABASE());
+
+   --Fill up the log with any existing connections
+   RAISE NOTICE 'Importing any existing connections in the logs';
+   PERFORM ClassDB.importConnectionLog();
+
+   RAISE NOTICE 'Creating new connections to the server. Please enter a single space '
+                'when prompted for a test user''s password. You must also enter the password '
+                'for :psqlCurrentUser to return to your superuser account.';
+END;
+$$;
+
+--Switch to different user to get some conenction in the log
+-- the '-' tells psql to connect to the current database with the supplied
+-- user name
+\c  - constudent01
+
+\c - constudent02
+
+\c - condbmanager01
+
+\c - coninstructor01
+
+--\c - conNonClassDB
+
+\c - :psqlCurrentUser
+
+--Check the logs
+DO
+$$
+DECLARE
+   initialLogSize INT;
+   newLogSize INT;
+BEGIN
+   --Get the initial size of the connection log
+   RAISE NOTICE 'Checking for new connections';
+   SELECT COUNT(*)
+   INTO initialLogSize
+   FROM ClassDB.ConnectionActivity;
+
+   PERFORM ClassDB.importConnectionLog();
+
+   SELECT COUNT(*)
+   INTO newLogSize
+   FROM ClassDB.ConnectionActivity;
+
+   --Check if the number of new connections in the log equals the number of connections
+   -- from ClasDB users made in the test
+   RAISE NOTICE 'Checking if the correct number of new connections were logged';
+   IF newLogSize - initialLogSize <> 4 THEN
+      RAISE EXCEPTION 'ERROR CODE 1';
+   END IF;
+
+   --Drop users & related objects
+   PERFORM ClassDB.dropStudent('conStudent01', true, true, 'drop_c');
+   PERFORM ClassDB.dropStudent('conStudent02', true, true, 'drop_c');
+   PERFORM ClassDB.dropInstructor('conInstructor01', true, true, 'drop_c');
+   PERFORM ClassDB.dropDBManager('conDBManager01', true, true, 'drop_c');
+
+   --DROP OWNED BY conNonClassDB;
+   --DROP USER conNonClassDB CASCADE;
+
+   RAISE NOTICE 'Success!';
+END;
+$$;

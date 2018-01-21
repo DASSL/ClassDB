@@ -1,7 +1,8 @@
---prepareServer.sql - ClassDB
+--initalizeServerCore.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
+--Data Science & Systems Lab (DASSL)
+--https://dassl.github.io/
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -26,7 +27,7 @@ DO
 $$
 BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
-                  WHERE rolname = current_user AND rolsuper = TRUE
+                  WHERE rolname = CURRENT_USER AND rolsuper
                  ) THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a user with'
                       ' superuser privileges';
@@ -48,14 +49,17 @@ BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles
                   WHERE rolname = $1
                  ) THEN
-      EXECUTE format('CREATE ROLE %s', $1);
+      EXECUTE FORMAT('CREATE ROLE %s', $1);
    END IF;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
---Create app-specific roles
--- also give the ClassDB role the ability to create roles and databases
+
+
+--Create app-specific roles and give ClassDB role the following capabilities:
+-- create roles and databases, cancel queries and terminate,
+-- and do all the things students, instructors, and DB managers can do
 DO
 $$
 BEGIN
@@ -67,6 +71,8 @@ BEGIN
    PERFORM pg_temp.createGroupRole('classdb_student');
    PERFORM pg_temp.createGroupRole('classdb_instructor');
    PERFORM pg_temp.createGroupRole('classdb_dbmanager');
+
+   GRANT ClassDB_Student, ClassDB_Instructor, ClassDB_DBManager TO ClassDB;
 END
 $$;
 
