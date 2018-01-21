@@ -1,13 +1,13 @@
 [ClassDB Home](Home) \| [Table of Contents](Table-of-Contents)
 
 ---
-# User Logging
+# Activity Logging
 
 _Authors: Steven Rollo, Sean Murthy_
 
-The ClassDB user logging system, created with `enableServerLogging.sql`, `addDDLMonitors.sql`, and `addLogMgmt.sql`, records the level of activity of each student user. Two specific metrics are recorded, DDL statements executed, and connections made to the DBMS. The systems for logging each metric are independent, and do not need to be installed together. This document will demonstrate how to work with both logging components.
+The ClassDB activity logging system, created with `enableServerLogging.sql`, `addDDLMonitors.sql`, and `addLogMgmt.sql`, records activities of each user. Two specific kinds of activities are recorded: DDL statements executed and connections made to the DBMS. The systems for logging each kind of activity are independent, and do not need to be installed together. This document demonstrates how to work with both logging components.
 
-## DDL Statement Logging
+## DDL Activity Logging
 ClassDB contains two event triggers that automatically execute a function when a DDL statement is executed. This function adds a new row to `ClassDB.DDLActivity`, a table which records every DDL operation performed by ClassDB users. The following table describes each column:
 
 | Column | Type | Description |
@@ -27,7 +27,7 @@ There are also four columns in `ClassDB.User` which show the total number of DDL
 | `LastDDLActivityATUTC` | `TIMESTAMP` | The timestamp (at UTC) at which the latest DDL operation was started |
 
 
-## Connection Logging
+## Connection Activity Logging
 ClassDB is also able to record each connection made to the server by ClasDB users. Unlike DDL statement logging, connection logging is not fully automated. While each connection to the DBMS is automatically recorded in Postgres' log file, `ClassDB.importLog()` must be manually executed to update the connection activity log. The Postgres log files record many database activities - only some are related to user connections.  For example, the following line is from an automated database process:
 ```
 2017-07-06 02:49:01.234 EDT,,,5052,,59492bbe.13bc,9063,,2017-06-20 10:05:50 EDT,,0,LOG,00000,"checkpoint starting: time",,,,,,,,,""

@@ -9,7 +9,7 @@ ClassDB v2.0.0 adds several 'Frequent User Views', a set of functions and views 
 
 A summary of the Frequent User Views developed is below. Objects that provide different interfaces to the same information are grouped together. For example, the function `ClassDB.getStudentActivitySummary()` and the view `ClassDB.StudentActivitySummary`.
 
-Note that much of information displaed by the Frequent User Views is collected by the [DDL and connection activity logging components](User-Logging). These components must be installed for most of these views to display any information. See the [setup](Setup#component-installation) page for more information.
+Note that much of information displaed by the Frequent User Views is collected by the [DDL and connection activity logging components](Activity-Logging). These components must be installed for most of these views to display any information. See the [setup](Setup#component-installation) page for more information.
 
 
 ## Instructor Views
@@ -185,7 +185,7 @@ This view displays a list of the user's connection and DDL activities by calling
 
 
 ## Additional Information
-All of the Frequent User Views are derived from the core ClassDB objects in the `ClassDB` schema. This poses an issue, since several of these views are intended for student use, but students cannot access the ClassDB schema. To solve this issue, we developed two sets of criteria. [The first](Object-Type-Criteria) details when an object should be a function versus a view, and [the second](Schema-Placement-Criteria) details when an object should be placed in the `ClassDB` schema versus the `public` schema.
+All of the Frequent User Views are derived from the core ClassDB objects in the `ClassDB` schema. This poses an issue, since several of these views are intended for student use, but students cannot access the ClassDB schema. To solve this issue, we developed two sets of criteria. [The first](Views-and-Functions) details when an object should be a function versus a view, and [the second](Object-Placement) details when an object should be placed in the `ClassDB` schema versus the `public` schema.
 
 Using these criteria, we developed the solution summarized below:
 - Objects intended for use by end-users, particularly students, should be views

@@ -22,6 +22,6 @@ Likewise, to obtain a list of currently registered Students:
 SELECT *
 FROM ClassDB.Student;
 ```
-All four views also contain logging information if the logging capabilities of ClassDB have been enabled. See [User Logging](User-Logging) for more information. Additional logging information can also be viewed using the [Frequent User Views](Frequent-User-Views).
+All four views also contain logging information if the logging capabilities of ClassDB have been enabled. See [User Logging](Activity-Logging) for more information. Additional logging information can also be viewed using the [Frequent User Views](Frequent-User-Views).
 
 ***

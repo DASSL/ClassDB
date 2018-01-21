@@ -120,9 +120,9 @@ It is possible to assign multiple group roles to a user. To do so, simply run th
 
 Internally, all three functions call the `ClassDB.createRole()` function, and then perform specific tasks for the group role that the user is being placed into. This `ClassDB.createRole()` function takes in a similar set of parameters from the three functions detailed above, but also adds an `isTeam` `BOOLEAN` parameter, which is always `FALSE` when creating users. The functionality behind this extra parameter is not yet implemented in ClassDB.
 
-Although `ClassDB.createRole()` is never directly called by the end-user, analyzing the checks it performs and the messages it outputs can be useful in evaluating ClassDB's behavior.  It can also be used to determine the possible cause of any errors that occur during user creation. In order to facilitate this process, a flowchart has been created that shows this sequence of checks and the events that occur as a result:
+Although `ClassDB.createRole()` is never directly called by end users, analyzing the checks it performs and the messages it outputs can be useful in understanding ClassDB's behavior. The analysis can also help users determine the possible cause of any errors that occur during user creation. 
 
-_Click on image to view in full size_
+The following figure shows a flowchart of checks made and actions taken during user creation. Click on the figure to view the full-size chart. Download the source [HTML document](ClassDBRoleCreationProcess.html) for viewing in [draw.io](https://draw.io).
 
 [![createRoleFlowchart](ClassDBRoleCreationProcess_small.png)](ClassDBRoleCreationProcess.png)
 

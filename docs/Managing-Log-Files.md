@@ -8,7 +8,7 @@ _Author: Steven Rollo_
 ClassDB's connection logging facilities rely on the external Postgres server log files. This document explains how ClassDB configures Postgres' logging system and how to monitor log file usage. This information most relevant to ClassDB deployments using the connection logging facility.  
 
 ## ClassDB Log File Configuration
-If [connection logging is enabled](User-Logging), ClassDB makes several modifications to the Postgres instance's settings. These changes allow ClassDB to retrieve connection information from the logs. The following SQL statements from `enableServerLogging.sql` are used to configure Postgres' log system, followed by a table describing each setting:
+If [connection logging is enabled](Activity-Logging), ClassDB makes several modifications to the Postgres instance's settings. These changes allow ClassDB to retrieve connection information from the logs. The following SQL statements from `enableServerLogging.sql` are used to configure Postgres' log system, followed by a table describing each setting:
 ```sql
 ALTER SYSTEM SET log_connections TO 'on';
 ALTER SYSTEM SET log_destination TO 'csvlog';
