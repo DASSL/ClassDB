@@ -9,7 +9,7 @@ This document explains how to install and configure ClassDB on an existing Postg
 
 
 ## Prerequisites
-ClassDB requires an existing instance of Postgres to run on. ClassDB has been primarily tested with the [BigSQL Postgres 9.6.3 distribution](https://www.bigsql.org/) on Windows 10 and Ubuntu Server 16.04. This documentation will not go into further detail on how to install and configure a Posrtgres instance.
+ClassDB requires an existing instance of Postgres to run on. ClassDB has been primarily tested with the [BigSQL Postgres 9.6.3 distribution](https://www.bigsql.org/) on Windows 10 and Ubuntu Server 16.04. This documentation will not go into further detail on how to install and configure a Postgres instance.
 
 ClassDB currently requires a "fully owned instance" of Postgres to function correctly. A "fully owned instance" is defined as one which you have full control over the host server. This includes Postgres instances running on a local machine, a local virtual machine, or a virtual machine instance in a cloud service such as Amazon EC2 or Azure VM. ClassDB does not support platform as a service (PaaS) instances, such as Amazon RDS or Azure Database for PostgreSQL.
 
