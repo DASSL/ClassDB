@@ -110,8 +110,15 @@ BEGIN
 	   -- the log_directory setting holds the log path
       logPath := (SELECT setting FROM pg_settings WHERE "name" = 'log_directory') ||
          '/postgresql-' || to_char(lastConDateLocal, 'MM.DD') || '.csv';
+
       --Import entries from the day's server log into our log table
-      EXECUTE format('COPY classdb.postgresLog FROM ''%s'' WITH csv', logPath);
+      BEGIN
+         EXECUTE format('COPY classdb.postgresLog FROM ''%s'' WITH csv', logPath);
+      EXCEPTION WHEN undefined_file THEN
+         --If an expected log file is missing, skip importing that log and
+         -- try the next log file
+      END;
+
       lastConDateLocal := lastConDateLocal + 1; --Check the next day
    END LOOP;
 
