@@ -124,6 +124,17 @@ DECLARE
    lastConTimestampUTC TIMESTAMP; --Hold the latest time (UTC) a connection was logged
    lastConDateLocal DATE; --Hold the latest date (local time) a connection was logged
 BEGIN
+   --Warn the user if any server connection logging parameters are disabled
+   IF NOT(ClassDB.isLoggingCollectorEnabled()) THEN
+      RAISE WARNING '''logging_collector'' is set to ''off'', connection log'
+         ' import may not work as expected.';
+   END IF;
+
+   IF NOT(ClassDB.isConnectionLoggingEnabled()) THEN
+      RAISE WARNING '''log_connections'' is set to ''off'', connection log'
+         ' import may not work as expected.';
+   END IF;
+
    --Get the timestamp (at UTC) of the latest connection activity entry. Then
    -- convert the timestamp to local time to get a 'best-guess' of the last log
    -- file data that was imported
