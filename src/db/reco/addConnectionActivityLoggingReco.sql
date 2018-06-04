@@ -185,14 +185,23 @@ BEGIN
    --Update the connection activity table based on the temp log table
    -- We only want to insert new activity records that are newer than the current
    -- latest connection, and are by ClassDB users to the current DB
-   INSERT INTO ClassDB.ConnectionActivity
-      SELECT user_name, log_time AT TIME ZONE 'utc'
-      FROM ClassDB.postgresLog
-      WHERE ClassDB.isUser(user_name) --Check the connection is from a ClassDB user
-      AND (log_time AT TIME ZONE 'utc') > --Check that the entry is new
-         COALESCE(lastConTimeStampUTC, to_timestamp(0))
-      AND message LIKE 'connection%' --Only pick connection-related entries
-      AND database_name = CURRENT_DATABASE(); --Only pick entries from current DB
+   With LogInsertedCount AS
+   (
+      INSERT INTO ClassDB.ConnectionActivity
+         SELECT user_name, log_time AT TIME ZONE 'utc'
+         FROM ClassDB.postgresLog
+         WHERE ClassDB.isUser(user_name) --Check the connection is from a ClassDB user
+         AND (log_time AT TIME ZONE 'utc') > --Check that the entry is new
+            COALESCE(lastConTimeStampUTC, to_timestamp(0))
+         AND message LIKE 'connection%' --Only pick connection-related entries
+         AND database_name = CURRENT_DATABASE() --Only pick entries from current DB
+         RETURNING ClassDB.changeTimeZone(AcceptedAtUTC)::DATE AS logDate
+   )
+   UPDATE ImportResult lr
+   SET connectionsLogged = COALESCE((SELECT COUNT(*)
+                                     FROM LogInsertedCount ic
+                                     WHERE ic.logDate = lr.logDate
+                                     GROUP BY ic.logDate), 0);
 
    --Clear the log table
    TRUNCATE ClassDB.PostgresLog;
