@@ -37,46 +37,6 @@ $$;
 SET LOCAL client_min_messages TO WARNING;
 
 
---ClassDB.PostgresLog is a staging table for data imported from the logs.
--- The data is then processed in ClassDB.importLog().
--- This table format suggested by the Postgres documentation for use with the
--- COPY statement
--- https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html
--- We only use the log_time and message columns for the log import process
-DROP TABLE IF EXISTS ClassDB.PostgresLog;
-CREATE TABLE ClassDB.PostgresLog
-(
-   log_time TIMESTAMP(3) WITH TIME ZONE, --Holds the connection accepted timestamp
-   user_name TEXT,
-   database_name TEXT,
-   process_id INTEGER,
-   connection_from TEXT,
-   session_id TEXT,
-   session_line_num BIGINT,
-   command_tag TEXT,
-   session_start_time TIMESTAMP WITH TIME ZONE,
-   virtual_transaction_id TEXT,
-   transaction_id BIGINT,
-   error_severity TEXT,
-   sql_state_code TEXT,
-   message TEXT, --States if the log row is a connection event, or something else
-   detail TEXT,
-   hint TEXT,
-   internal_query TEXT,
-   internal_query_pos INTEGER,
-   context TEXT,
-   query TEXT,
-   query_pos INTEGER,
-   location TEXT,
-   application_name TEXT,
-   PRIMARY KEY (session_id, session_line_num)
-);
-
---Change owner of the import staging table to ClassDB
-ALTER TABLE ClassDB.postgresLog OWNER TO ClassDB;
-REVOKE ALL PRIVILEGES ON ClassDB.postgresLog FROM PUBLIC;
-
-
 --Helper function to check if log_connections is set to 'on' or 'off'.
 CREATE OR REPLACE FUNCTION ClassDB.isConnectionLoggingEnabled()
    RETURNS BOOLEAN AS
@@ -92,6 +52,7 @@ ALTER FUNCTION ClassDB.isConnectionLoggingEnabled() OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION ClassDB.isConnectionLoggingEnabled()
    FROM PUBLIC;
+
 
 --Helper function to check if logging_collector is set to 'on' or 'off'.
 CREATE OR REPLACE FUNCTION ClassDB.isLoggingCollectorEnabled()
@@ -140,6 +101,39 @@ BEGIN
          ' import may not work as expected.';
    END IF;
 
+   --Temporary staging table for data imported from the logs.
+   -- This table format suggested by the Postgres documentation for use with the
+   -- COPY statement
+   -- https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html
+   -- We only use the log_time and message columns for the log import process
+   CREATE TEMPORARY TABLE ImportedLogData
+   (
+      log_time TIMESTAMP(3) WITH TIME ZONE, --Holds the connection accepted timestamp
+      user_name TEXT,
+      database_name TEXT,
+      process_id INTEGER,
+      connection_from TEXT,
+      session_id TEXT,
+      session_line_num BIGINT,
+      command_tag TEXT,
+      session_start_time TIMESTAMP WITH TIME ZONE,
+      virtual_transaction_id TEXT,
+      transaction_id BIGINT,
+      error_severity TEXT,
+      sql_state_code TEXT,
+      message TEXT, --States if the log row is a connection event, or something else
+      detail TEXT,
+      hint TEXT,
+      internal_query TEXT,
+      internal_query_pos INTEGER,
+      context TEXT,
+      query TEXT,
+      query_pos INTEGER,
+      location TEXT,
+      application_name TEXT,
+      PRIMARY KEY (session_id, session_line_num)
+   ) ON COMMIT DROP;
+
    --Temporary table that will store the status of each import
    -- ON COMMIT DROP drops the table at the end of the current transaction (ie.
    -- end of this function)
@@ -171,7 +165,7 @@ BEGIN
 
       --Import entries from the day's server log into our log table
       BEGIN
-         EXECUTE format('COPY classdb.postgresLog FROM ''%s'' WITH csv', logPath);
+         EXECUTE format('COPY ImportedLogData FROM ''%s'' WITH csv', logPath);
          INSERT INTO ImportResult VALUES (lastConDateLocal, 0, '');
       EXCEPTION WHEN undefined_file THEN
          --If an expected log file is missing, skip importing that log and
@@ -185,11 +179,11 @@ BEGIN
    --Update the connection activity table based on the temp log table
    -- We only want to insert new activity records that are newer than the current
    -- latest connection, and are by ClassDB users to the current DB
-   With LogInsertedCount AS
+   WITH LogInsertedCount AS
    (
       INSERT INTO ClassDB.ConnectionActivity
          SELECT user_name, log_time AT TIME ZONE 'utc'
-         FROM ClassDB.postgresLog
+         FROM ImportedLogData
          WHERE ClassDB.isUser(user_name) --Check the connection is from a ClassDB user
          AND (log_time AT TIME ZONE 'utc') > --Check that the entry is new
             COALESCE(lastConTimeStampUTC, to_timestamp(0))
@@ -197,14 +191,11 @@ BEGIN
          AND database_name = CURRENT_DATABASE() --Only pick entries from current DB
          RETURNING ClassDB.changeTimeZone(AcceptedAtUTC)::DATE AS logDate
    )
-   UPDATE ImportResult lr
+   UPDATE ImportResult lr --Next, update the totals in the result table
    SET connectionsLogged = COALESCE((SELECT COUNT(*)
                                      FROM LogInsertedCount ic
                                      WHERE ic.logDate = lr.logDate
                                      GROUP BY ic.logDate), 0);
-
-   --Clear the log table
-   TRUNCATE ClassDB.PostgresLog;
 
    --Return the result table
    RETURN QUERY SELECT * FROM ImportResult;
