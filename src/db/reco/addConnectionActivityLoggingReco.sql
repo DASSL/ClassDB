@@ -117,7 +117,12 @@ REVOKE ALL ON FUNCTION ClassDB.isLoggingCollectorEnabled()
 -- For each line containing connection information, the matching student's
 -- connection info is updated
 CREATE OR REPLACE FUNCTION ClassDB.importConnectionLog(startDate DATE DEFAULT NULL)
-   RETURNS VOID AS
+   RETURNS TABLE
+   (
+      logDate DATE,
+      connectionsLogged INT,
+      errorMessage VARCHAR
+   ) AS
 $$
 DECLARE
    logPath VARCHAR(4096); --Max file path length on Linux, > max length on Windows
@@ -134,6 +139,16 @@ BEGIN
       RAISE WARNING '''log_connections'' is set to ''off'', connection log'
          ' import may not work as expected.';
    END IF;
+
+   --Temporary table that will store the status of each import
+   -- ON COMMIT DROP drops the table at the end of the current transaction (ie.
+   -- end of this function)
+   CREATE TEMPORARY TABLE ImportResult
+   (
+      logDate DATE,
+      connectionsLogged INT,
+      message VARCHAR
+   ) ON COMMIT DROP;
 
    --Get the timestamp (at UTC) of the latest connection activity entry. Then
    -- convert the timestamp to local time to get a 'best-guess' of the last log
@@ -157,9 +172,11 @@ BEGIN
       --Import entries from the day's server log into our log table
       BEGIN
          EXECUTE format('COPY classdb.postgresLog FROM ''%s'' WITH csv', logPath);
+         INSERT INTO ImportResult VALUES (lastConDateLocal, 0, '');
       EXCEPTION WHEN undefined_file THEN
          --If an expected log file is missing, skip importing that log and
-         -- try the next log file
+         -- try the next log file. Store the error in the result table
+         INSERT INTO ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
       END;
 
       lastConDateLocal := lastConDateLocal + 1; --Check the next day
@@ -179,6 +196,9 @@ BEGIN
 
    --Clear the log table
    TRUNCATE ClassDB.PostgresLog;
+
+   --Return the result table
+   RETURN QUERY SELECT * FROM ImportResult;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
