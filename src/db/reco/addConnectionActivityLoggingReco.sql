@@ -16,7 +16,7 @@
 -- addUserMgmt.sql for the current database
 
 --This script adds the connection logging portion of the ClassDB user monitoring
--- system.  It provides the classdb.importLog () function to import
+-- system.  It provides the ClassDB.importLog () function to import
 -- the Postgres connection logs and record student connection data.
 
 
@@ -26,7 +26,7 @@ START TRANSACTION;
 DO
 $$
 BEGIN
-   IF NOT (SELECT classdb.isSuperUser()) THEN
+   IF NOT (SELECT ClassDB.isSuperUser()) THEN
       RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
    END IF;
 END
@@ -38,7 +38,7 @@ SET LOCAL client_min_messages TO WARNING;
 
 
 --ClassDB.PostgresLog is a staging table for data imported from the logs.
--- The data is then processed in classdb.importLog().
+-- The data is then processed in ClassDB.importLog().
 -- This table format suggested by the Postgres documentation for use with the
 -- COPY statement
 -- https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html
@@ -73,9 +73,25 @@ CREATE TABLE ClassDB.PostgresLog
 );
 
 --Change owner of the import staging table to ClassDB
-ALTER TABLE classdb.postgresLog OWNER TO ClassDB;
-REVOKE ALL PRIVILEGES ON classdb.postgresLog FROM PUBLIC;
+ALTER TABLE ClassDB.postgresLog OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.postgresLog FROM PUBLIC;
 
+
+--Helper function to check if logging_collector is set to 'on' or 'off'.
+CREATE OR REPLACE FUNCTION ClassDB.isLoggingCollectorEnabled()
+   RETURNS BOOLEAN AS
+$$
+   --This query returns 'on' or 'off', which can be cast to a boolean
+   SELECT setting::BOOLEAN
+   FROM pg_settings
+   WHERE name = 'logging_collector';
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
+ALTER FUNCTION ClassDB.isLoggingCollectorEnabled() OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION ClassDB.isLoggingCollectorEnabled()
+   FROM PUBLIC;
 
 --Function to import all log files between a starting date and the current date
 -- and update student connection information.
@@ -84,7 +100,7 @@ REVOKE ALL PRIVILEGES ON classdb.postgresLog FROM PUBLIC;
 -- starting with the supplied date (startDate)
 -- For each line containing connection information, the matching student's
 -- connection info is updated
-CREATE OR REPLACE FUNCTION classdb.importConnectionLog(startDate DATE DEFAULT NULL)
+CREATE OR REPLACE FUNCTION ClassDB.importConnectionLog(startDate DATE DEFAULT NULL)
    RETURNS VOID AS
 $$
 DECLARE
