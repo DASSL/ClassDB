@@ -77,6 +77,22 @@ ALTER TABLE ClassDB.postgresLog OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.postgresLog FROM PUBLIC;
 
 
+--Helper function to check if log_connections is set to 'on' or 'off'.
+CREATE OR REPLACE FUNCTION ClassDB.isConnectionLoggingEnabled()
+   RETURNS BOOLEAN AS
+$$
+   --This query returns 'on' or 'off', which can be cast to a boolean
+   SELECT setting::BOOLEAN
+   FROM pg_settings
+   WHERE name = 'log_connections';
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
+ALTER FUNCTION ClassDB.isConnectionLoggingEnabled() OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION ClassDB.isConnectionLoggingEnabled()
+   FROM PUBLIC;
+
 --Helper function to check if logging_collector is set to 'on' or 'off'.
 CREATE OR REPLACE FUNCTION ClassDB.isLoggingCollectorEnabled()
    RETURNS BOOLEAN AS
