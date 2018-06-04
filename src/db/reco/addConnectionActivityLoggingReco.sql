@@ -170,6 +170,7 @@ BEGIN
       EXCEPTION WHEN undefined_file THEN
          --If an expected log file is missing, skip importing that log and
          -- try the next log file. Store the error in the result table
+         RAISE WARNING 'Log file for % not found, skipping.', lastConDateLocal;
          INSERT INTO ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
       END;
 
