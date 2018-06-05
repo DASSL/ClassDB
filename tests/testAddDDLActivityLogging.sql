@@ -202,22 +202,6 @@ BEGIN
 
    RESET SESSION AUTHORIZATION;
 
-
-   --Drop users & related objects
-   PERFORM ClassDB.dropStudent('ddlStudent01', true);
-   PERFORM ClassDB.dropStudent('ddlStudent02', true);
-   PERFORM ClassDB.dropInstructor('ddlInstructor01', true);
-   PERFORM ClassDB.dropDBManager('ddlDBManager01', true);
-
-   DROP SCHEMA ddlStudent01 CASCADE;
-   DROP SCHEMA ddlStudent02 CASCADE;
-   DROP SCHEMA ddlInstructor01 CASCADE;
-   DROP SCHEMA ddlDBManager01 CASCADE;
-
-   --Drop non-ClassDB user
-   DROP SCHEMA ddlNonClassDBUser CASCADE;
-   DROP USER ddlNonClassDBUser;
-
    RAISE NOTICE 'Success!';
    RAISE NOTICE 'Displaying final contents of ClassDB.DDLActivity:';
 END;
@@ -226,4 +210,4 @@ $$;
 SELECT *
 FROM ClassDB.DDLActivity;
 
-COMMIT;
+ROLLBACK;

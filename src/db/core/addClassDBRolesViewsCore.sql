@@ -40,34 +40,48 @@ $$;
 
 
 --Define a view to return known users
+-- IsXYZ fields denote if user is a member of the appropriate ClassDB role
+-- HasClassDBRole is TRUE if any of the IsXYZ fields is TRUE
+-- creates derived tables w/ user-specific aggregates over tables DDLActivity
+-- and ConnectionActivity
+-- DISTINCT ON (RoleName) limits output to just one row per role: required
+-- because the join to get last DDL op and object can technically return
+-- more than one row for a user because DDLActivity does not have a PK
 CREATE OR REPLACE VIEW ClassDB.User AS
-  SELECT RoleName AS UserName, FullName, SchemaName, ExtraInfo,
-  ClassDB.IsInstructor(RoleName) AS IsInstructor, --True if user is instructor
-  ClassDB.IsStudent(RoleName) AS IsStudent, --True if user is student
-  ClassDB.IsDBManager(RoleName) AS IsDBManager, --True if user is DBManager
-  ClassDB.isUser(RoleName) AS HasClassDBRole, --True if user is any ClassDB role
-  DDLCount, LastDDLActivityAtUTC, LastDDLOperation, LastDDLObject,
-  ConnectionCount, LastConnectionAtUTC
+  SELECT DISTINCT ON (RoleName) RoleName AS UserName,
+  FullName, SchemaName, ExtraInfo,
+  ClassDB.IsInstructor(RoleName) AS IsInstructor,
+  ClassDB.IsStudent(RoleName) AS IsStudent,
+  ClassDB.IsDBManager(RoleName) AS IsDBManager,
+  ClassDB.IsInstructor(RoleName)
+  OR ClassDB.IsStudent(RoleName)
+  OR ClassDB.IsDBManager(RoleName) AS HasClassDBRole,
+  COALESCE(DDLCount, 0) AS DDLCount, LastDDLActivityAtUTC,
+  D2.DDLOperation AS LastDDLOperation, D2.DDLObject AS LastDDLObject,
+  COALESCE(ConnectionCount, 0) AS ConnectionCount, LastConnectionAtUTC
 FROM ClassDB.RoleBase
-LEFT OUTER JOIN (
+LEFT OUTER JOIN
+(
   SELECT UserName,
-  COUNT(*) AS DDLCount, --The amount of DDLs the user has executed
-  MAX(StatementStartedAtUTC) AS LastDDLActivityAtUTC --TIMESTAMP of user's last DDL op
+  COUNT(*) AS DDLCount, --# of DDL ops by user
+  MAX(StatementStartedAtUTC) AS LastDDLActivityAtUTC --time of user's last DDL op
   FROM ClassDB.DDLActivity
-  GROUP BY UserName) AS DDLActivityAggregate on RoleName = DDLActivityAggregate.UserName
-LEFT OUTER JOIN (
+  GROUP BY UserName
+) AS D1 ON D1.UserName = RoleName
+LEFT OUTER JOIN --can return more than one row because DDLActivity has no PK
+  ClassDB.DDLActivity D2 ON D2.UserName = Rolename AND D2.UserName = D1.UserName
+                            AND D2.StatementStartedAtUTC = D1.LastDDLActivityAtUTC
+LEFT OUTER JOIN
+(
   SELECT UserName,
-  COUNT(*) AS ConnectionCount, --Total amount of times user has connected to this DB
-  MAX(AcceptedAtUTC) AS LastConnectionAtUTC --TIMESTAMP of the last connection user made
+  COUNT(*) AS ConnectionCount, --# of connections by user
+  MAX(AcceptedAtUTC) AS LastConnectionAtUTC --time of user's last connection
   FROM ClassDB.ConnectionActivity
-  GROUP BY UserName) AS ConnectionActivity on RoleName = ConnectionActivity.UserName
-LEFT OUTER JOIN (
-  SELECT Distinct on (UserName) UserName,
-  DDLOperation AS LastDDLOperation, --The operation that the user last performed
-  DDLObject AS LastDDLObject  --The object that the user last performed the DDL activity on
-  FROM ClassDB.DDLActivity
-  ORDER BY UserName, StatementStartedAtUTC DESC) AS DDLActOB on Rolename = DDLActOB.UserName
-WHERE NOT IsTeam;
+  GROUP BY UserName
+) AS C ON C.UserName = RoleName
+WHERE NOT IsTeam
+ORDER BY UserName;
+
 
 ALTER VIEW ClassDB.User OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.User FROM PUBLIC;
@@ -84,6 +98,7 @@ CREATE OR REPLACE VIEW ClassDB.Instructor AS
    FROM ClassDB.User
    WHERE IsInstructor;
 
+
 ALTER VIEW ClassDB.Instructor OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.Instructor FROM PUBLIC;
 GRANT SELECT ON ClassDB.Instructor TO ClassDB_Instructor, ClassDB_DBManager;
@@ -97,6 +112,7 @@ CREATE OR REPLACE VIEW ClassDB.Student AS
    FROM ClassDB.User
    WHERE IsStudent;
 
+
 ALTER VIEW ClassDB.Student OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.Student FROM PUBLIC;
 GRANT SELECT ON ClassDB.Student TO ClassDB_Instructor, ClassDB_DBManager;
@@ -109,6 +125,7 @@ CREATE OR REPLACE VIEW ClassDB.DBManager AS
           ConnectionCount, LastConnectionAtUTC
    FROM ClassDB.User
    WHERE IsDBManager;
+
 
 ALTER VIEW ClassDB.DBManager OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.DBManager FROM PUBLIC;

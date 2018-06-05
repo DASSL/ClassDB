@@ -19,10 +19,10 @@ ClassDB does use `ALTER ROLE` internally to reset user passwords, however this i
 
 ## Resetting a Forgotten Password
 
-One of the more common issues that will occur during the use of ClassDB is a user forgetting their password. Because of this, ClassDB provides a `resetUserPassword()` function which takes one parameter and can be executed by an Instructor or DBManager:
+One of the more common issues that will occur during the use of ClassDB is a user forgetting their password. Because of this, ClassDB provides a `ClassDB.resetPassword()` function which takes one parameter and can be executed by an Instructor or DBManager:
 
-- userName - The user name of the user who requires a password reset
+- `roleName` - The user name of the user who requires a password reset
 
-This function will reset the given user's password to their user name. This is not necessarily the same as the `initialPassword` given during the creation of the user.
+This function will reset the given user's password to their user name. This is not necessarily the same as the `initialPassword` given during the creation of the user. Additionally, this function will work on any server role, not just ClassDB users.
 
 ---

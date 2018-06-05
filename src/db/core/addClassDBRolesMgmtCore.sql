@@ -140,7 +140,7 @@ BEGIN
    $3 = ClassDB.getSchemaName($1);
 
    --grant server-level student group role to new student
-   EXECUTE FORMAT('GRANT ClassDB_Student TO %s', $1);
+   PERFORM ClassDB.grantRole('ClassDB_Student', $1);
 
    --set server-level client connection settings for the student
    EXECUTE FORMAT('ALTER ROLE %s CONNECTION LIMIT 5', $1);
@@ -223,7 +223,7 @@ CREATE OR REPLACE FUNCTION
    ClassDB.dropStudent(userName ClassDB.IDNameDomain,
                        dropFromServer BOOLEAN DEFAULT FALSE,
                        okIfRemainsClassDBRoleMember BOOLEAN DEFAULT TRUE,
-                       objectsDisposition VARCHAR DEFAULT 'assign_i',
+                       objectsDisposition VARCHAR DEFAULT 'assign',
                        newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL)
    RETURNS VOID AS
 $$
@@ -260,7 +260,7 @@ GRANT EXECUTE ON FUNCTION
 CREATE OR REPLACE FUNCTION
    ClassDB.dropAllStudents(dropFromServer BOOLEAN DEFAULT FALSE,
                            okIfRemainsClassDBRoleMember BOOLEAN DEFAULT TRUE,
-                           objectsDisposition VARCHAR DEFAULT 'assign_i',
+                           objectsDisposition VARCHAR DEFAULT 'assign',
                            newObjectsOwnerName ClassDB.IDNameDomain
                                                DEFAULT NULL)
    RETURNS VOID AS
@@ -308,7 +308,7 @@ BEGIN
    PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $7);
 
    --grant server-level instructor group role to new instructor
-   EXECUTE FORMAT('GRANT ClassDB_Instructor TO %s', $1);
+   PERFORM ClassDB.grantRole('ClassDB_Instructor', $1);
 
    --set privileges on future tables the instructor creates in 'public' schema
    EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA public GRANT'
@@ -381,7 +381,7 @@ CREATE OR REPLACE FUNCTION
    ClassDB.dropInstructor(userName ClassDB.IDNameDomain,
                           dropFromServer BOOLEAN DEFAULT FALSE,
                           okIfRemainsClassDBRoleMember BOOLEAN DEFAULT TRUE,
-                          objectsDisposition VARCHAR DEFAULT 'assign_i',
+                          objectsDisposition VARCHAR DEFAULT 'assign',
                           newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL)
    RETURNS VOID AS
 $$
@@ -433,7 +433,7 @@ BEGIN
    PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $7);
 
    --grant server-level DB manager group role to new DB manager
-   EXECUTE FORMAT('GRANT ClassDB_DBManager TO %s', $1);
+   PERFORM ClassDB.grantRole('ClassDB_DBManager', $1);
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
@@ -493,7 +493,7 @@ CREATE OR REPLACE FUNCTION
    ClassDB.dropDBManager(userName ClassDB.IDNameDomain,
                          dropFromServer BOOLEAN DEFAULT FALSE,
                          okIfRemainsClassDBRoleMember BOOLEAN DEFAULT TRUE,
-                         objectsDisposition VARCHAR DEFAULT 'assign_i',
+                         objectsDisposition VARCHAR DEFAULT 'assign',
                          newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL)
    RETURNS VOID AS
 $$
