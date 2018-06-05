@@ -12,7 +12,7 @@
 
 --This script must be run as superuser.
 --This script should be run in each database to which ClassDB is to be added
--- it should be run after running addRoleBaseMgmt.sql
+-- it should be run after running addClassDBRolesMgmtCore.sql
 
 --This script adds event triggers and corresponding handlers for DDL statements
 -- presently only DROP SCHEMA and DROP OWNED are handled
@@ -24,7 +24,8 @@ DO
 $$
 BEGIN
    IF NOT ClassDB.isSuperUser() THEN
-      RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
+      RAISE EXCEPTION 'Insufficient privileges for script: '
+                      'must be run as a superuser';
    END IF;
 END
 $$;
@@ -37,15 +38,13 @@ SET LOCAL client_min_messages TO WARNING;
 
 --Define a function to handle all ddl_command_start events
 -- presently handles only DROP SCHEMA and DROP OWNED commands
--- prevents from running DROP SCHEMA and DROP OWNED if they themselves own a
--- schema: a somewhat arbitrary rule, but c'est la vie
+-- prevents DROP SCHEMA and DROP OWNED by students
 CREATE OR REPLACE FUNCTION ClassDB.handleRoleBaseDDLStart()
 RETURNS event_trigger AS
 $$
 DECLARE
    sessionUserName ClassDB.IDNameDomain;
    commandName VARCHAR;
-   ownsSomeSchema BOOLEAN;
 BEGIN
    --save the session user in a form ready to use with ClassDB functions
    sessionUserName = SESSION_USER::ClassDB.IDNameDomain;
@@ -58,24 +57,14 @@ BEGIN
       RETURN;
    END IF;
 
-   --peform command-specific tasks
+   --peform command-specific tasks: only two commands handled presently
    commandName = LOWER(TG_TAG);
    IF (commandName IN ('drop schema', 'drop owned')) THEN
-
-      --ideally like to test if session user owns the schema to be dropped, but
-      --the schema name is unavailable at ddl_command_start
-      -- test if session user owns some schema before deciding if op is OK
-      ownsSomeSchema = EXISTS
-                        (SELECT * FROM INFORMATION_SCHEMA.SCHEMATA
-                         WHERE schema_owner = ClassDB.foldPgID(sessionUserName)
-                        );
-
-      --prevent students users who own a schema from performing this op
-      IF(ownsSomeSchema AND ClassDB.IsStudent(sessionUserName)) THEN
+      --prevent students users from performing this op
+      IF(ClassDB.isStudent(sessionUserName)) THEN
          RAISE EXCEPTION 'Invalid operation: student users may not perform '
-                         'operation "%" when they own their own schema', TG_TAG;
+                         'operation "%"', TG_TAG;
       END IF;
-
    END IF;
 
 END;
