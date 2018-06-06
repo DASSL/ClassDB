@@ -19,7 +19,7 @@
 
 START TRANSACTION;
 
---Check for superuser
+--make sure current user is superuser
 DO
 $$
 BEGIN
@@ -37,8 +37,7 @@ SET LOCAL client_min_messages TO WARNING;
 
 
 --Define a function to handle the start of any DDL stmt that leads to dropping
--- raises an exception if the function is called for/by a student user
---Should be called only from the trigger triggerDropSchemaDDLStart
+-- raises an exception if the function is called for a student user
 CREATE OR REPLACE FUNCTION ClassDB.handleDropSchemaDDLStart()
 RETURNS event_trigger AS
 $$
@@ -97,6 +96,7 @@ $$ LANGUAGE sql
 REVOKE ALL ON FUNCTION ClassDB.allowSchemaDrop() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ClassDB.allowSchemaDrop()
    TO ClassDB_Instructor, ClassDB_DBManager, ClassDB;
+
 
 
 --Define a function to test if student-initiated schema schema is  allowed
