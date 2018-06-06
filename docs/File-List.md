@@ -9,73 +9,48 @@ This document lists the files located in the ClassDB repository. Each section li
 
 ## Root (./)
 Contains the README and LICENSE files, as well as each ClassDB sub-folder.
-- `LICENSE.md`
-- `README.md`
-
-## docs (./docs)
-Contains a copy of the ClassDB documentation for the corresponding release. The contents of the docs folder is a copy of the [ClassDB wiki](https://github.com/DASSL/ClassDB/wiki) at the time of release - the wiki holds the current development version of the docs.
+- LICENSE.md
+- README.md
 
 ## examples (./examples)
 Contains script files for the shelter example schema. More information can be found on the [Scripts](Scripts) page.
-- `createShelterSchema.sql`
-- `dropShelterSchema.sql`
-- `populateShelterSchema.sql`
+- createShelterSchema.sql
+- dropShelterSchema.sql
+- populateShelterSchema.sql
 
 ## src (./src)
 Contains the source code for ClassDB. All files need to install ClassDB are in this folder. More information can be found on the [Scripts](Scripts) page.
-- `./src/`
-  - `db/`
-    - `addAllToDB.psql`
-    - `removeAllFromDB.sql`
-    - `core/`
-      - `initializeDBCore.sql`
-      - `addAllDBCore.psql`
-      - `addClassDBRolesMgmtCore.sql`
-      - `addClassDBRolesViewsCore.sql`
-      - `addHelpersCore.sql`
-      - `addRoleBaseMgmtCore.sql`
-      - `addUserMgmtCore.sql`
-    - `opt/`
-      - `addAllDBOpt.psql`
-      - `addCatalogMgmtOpt.sql`
-    - `reco/`
-      - `addFrequentViewsReco.sql`
-      - `addAllDBReco.psql`
-      - `addConnectionActivityLoggingReco.sql`
-      - `addConnectionMgmtReco.sql`
-      - `addDDLActivityLoggingReco.sql`
-  - `server/`
-    - `addAllToServer.psql`
-    - `removeAllFromServer.sql`
-    - `core/`
-      - `prepareServerCore.sql`
-      - `addAllServerCore.psql`
-    - `reco/`
-      - `enableConnectionLoggingReco.psql`
-      - `addAllServerReco.psql`
-      - `disableConnectionLoggingReco.psql`
+- addCatalogMgmt.sql
+- addConnectionMgmt.sql
+- addDDLMonitors.sql
+- addHelpers.sql
+- addLogMgmt.sql
+- addUserMgmt.sql
+- enableServerLogging.sql
+- initializeDB.sql
+- prepareDB.psql
+- prepareServer.sql
+- removeFromDB.sql
+- removeFromServer.sql
 
 ## tests (./tests)
 This folder contains scripts to test the functionality of ClassDB, along with the privileges sub-folder
-- `testAddConnectionActivityLogging.psql`
-- `testAddConnectionActivityLoggingCleanup.sql`
-- `testAddDDLActivityLogging.sql`
-- `testClassDBRolesMgmt.sql`
-- `testHelpers.sql`
-- `testUserMgmt.sql`
-- `testRoleBaseMgmt.sql`
+- testAddHelperFunctions.sql
+- testAddUserMgmt.sql
+- testAddUserMgmtCleanup.sql
+- testAddUserMgmtREADME.txt
 
 ### privileges (./tests/privileges)
 This folder contains a sequence of scripts to test the functionality of ClassDB's privilege management
-- `0_setup.sql`
-- `1_instructorPass.sql`
-- `2_studentPass.sql`
-- `3_dbmanagerPass.sql`
-- `4_instructorPass2.sql`
-- `5_instructorFail.sql`
-- `6_studentFail.sql`
-- `7_dbmanagerFail.sql`
-- `8_cleanup.sql`
-- `testPrivilegesREADME.txt`
+- 0_setup.sql
+- 1_instructorPass.sql
+- 2_studentPass.sql
+- 3_dbmanagerPass.sql
+- 4_instructorPass2.sql
+- 5_instructorFail.sql
+- 6_studentFail.sql
+- 7_dbmanagerFail.sql
+- 8_cleanup.sql
+- testPrivilegesREADME.txt
 
 ---

@@ -1,8 +1,7 @@
 --3_dbmanagerPass.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab (DASSL)
---https://dassl.github.io/
+--Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -11,80 +10,70 @@
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 
-START TRANSACTION;
-
---Execute appropriate ClassDB functions (these tests do not verify correctness
--- of each function)
-SELECT ClassDB.createStudent('teststu', 'noname');
-SELECT ClassDB.resetPassword('teststu');
-SELECT ClassDB.listUserConnections('teststu');
-SELECT ClassDB.killUserConnections('teststu');
-SELECT ClassDB.dropStudent('teststu', TRUE, TRUE, 'drop_c');
-
---ClassDB.dropAllStudents is not being tested here because it would drop the
--- test students that will later be used to connect to the DB
---SELECT ClassDB.dropAllStudents(TRUE, TRUE, 'drop_c');
-
-SELECT ClassDB.createInstructor('testins', 'noname');
-SELECT ClassDB.dropInstructor('testins', TRUE, TRUE, 'drop_c');
-
-SELECT ClassDB.createDBManager('testman', 'noname');
-SELECT ClassDB.dropDBManager('testman', TRUE, TRUE, 'drop_c');
-
-SELECT ClassDB.importConnectionLog();
+--Execute appropriate ClassDB functions (this is not inteded to test correctness of the
+-- each function).
 
 
---CRUD on tables created by the DBManager. This table should be placed in their
+SELECT classdb.createStudent('teststu', 'noname');
+SELECT classdb.resetUserPassword('teststu');
+SELECT classdb.listUserConnections('teststu');
+SELECT classdb.killUserConnections('teststu');
+SELECT classdb.dropStudent('teststu');
+
+SELECT classdb.createInstructor('testins', 'noname');
+SELECT classdb.dropInstructor('testins');
+
+SELECT classdb.createDBManager('testman', 'noname');
+SELECT classdb.dropDBManager('testman');
+
+
+--CRUD on tables created by the DBManager. This table should be placed in their 
 -- own schema and be accessed without needing to be fully schema qualified
+
 --Create without schema qualification
-CREATE TABLE Test
+CREATE TABLE test
 (
    col1 VARCHAR(10)
 );
 
---Insert with schema qualification - ensures test was created in the ptdbm0 schema
-INSERT INTO ptdbm0.Test VALUES ('hello');
+--Insert with schema qualification - ensures test was created in the dbm0 schema
+INSERT INTO dbm0.test VALUES ('hello');
 
-SELECT * FROM Test;
+SELECT * FROM test;
 
-UPDATE Test
-SET col1 = 'goodbye';
+UPDATE test
+SET col1 = 'goodbye'
+WHERE TRUE;
 
-DELETE FROM Test;
-DROP TABLE Test;
+DELETE FROM test;
 
-
---Read from columns in RoleBase table
-SELECT * FROM ClassDB.RoleBase;
+DROP TABLE test;
 
 
---Read from columns in User, Student, Instructor, and DBManager views
-SELECT * FROM ClassDB.User;
-SELECT * FROM ClassDB.DBManager;
-SELECT * FROM ClassDB.Student;
-SELECT * FROM ClassDB.Instructor;
+--Read from columns in Student and Instructor tables
+SELECT * FROM classdb.Student;
+SELECT * FROM classdb.Instructor;
 
 
---Update FullName and ExtraInfo in RoleBase table
-SELECT ClassDB.createStudent('updateInfoTest', 'Temp name', NULL, 'Temp info');
+--Update name and schoolID in Student table
+SELECT classdb.createStudent('teststu', 'Nonme', '50124');
 
-UPDATE ClassDB.RoleBase
-SET FullName = 'Updated name', ExtraInfo = 'Updated info'
-WHERE roleName = 'updateInfoTest';
+UPDATE classdb.Student
+SET studentName = 'NoName', schoolID = '50125'
+WHERE userName = 'teststu';
 
-SELECT ClassDB.dropStudent('updateInfoTest', TRUE, TRUE, 'drop_c');
+SELECT classdb.dropStudent('teststu');
 
 
---Read on tables in public schema created by Instructor (should return 1 row)
-SELECT * FROM public.testInsPublic;
+--Read on tables in the public schema created by Instructor (should return 1 row)
+SELECT * FROM public.testInsPub;
 
 
 --Create table in $user schema to test non-access for other roles
+DROP TABLE IF EXISTS testDbmUsr;
 CREATE TABLE testDbmUsr
 (
    col1 VARCHAR(20)
 );
 
-INSERT INTO testDbmUsr VALUES('Read by: ptdbm0');
-
-COMMIT;
+INSERT INTO testDbmUsr VALUES('Read by: no one');

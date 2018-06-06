@@ -438,7 +438,7 @@ BEGIN
    IF EXISTS(
       SELECT * FROM pg_catalog.pg_roles
       WHERE RolName IN ('testdbm0', 'testdbm1', 'testdbm2', 'testdbm3',
-                        'testdbmstu0', 'testdbm4')
+                        'testdbmdbm0', 'testdbm4')
             AND NOT RolCanLogin
             )
    THEN
@@ -689,13 +689,6 @@ BEGIN
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createDBManager('testStuDBM0', 'Test student/DB manager 0');
    RESET client_min_messages;
-   
-   --Create DB manager to handle default object disposition
-   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');  
-   SET SESSION AUTHORIZATION tempDBM0;
-   
-   --Suppress NOTICEs about ownership reassignment
-   SET SESSION client_min_messages TO WARNING;
 
    --Drop first student
    PERFORM ClassDB.dropStudent('testStu0');
@@ -703,30 +696,24 @@ BEGIN
    --Drop second student, including dropping from server
    PERFORM ClassDB.dropStudent('testStu1', TRUE);
 
-   --Manually server role for third student (must be done as superuser), then
-   -- from ClassDB (as instructor again)
-   RESET SESSION AUTHORIZATION;
+   --Drop server role for third student, then drop using ClassDB means
    DROP OWNED BY testStu2;
    DROP ROLE testStu2;
-
-   SET SESSION AUTHORIZATION tempDBM0;
+   SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.dropStudent('testStu2');
+   RESET client_min_messages;
 
    --Drop server role and owned objects for fourth student
    PERFORM ClassDB.dropStudent('testStu3', TRUE, TRUE, 'drop_c');
 
-   --Drop fifth student, who has an additional non-ClassDB schema
+   --Drop fifth student
    PERFORM ClassDB.dropStudent('testStu4');
 
    --Drop multi-role student
+   SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.dropStudent('testStuDBM0');
-
-   --Switch back to superuser role before validating test cases
-   RESET SESSION AUTHORIZATION;
-   
-   --Turn all messages back on
    RESET client_min_messages;
-   
+
    --Check for correct existence of roles
    IF    NOT ClassDB.isServerRoleDefined('testStu0')
       OR ClassDB.isServerRoleDefined('testStu1')
@@ -751,19 +738,19 @@ BEGIN
    END IF;
 
    --Check for ownership of existing schemas
-   IF NOT(ClassDB.getSchemaOwnerName('testStu0') = 'tempdbm0'
-      AND ClassDB.getSchemaOwnerName('testStu1') = 'tempdbm0'
-      AND ClassDB.getSchemaOwnerName('testStu4') = 'tempdbm0'
-      AND ClassDB.getSchemaOwnerName('testSchema') = 'tempdbm0'
-      AND ClassDB.getSchemaOwnerName('testStuDBM0') = 'tempdbm0')
+   IF NOT(ClassDB.getSchemaOwnerName('testStu0') = 'classdb_instructor'
+      AND ClassDB.getSchemaOwnerName('testStu1') = 'classdb_instructor'
+      AND ClassDB.getSchemaOwnerName('testStu4') = 'classdb_instructor'
+      AND ClassDB.getSchemaOwnerName('testSchema') = 'classdb_instructor'
+      AND ClassDB.getSchemaOwnerName('testStuDBM0') = 'classdb_instructor')
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
 
    --Cleanup
-   DROP OWNED BY tempDBM0;
-   DROP ROLE testStu0, testStu4, testStuDBM0, tempDBM0;
-   DELETE FROM ClassDB.RoleBase WHERE RoleName IN ('teststudbm0', 'tempdbm0');
+   DROP ROLE testStu0, testStu4, testStuDBM0;
+   DROP SCHEMA testStu0 ,testStu1, testStu4, testSchema, testStuDBM0;
+   DELETE FROM ClassDB.RoleBase WHERE RoleName = 'teststudbm0';
 
    RETURN 'PASS';
 END;
@@ -790,13 +777,6 @@ BEGIN
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createDBManager('testInsDBM0', 'Test instructor/DB manager 0');
    RESET client_min_messages;
-   
-   --Create DB manager to handle default object disposition
-   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');  
-   SET SESSION AUTHORIZATION tempDBM0;
-   
-   --Suppress NOTICEs about ownership reassignment
-   SET SESSION client_min_messages TO WARNING;
 
    --Drop first instructor
    PERFORM ClassDB.dropInstructor('testIns0');
@@ -804,30 +784,24 @@ BEGIN
    --Drop second instructor, including dropping from server
    PERFORM ClassDB.dropInstructor('testIns1', TRUE);
 
-   --Manually server role for third instructor (must be done as superuser), then
-   -- from ClassDB (as instructor again)
-   RESET SESSION AUTHORIZATION;
+   --Drop server role for third instructor, then drop using ClassDB means
    DROP OWNED BY testIns2;
    DROP ROLE testIns2;
-
-   SET SESSION AUTHORIZATION tempDBM0;
+   SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.dropInstructor('testIns2');
+   RESET client_min_messages;
 
    --Drop server role and owned objects for fourth instructor
    PERFORM ClassDB.dropInstructor('testIns3', TRUE, TRUE, 'drop_c');
 
-   --Drop fifth instructor, who has an additional non-ClassDB schema
+   --Drop fifth instructor
    PERFORM ClassDB.dropInstructor('testIns4');
 
    --Drop multi-role instructor
+   SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.dropInstructor('testInsDBM0');
-
-   --Switch back to superuser role before validating test cases
-   RESET SESSION AUTHORIZATION;
-   
-   --Turn all messages back on
    RESET client_min_messages;
-   
+
    --Check for correct existence of roles
    IF    NOT ClassDB.isServerRoleDefined('testIns0')
       OR ClassDB.isServerRoleDefined('testIns1')
@@ -852,19 +826,19 @@ BEGIN
    END IF;
 
    --Check for ownership of existing schemas
-   IF NOT(ClassDB.getSchemaOwnerName('testIns0') = 'tempdbm0'
-      AND ClassDB.getSchemaOwnerName('testIns1') = 'tempdbm0'
-      AND ClassDB.getSchemaOwnerName('testIns4') = 'tempdbm0'
-      AND ClassDB.getSchemaOwnerName('testSchema') = 'tempdbm0'
-      AND ClassDB.getSchemaOwnerName('testInsDBM0') = 'tempdbm0')
+   IF NOT(ClassDB.getSchemaOwnerName('testIns0') = 'classdb_instructor'
+      AND ClassDB.getSchemaOwnerName('testIns1') = 'classdb_instructor'
+      AND ClassDB.getSchemaOwnerName('testIns4') = 'classdb_instructor'
+      AND ClassDB.getSchemaOwnerName('testSchema') = 'classdb_instructor'
+      AND ClassDB.getSchemaOwnerName('testInsDBM0') = 'classdb_instructor')
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
 
    --Cleanup
-   DROP OWNED BY tempDBM0;
-   DROP ROLE testIns0, testIns4, testInsDBM0, tempDBM0;
-   DELETE FROM ClassDB.RoleBase WHERE RoleName IN ('testinsdbm0', 'tempdbm0');
+   DROP ROLE testIns0, testIns4, testInsDBM0;
+   DROP SCHEMA testIns0 ,testIns1, testIns4, testSchema, testInsDBM0;
+   DELETE FROM ClassDB.RoleBase WHERE RoleName = 'testinsdbm0';
 
    RETURN 'PASS';
 END;
@@ -886,18 +860,11 @@ BEGIN
    CREATE SCHEMA testSchema AUTHORIZATION testDBM1;
 
    --Multi-role user
-   PERFORM ClassDB.createDBManager('testDBMStu0', 'Test DB manager/Student 0',
+   PERFORM ClassDB.createDBManager('testDBMStu0', 'Test DB manager/student 0',
                                  NULL, NULL, FALSE, FALSE);
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM ClassDB.createStudent('testDBMStu0', 'Test DB manager/Student 0');
+   PERFORM ClassDB.createDBManager('testDBMStu0', 'Test DB manager/student 0');
    RESET client_min_messages;
-   
-   --Create DB manager to handle default object disposition
-   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');  
-   SET SESSION AUTHORIZATION tempDBM0;
-   
-   --Suppress NOTICEs about ownership reassignment
-   SET SESSION client_min_messages TO WARNING;
 
    --Drop first DB manager
    PERFORM ClassDB.dropDBManager('testDBM0');
@@ -905,30 +872,24 @@ BEGIN
    --Drop second DB manager, including dropping from server
    PERFORM ClassDB.dropDBManager('testDBM1', TRUE);
 
-   --Manually server role for third DB manager (must be done as superuser), then
-   -- from ClassDB (as instructor again)
-   RESET SESSION AUTHORIZATION;
+   --Drop server role for third DB manager, then drop using ClassDB means
    DROP OWNED BY testDBM2;
    DROP ROLE testDBM2;
-
-   SET SESSION AUTHORIZATION tempDBM0;
+   SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.dropDBManager('testDBM2');
+   RESET client_min_messages;
 
    --Drop server role and owned objects for fourth DB manager
    PERFORM ClassDB.dropDBManager('testDBM3', TRUE, TRUE, 'drop_c');
 
-   --Drop fifth DB manager, who has an additional non-ClassDB schema
+   --Drop fifth DB manager
    PERFORM ClassDB.dropDBManager('testDBM4');
 
    --Drop multi-role DB manager
+   SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.dropDBManager('testDBMStu0');
-
-   --Switch back to superuser role before validating test cases
-   RESET SESSION AUTHORIZATION;
-   
-   --Turn all messages back on
    RESET client_min_messages;
-   
+
    --Check for correct existence of roles
    IF    NOT ClassDB.isServerRoleDefined('testDBM0')
       OR ClassDB.isServerRoleDefined('testDBM1')
@@ -953,19 +914,19 @@ BEGIN
    END IF;
 
    --Check for ownership of existing schemas
-   IF NOT(ClassDB.getSchemaOwnerName('testDBM0') = 'tempdbm0'
-      AND ClassDB.getSchemaOwnerName('testDBM1') = 'tempdbm0'
-      AND ClassDB.getSchemaOwnerName('testDBM4') = 'tempdbm0'
-      AND ClassDB.getSchemaOwnerName('testSchema') = 'tempdbm0'
-      AND ClassDB.getSchemaOwnerName('testDBMStu0') = 'tempdbm0')
+   IF NOT(ClassDB.getSchemaOwnerName('testDBM0') = 'classdb_instructor'
+      AND ClassDB.getSchemaOwnerName('testDBM1') = 'classdb_instructor'
+      AND ClassDB.getSchemaOwnerName('testDBM4') = 'classdb_instructor'
+      AND ClassDB.getSchemaOwnerName('testSchema') = 'classdb_instructor'
+      AND ClassDB.getSchemaOwnerName('testDBMStu0') = 'classdb_instructor')
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
 
    --Cleanup
-   DROP OWNED BY tempDBM0;
-   DROP ROLE testDBM0, testDBM4, testDBMStu0, tempDBM0;
-   DELETE FROM ClassDB.RoleBase WHERE RoleName IN ('testdbmstu0', 'tempdbm0');
+   DROP ROLE testDBM0, testDBM4, testDBMStu0;
+   DROP SCHEMA testDBM0 ,testDBM1, testDBM4, testSchema, testDBMStu0;
+   DELETE FROM ClassDB.RoleBase WHERE RoleName = 'testdbmstu0';
 
    RETURN 'PASS';
 END;
@@ -978,16 +939,9 @@ BEGIN
    --Create two test students
    PERFORM ClassDB.createStudent('testStu0', 'Test student 0');
    PERFORM ClassDB.createStudent('testStu1', 'Test student 1');
-   
-   --Create DB manager to handle default object disposition
-   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');  
-   SET SESSION AUTHORIZATION tempDBM0;
 
    --Minimal drop
    PERFORM ClassDB.dropAllStudents();
-   
-   --Reset back to superuser role for test case validation
-   RESET SESSION AUTHORIZATION;
 
    --Check for correct existence of roles
    IF    NOT ClassDB.isServerRoleDefined('testStu0')
@@ -1004,8 +958,8 @@ BEGIN
    END IF;
 
    --Check for ownership of existing schemas
-   IF NOT(ClassDB.getSchemaOwnerName('testStu0') = 'tempdbm0'
-      AND ClassDB.getSchemaOwnerName('testStu1') = 'tempdbm0')
+   IF NOT(ClassDB.getSchemaOwnerName('testStu0') = 'classdb_instructor'
+      AND ClassDB.getSchemaOwnerName('testStu1') = 'classdb_instructor')
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
@@ -1034,12 +988,7 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 5';
    END IF;
-   
-   --Cleanup
-   DROP OWNED BY tempDBM0;
-   DROP ROLE tempDBM0;
-   DELETE FROM ClassDB.RoleBase WHERE RoleName = 'tempdbm0';
-   
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
@@ -1065,4 +1014,4 @@ $$  LANGUAGE plpgsql;
 SELECT pg_temp.prepareClassDBTest();
 
 
-ROLLBACK;
+COMMIT;

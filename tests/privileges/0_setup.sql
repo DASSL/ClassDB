@@ -1,8 +1,7 @@
 --0_setup.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab (DASSL)
---https://dassl.github.io/
+--Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -11,18 +10,13 @@
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 
-START TRANSACTION;
-
-
 --Create Instructor, Student, and DBManager to login for testing purposes.
 -- The password for these users will be the same as their username
-SELECT ClassDB.createInstructor('ptins0', 'Instructor 0');
-SELECT ClassDB.createInstructor('ptins1', 'Instructor 1');
+SELECT classdb.createInstructor('ins0', 'NoName');
+SELECT classdb.createInstructor('ins1', 'NoName');
 
-SELECT ClassDB.createStudent('ptstu0', 'Student 0');
-SELECT ClassDB.createStudent('ptstu1', 'Student 1');
+SELECT classdb.createStudent('stu0', 'NoName');
+SELECT classdb.createStudent('stu1', 'NoName');
 
-SELECT ClassDB.createDBManager('ptdbm0', 'DB Manager 0');
-SELECT ClassDB.createDBManager('ptdbm1', 'DB Manager 1');
-
-COMMIT;
+SELECT classdb.createDBManager('dbm0');
+SELECT classdb.createDBManager('dbm1');

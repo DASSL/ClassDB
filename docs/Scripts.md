@@ -5,155 +5,72 @@
 
 _Author: Steven Rollo_
 
-This documents the scripts included in ClassDB. A description of each script, what permissions it requires, and when to use it are provided. The directory structure of the ClassDB repository is also provided.
+This documents the scripts included in ClassDB. A description of each script, what permissions it requires, and when to use it are provided.
 
-## Directory Structure
-The `src` folder is organized in a hierarchy designed to clarify the usage of each ClassDB script. There are two top level directories:
+## Required Scripts
+There are five ClassDB scripts that are required for ClassDB to function. These scripts install the core functionality of ClassDB, including
+configuration of user permissions and procedures to create and manage users. In order to install the required components, you must have access to a superuser account. An additionall script is provided to help automate this process by executing four of the five required scripts.
 
-| Name | Description |
-| ---- | ----------- |
-| `db` | The scripts in this folder contain the database-level components of ClassDB. They must be run once per database. |  
-| `server` | The scripts in this folder contain the server-level components of ClassDB. They only need to be ran once per server. |
-
-Each of these directories contains up to three sub-directories. Additionally, each contains install and uninstall script for all components located in the sub-directories.
-
-| Name | Description |
-| ---- | ----------- |
-| `core` | These scripts install components that are required for ClassDB to function |
-| `opt` | These scripts install components that are useful, but are not necessary to use ClassDB to its full potential |
-| `reco` | These scripts install components that significantly increase the utility of ClassDB, but are not necessary for ClassDB to function |
-
-
-
-## Database-Level
-
-#### addAllToDB.psql
+### prepareServer.sql
 - Permissions Required: `superuser`
 
-`addAllToDB.psql` installs all database level ClassDB components. This is useful if you want to perform a full installation without selecting individual components to install.
+`prepareServer.sql` performs server level configuration for ClassDB, and should be run once per Postgres instance. It creates the four user roles that are used by ClassDB:
 
-### Core Scripts
-
-#### addAllDBCore.psql
-- Permissions Required: `superuser`
-
-`addAllDBCore.psql` is a psql helper script that runs all of the core database-level installation scripts at once. It uses psql meta-commands to do this, so it must be run using psql. The `.psql` file extension was added to help distinguish it from normal sql scripts.
-
-#### addClassDBRolesMgmtCore.sql
-- Permissions Required: `superuser`
-
-`addClassDBRolesMgmtCore.sql` creates functions for managing ClassDB users.
-
-#### addClassDBRolesViewsCore.sql
-- Permissions Required: `superuser`
-
-`addClassDBRolesViewsCore.sql` creates views displaying each type of ClassDB user.
-
-#### addHelpersCore.sql
-- Permissions Required: `superuser`
-
-`addHelpers.sql` creates several helper functions that are used internally by ClassDB.
-
-#### addRoleBaseMgmtCore.sql
-- Permissions Required: `superuser`
-
-`addRoleBaseMgmtCore.sql` creates the base ClassDB role system, which all other ClassDB roles are based on.
-
-#### addUserMgmtCore.sql
-- Permissions Required: `superuser`
-
-`addUserMgmtCore.sql` creates tables for logging information about ClassDB users.
-
-#### initializeDBCore.sql
-- Permissions Required: `superuser`
-
-`initializeDBCore.sql` sets appropriate permissions for each ClassDB role on the current database, and creates the ClassDB schema.
-
-
-### Optional Scripts
-
-#### addAllDBOpt.psql
-- Permissions Required: `superuser`
-
-`addAllDBOpt.psql` is a psql helper script that runs all of the optional database-level installation scripts at once.
-
-#### addCatalogMgmtOpt.sql
-- Permissions Required: None
-
-`addCatalogMgmtOpt.sql` provides two helper functions intended to be used by students. These functions provide an easy way for a student to list all tables in a schema, and to get information about all columns in a given table.
-
-
-### Recommend Scripts
-
-#### initializeDBReco.psql
-- Permissions Required: `superuser`
-
-`initializeDBReco.psql` is a psql helper script that runs all of the recommend database-level installation scripts at once.
-
-#### addConnectionActivityLoggingReco.sql
-- Permissions Required: `superuser`
-
-`addConnectionActivityLoggingReco.sql` provides a function to record connections made by ClassDB users to the DBMS in `ClassDB.ConnectionActivity`. This function imports Postgres' external server logs to get connection records. `enableConnectionLoggingReco.psql` must also be run in order for connection logging to function.
-
-#### addConnectionMgmtReco.sql
-- Permissions Required: `superuser`
-
-`addConnectionMgmtReco.sql` provides several function allowing instructors and dbmanagers to monitor and shutdown connections to the Postgres server.
-
-#### addDDLActivityLoggingReco.sql
-- Permissions Required: `superuser`
-
-`addDDLActivityLoggingReco.sql` provides DDL statement logging for all ClassDB users. This script installs triggers that record every DDL statement performed by a ClassDB user in `ClassDB.DDLActivity`.
-
-#### addFrequentViewsReco.sql
-- Permissions Required: `superuser`
-
-`addFrequentViewsReco.sql` provides several views accessible to ClassDB users summarizing user data and activity. A detailed description of each can be found [here](Frequent-User-Views).
-
-
-
-## Server-Level
-
-#### addAllToServer.psql
-- Permissions Required: `superuser`
-
-`addAllToServer.psql` installs all server level ClassDB components. This is useful if you want to perform a full installation without selecting individual components to install.
-
-### Core Scripts
-
-#### addAllServerCore.psql
-- Permissions Required: `superuser`
-
-`addAllServerCore.psql` is a psql helper script that install all of the core server-level components at once.
-
-#### prepareServerCore.sql
-- Permissions Required: `superuser`
-
-`prepareServerCore.sql` performs server level configuration for ClassDB, and should be run once per Postgres instance. It creates the four user roles that are used by ClassDB:
-
-- `classdb_instructor`
-- `classdb_student`
-- `classdb_dbmanager`
-- `classdb`
+- Instructor
+- Student
+- DBManager
+- ClassDB
 
 These roles are explained in detail in the [Roles overview](Roles).
 
-
-### Recommend Scripts
-
-#### addAllServerReco.psql
+### initializeDB.sql
 - Permissions Required: `superuser`
 
-`addAllServerReco.psql` is a psql helper script that install all of the recommend server-level components at once.
+`initializeDB.sql` sets appropriate permissions for each ClassDB role on the current database, and creates the ClassDB schema. It should be run once per database.
 
-#### enableConnectionLoggingReco.psql and disableConnectionLoggingReco.psql
+### addHelpers.sql
 - Permissions Required: `superuser`
 
- `enableConnectionLoggingReco.psql` modifies the Postgres logging system configuration. These changes cause Postgres to log connections made to the DBMS in the external server logs. This is intended to be used with `addConnectionActivityLoggingReco.sql` to log connections made by ClassDB users to the DBMS.
- `disableConnectionLoggingReco.psql` turns off server connection logging. Thus, it only needs to be run if you want to disable connection logging after running `enableConnectionLoggingReco.psql`.
- We recomend that psql be used to run these scripts.
+`addHelpers.sql` creates several helper functions that are used internally by ClassDB. It should be run once per database
 
+### addConnectionMgmt.sql
+- Permissions Required: `superuser`
 
+`addConnectionMgmt.sql` creates functions used to view and terminate user connections. This is used in conjunction with a connection limit for Student users. It should be run once per database.
+
+### addUserMgmt.sql
+- Permissions Required: `superuser`
+
+`addUserMgmt.sql` creates all procedures used to manage ClassDB users, and sets up appropriate access controls for user schemas. It should be run once per database.
+
+### prepareDB.psql
+- Permissions Required: `superuser`
+
+'prepareDB.psql' is a helper script that runs all of the database level installation scripts at once. It uses psql meta-commands to do this, so it must be run using psql. The `.psql` file extension was added to help distinguish it from normal sql scripts.
+
+## Optional Scripts
+There are four optional components provided with ClassDB. These scripts provide useful additions, but are not required for the core functionality of ClassDB.
+
+### addCatalogMgmt.sql
+- Permissions Required: None
+
+`addCatalogMgmt.sql` provides two helper functions intended to be used by students. These functions provide an easy way for a student to list all tables in a schema, and to get information about all columns in a given table. It should be run once per database.
+
+### addDDLMonitors.sql
+- Permissions Required: `superuser`
+
+`addDDLMonitors.sql` provides the DDL statement logging for Student users. This facility stores information about the last DDL statement performed and the total number of DDL statements performed by each Student user in the `classdb.student` table. It should be run once per database.
+
+### enableServerLogging.sql
+- Permissions Required: `superuser`
+
+`enableServerLogging.sql` modifies the Postgres logging system configuration. These changes cause Postgres to log connections made to the DBMS. It should be run once per Postgres instance.
+
+### addLogMgmt.sql
+- Permissions Required: `superuser`
+
+`addLogMgmt.sql` provides connection logging using the external Postgres log file. A procedure is provided to analyze the log file, and store the last connection time and total number of connections for each Student user in `classdb.student`.
+It should be run once per database.
 
 ## Example Schema
 ClassDB also includes an example schema called `Shelter`. This schema contains a system for managing adoptions at a fictional animal shelter. It is intended as an example students can refer to. The schema is read-only for Students, while Instructors and DBManagers have read and write access. This example schema is not required, and is only intended as a teaching aid.
@@ -173,17 +90,15 @@ This script populates the shelter schema with sample data. Any user with write a
 
 This script removes the `shelter` schema and all objects contained within. It should be run once per database.
 
-
-
 ## Uninstall Scripts
 The following scripts are used to remove ClassDB components from a database or instance.
 
-### removeAllFromDB.sql
+### removeFromDB.sql
 
-`removeAllFromDB.sql` removes all ClassDB database level components from a single database. This includes the ClassDB schema and all contained objects, the catalog management functions, and the DDL monitoring triggers. It makes efforts to not interfere with user data - user schemas are not removed, and the uninstall will fail if there are user-created objects dervided from ClassDB objects.
+`removeFromDB.sql` removes all ClassDB database level components from a single database. This includes the ClassDB schema and all contained objects, the catalog management functions, and the DDL monitoring triggers. It also preserves all user schemas by changing their owner from ClassDB to the appropriate user.
 
-### removeAllFromServer.sql
+### removeFromServer.sql
 
-`removeAllFromServer.sql` removes all ClassDB server level components. This includes all the ClassDB roles. `removeAllFromDB.sql` must be run on all database ClassDB is installed on before `removeAllFromServer.sql` can be used.
+`removeFromServer.sql` removes all ClassDB server level components. This includes all the ClassDB roles. `removeFromDB.sql` must be run on all database ClassDB is installed on before `removeFromServer.sql` can be used.
 
 ---

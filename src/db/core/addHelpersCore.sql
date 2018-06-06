@@ -310,43 +310,7 @@ $$ LANGUAGE plpgsql
 ALTER FUNCTION ClassDB.canLogin(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
 
-
---Define a function to grant a role ("role") to another role ("receiver")
--- current user is the default receiver
--- grants role to receiver only if receiver is not already a member of the role
--- raises a custom exception if grant fails due to insufficient privilege and
--- includes the original error message as a hint
--- re-raises all other exceptions
--- this function must be VOLATILE; marking it STABLE raises the following exception
---    ERROR: GRANT ROLE is not allowed in a non-volatile function
---    SQL state: 0A000
-CREATE OR REPLACE FUNCTION
-   ClassDB.grantRole(roleName ClassDB.IDNameDomain,
-                     receiverName ClassDB.IDNameDomain DEFAULT CURRENT_USER
-                    )
-   RETURNS VOID AS
-$$
-BEGIN
-   IF NOT ClassDB.isMember($2, $1) THEN
-      EXECUTE FORMAT('GRANT %s TO %s', $1, $2);
-   END IF;
-EXCEPTION
-   WHEN insufficient_privilege THEN
-      RAISE EXCEPTION 'Insufficient privilege: Executing user % '
-                      'cannot grant role % to role %', CURRENT_USER, $1, $2
-                      USING HINT = SQLERRM;
-   WHEN OTHERS THEN
-      RAISE;
-END;
-$$ LANGUAGE plpgsql
-  RETURNS NULL ON NULL INPUT;
-
-ALTER FUNCTION ClassDB.grantRole(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
-   OWNER TO ClassDB;
-
-
-
---Define a function to list all objects owned by a role. This query uses
+--Define a function to list all  objects owned by some role. This query uses
 -- pg_class which lists all objects Postgres considers relations (tables, views,
 -- and types) and UNIONs with pg_proc include functions
 --Postgres views are used because they contain the owner of each object
@@ -371,15 +335,15 @@ $$
       WHEN c.relkind = 'f' THEN 'Foreign Table'
       ELSE NULL
    END
-   FROM pg_catalog.pg_class c
-   JOIN pg_catalog.pg_roles r ON r.oid = c.relowner
-   JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+   FROM pg_class c --Join pg_roles and pg_namespace to get the names of the role and schema
+   JOIN pg_roles r ON r.oid = c.relowner
+   JOIN pg_namespace n ON n.oid = c.relnamespace
    WHERE r.rolname = ClassDB.foldPgID($1)
    UNION ALL
    SELECT p.proname::VARCHAR(63), n.nspname::VARCHAR(63), 'Function'
-   FROM pg_catalog.pg_proc p
-   JOIN pg_catalog.pg_roles r ON r.oid = p.proowner
-   JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+   FROM pg_proc p
+   JOIN pg_roles r ON r.oid = p.proowner
+   JOIN pg_namespace n ON n.oid = p.pronamespace
    WHERE r.rolname = ClassDB.foldPgID($1);
 $$ LANGUAGE sql
    STABLE
@@ -391,7 +355,6 @@ REVOKE ALL ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain) FROM PUBLI
 
 GRANT EXECUTE ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain)
       TO ClassDB_Instructor, ClassDB_DBManager;
-
 
 
 --Define a function to list all 'orphan' objects owned by ClassDB_Instructor and
@@ -440,14 +403,9 @@ GRANT EXECUTE ON FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain)
       TO ClassDB_Instructor, ClassDB_DBManager;
 
 
-
 --Changes a timestamp in fromTimeZone to toTimeZone
-CREATE OR REPLACE FUNCTION
-   ClassDB.changeTimeZone
-   (ts TIMESTAMP,
-    toTimeZone VARCHAR DEFAULT TO_CHAR(CURRENT_TIMESTAMP, 'TZ'),
-    fromTimeZone VARCHAR DEFAULT 'UTC'
-   )
+CREATE OR REPLACE FUNCTION ClassDB.changeTimeZone(ts TIMESTAMP,
+   toTimeZone VARCHAR DEFAULT TO_CHAR(CURRENT_TIMESTAMP, 'TZ'), fromTimeZone VARCHAR DEFAULT 'UTC')
 RETURNS TIMESTAMP AS
 $$
    SELECT (ts AT TIME ZONE COALESCE(fromTimeZone, 'UTC')) AT TIME ZONE
@@ -458,7 +416,6 @@ $$ LANGUAGE sql
 ALTER FUNCTION
    ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
    OWNER TO ClassDB;
-
 
 
 --Define a function to retrieve specific capabilities a user has

@@ -5,7 +5,7 @@
 
 _Author: Steven Rollo_
 
-A common activity for both students and instructors is listing all tables in a schema, and describing individual columns in a table. This document will explain how to use the ClassDB catalog management functions for this purpose. These functions provide a simple way to perform these operations, and are intended to be used by students. This document will also demonstrate other ways to perform these operations, such as querying the `INFORMATION_SCHEMA`.
+A common activity for both students and instructors is listing all tables in a schema, and describing individual columns in a table. This document will explain how to use the ClassDB meta functions for this purpose. These functions provide a simple way to perform these operations, and are intended to be used by students. This document will also demonstrate other ways to perform these operations, such as querying the `INFORMATION_SCHEMA`.
 
 ## Listing Tables
 This section will show four different methods to list all tables in a given schema.
@@ -16,9 +16,9 @@ SELECT * FROM listTables();
 ```
 Optionally, a schema name may be provided to the function. The following query lists all tables in the schema `public`:
 ```sql
-SELECT * FROM listTables('public');
+SELECT * FROM public.listTables('public');
 ```
-Note that users must have at least `USAGE` privileges on the target schema, and `SELECT` on each contained object to use `listTables`. Lacking `USAGE` privileges on a target schema will cause no objects to be listed, while lacking `SELECT` privileges on a contained object will cause that specific object to not be listed. Internally, both instances of the function execute a query against the `INFORMATION_SCHEMA`.
+Internally, both instances of the function execute a query against the `INFORMATION_SCHEMA`.
 
 ### `INFORMATION_SCHEMA.TABLES`
 Querying the [`INFORMATION_SCHEMA.TABLES` view](https://www.postgresql.org/docs/9.6/static/infoschema-tables.html) can also provide a list of all tables in a schema. This may be used on its own, or combined with other `INFORMATION_SCHEMA` queries. It may be helpful to show more advanced students the following query similar to the one used by the `public.listTables()` function:
@@ -46,7 +46,7 @@ The psql command line client also contains a helper command `\dt`, which lists a
 Describing a table refers to listing all columns in a table. The four methods above can also be applied to describing table.
 
 ### ClassDB `public.describe()` Function
-ClassDB provides the `public.describe()` function to list all columns in a given table. It takes up to two parameters, one table name, and an optional schema name. If no schema name is given, the user's current schema is assumed. Note that `describne()` has the same access restrictions as `listTables()`. The following two queries demonstrate the usage of `describe()`. The first describes the table `mytable` in the current schema, while the second describes the table `shelter.dog`.
+ClassDB provides the `public.describe()` function to list all columns in a given table. It takes up to two parameters, one table name, and an optional schema name. If no schema name is given, the user's current schema is assumed. The following two queries demonstrate this. The first describes the table `mytable` in the current schema, while the second describes the table `shelter.dog`.
 ```sql
 SELECT * FROM describe('mytable');
 ```

@@ -246,57 +246,31 @@ BEGIN
 --------------------------------------------------------------------------------
 
    --test dropping a role while also dropping it from the server
-   --also test object assignment to current user
-   --give role u1 execution permission on dropRole and execute dropRole as u1
-   -- cannot call dropRole as a superuser or any classdb group role
+   --also test object assignment to ClassDB_Instructor
 
    --t1 is a known role
    RAISE INFO '%   isRoleKnown(t1: before dropRole)',
    CASE ClassDB.isRoleKnown('t1') WHEN TRUE THEN 'PASS' ELSE 'FAIL: Code 32' END;
 
-   --let u1 execute function dropRole
-   GRANT USAGE ON SCHEMA ClassDB TO u1;
-   GRANT EXECUTE ON FUNCTION
-      ClassDB.dropRole(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
-                       ClassDB.IDNameDomain
-                      )
-   TO u1;
-
-   --become u1
-   SET SESSION AUTHORIZATION u1;
-
-   --drop t1 from record and from the server; assign objects to current user (u1)
+   --drop u1 from record and from the server; assign objects to ClassDB_Instructor
    PERFORM ClassDB.dropRole('t1', TRUE);
 
-   --go back to being the orginal users
-   RESET SESSION AUTHORIZATION;
-
-   --u1 no longer needs access to function dropRole
-   REVOKE USAGE ON SCHEMA ClassDB FROM u1;
-   REVOKE EXECUTE ON FUNCTION
-      ClassDB.dropRole(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
-                       ClassDB.IDNameDomain
-                      )
-   FROM u1;
-
    --t1 is no longer a known role
-   RAISE INFO '%   isRoleKnown(t1: after dropRole)',
+   RAISE INFO '%   isRoleKnown(u1: after dropRole)',
    CASE ClassDB.isRoleKnown('t1') WHEN TRUE THEN 'FAIL: Code 33' ELSE 'PASS' END;
 
    --t1 is no longer a server role
-   RAISE INFO '%   isServerRoleDefined(t1: after dropRole)',
+   RAISE INFO '%   isServerRoleDefined(u1: after dropRole)',
    CASE ClassDB.isServerRoleDefined('t1') WHEN TRUE THEN 'FAIL: Code 34' ELSE 'PASS' END;
 
-   --t1's schema exists but is owned by role 'u1' (t1's objects assigned to u1)
-   RAISE INFO '%   dropRole(t1, TRUE)',
+   --t1's schema exists but is owned by classdb_instructor
+   RAISE INFO '%   createRole(s1, s1 name, FALSE)',
    CASE EXISTS(SELECT * FROM information_schema.schemata
-               WHERE schema_name = 't1_schema' AND schema_owner = 'u1'
+               WHERE schema_name = 't1_schema' AND schema_owner = 'classdb_instructor'
               )
       WHEN TRUE THEN 'PASS'
       ELSE 'FAIL: Code 35'
    END;
-
-
 
 --------------------------------------------------------------------------------
 
@@ -329,8 +303,15 @@ BEGIN
 
 --------------------------------------------------------------------------------
 
+   --clean up
+
+   --u1 is still a server role, but it does not own any object
+   DROP ROLE u1;
+
+   --t1's schema is still around (owned by ClassDB_Instructor)
+   DROP SCHEMA t1_schema CASCADE;
+
 END
 $$;
 
-
-ROLLBACK;
+COMMIT;

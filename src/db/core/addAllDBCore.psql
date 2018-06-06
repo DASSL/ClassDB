@@ -18,9 +18,9 @@
 
 --This script should be run first
 
---This script uses psql meta-commands run other scripts and so it should be run using psql.
--- the script can be run using the -f command line switch of psql or using the \i command
--- inside a psql interactive session
+-- This script uses psql meta-commands run other scripts and so it should be run using psql.
+--  the script can be run using the -f command line switch of psql or using the \i command
+--  inside a psql interactive session
 
 --This script uses the \ir flag so that a relative path from where the script is located is
 -- used rather then the program's current directory

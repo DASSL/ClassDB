@@ -8,7 +8,7 @@ _Author: Steven Rollo_
 ClassDB's connection logging facilities rely on the external Postgres server log files. This document explains how ClassDB configures Postgres' logging system and how to monitor log file usage. This information most relevant to ClassDB deployments using the connection logging facility.  
 
 ## ClassDB Log File Configuration
-If [connection logging is enabled](Activity-Logging), ClassDB makes several modifications to the Postgres instance's settings. These changes allow ClassDB to retrieve connection information from the logs. The following SQL statements from `enableServerLogging.sql` are used to configure Postgres' log system, followed by a table describing each setting:
+If [connection logging is enabled](User-Logging), ClassDB makes several modifications to the Postgres instance's settings. These changes allow ClassDB to retrieve connection information from the logs. The following SQL statements from `enableServerLogging.sql` are used to configure Postgres' log system, followed by a table describing each setting:
 ```sql
 ALTER SYSTEM SET log_connections TO 'on';
 ALTER SYSTEM SET log_destination TO 'csvlog';
@@ -45,10 +45,10 @@ First, you may manually delete old log files that have already been imported to 
 ```sql
 SHOW log_directory;
 ```
-The next query shows the latest connection date imported from the logs. This date also corresponds to the last log file that was imported. Log files matching dates earlier than the one returned may be safely deleted.
+The next query shows the latest connection timestamp imported from the logs. This date in this timestamp also corresponds to the last log file that was imported. Log files matching dates earlier than the one returned may be safely deleted.
 ```sql
-date((SELECT ClassDB.ChangeTimeZone(MAX(AcceptedAtUTC))
-      FROM ClassDB.ConnectionActivity));
+SELECT MAX(lastConnection)
+FROM classdb.student;
 ```
 
 Another method to reduce log size is to reduce the amount of information stored. For example, setting `log_error_verbosity` to `TERSE` will disable the logging of full statements on errors. This can greatly reduce the amount of data logged. For more information about logging configuration, see the [Postgres error reporting and logging documentation.](https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html)

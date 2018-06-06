@@ -1,8 +1,7 @@
 --1_instructorPass.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
---Data Science & Systems Lab (DASSL)
---https://dassl.github.io/
+--Data Science & Systems Lab (DASSL), Western Connecticut State University (WCSU)
 
 --(C) 2017- DASSL. ALL RIGHTS RESERVED.
 --Licensed to others under CC 4.0 BY-SA-NC
@@ -10,107 +9,98 @@
 
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
-START TRANSACTION;
+
+--Execute appropriate ClassDB functions (this is not inteded to test correctness of the
+-- each function).
 
 
---Execute appropriate ClassDB functions (these tests do not verify correctness
--- of each function)
-SELECT ClassDB.createStudent('teststu', 'noname');
-SELECT ClassDB.resetPassword('teststu');
-SELECT ClassDB.listUserConnections('teststu');
-SELECT ClassDB.killUserConnections('teststu');
-SELECT ClassDB.dropStudent('teststu', TRUE, TRUE, 'drop_c');
+SELECT classdb.createStudent('teststu', 'noname');
+SELECT classdb.resetUserPassword('teststu');
+SELECT classdb.listUserConnections('teststu');
+SELECT classdb.killUserConnections('teststu');
+SELECT classdb.dropStudent('teststu');
 
---ClassDB.dropAllStudents is not being tested here because it would drop the
--- test students that will later be used to connect to the DB
---SELECT ClassDB.dropAllStudents(TRUE, TRUE, 'drop_c');
+SELECT classdb.createInstructor('testins', 'noname');
+SELECT classdb.dropInstructor('testins');
 
-SELECT ClassDB.createInstructor('testins', 'noname');
-SELECT ClassDB.dropInstructor('testins', TRUE, TRUE, 'drop_c');
-
-SELECT ClassDB.createDBManager('testman', 'noname');
-SELECT ClassDB.dropDBManager('testman', TRUE, TRUE, 'drop_c');
-
-SELECT ClassDB.importConnectionLog();
+SELECT classdb.createDBManager('testman', 'noname');
+SELECT classdb.dropDBManager('testman');
 
 
---CRUD on tables created by the instructor. This table should be placed in their
--- own schema and be accessed without needing to be fully schema qualified
+--CRUD on tables created by the instructor. This table should be placed in their own schema
+-- and be accessed without needing to be fully schema qualified
+
 --Create without schema qualification
-CREATE TABLE Test
+CREATE TABLE test
 (
-   Col1 VARCHAR(10)
+   col1 VARCHAR(10)
 );
 
---Insert with schema qualification - ensures test table was created in the
--- ptins0 schema
-INSERT INTO ptins0.Test VALUES ('hello');
+--Insert with schema qualification - ensures test was created in the ins0 schema
+INSERT INTO ins0.test VALUES ('hello');
 
 --Select
-SELECT * FROM Test;
+SELECT * FROM test;
 
 --Update
-UPDATE Test
-SET Col1 = 'goodbye';
+UPDATE test
+SET col1 = 'goodbye'
+WHERE TRUE;
 
 --Delete
-DELETE FROM Test;
-DROP TABLE Test;
+DELETE FROM test;
+
+DROP TABLE test;
 
 
 --CRUD on public schema
-CREATE TABLE public.PublicTest
+CREATE TABLE public.pubTest
 (
-   Col1 VARCHAR(10)
+   col1 VARCHAR(10)
 );
 
-INSERT INTO public.PublicTest VALUES ('hello');
+INSERT INTO public.pubTest VALUES ('hello');
 
-SELECT * FROM public.PublicTest;
+SELECT * FROM public.pubTest;
 
-UPDATE public.PublicTest
-SET Col1 = 'goodbye';
+UPDATE public.pubTest
+SET col1 = 'goodbye'
+WHERE TRUE;
 
-DELETE FROM public.PublicTest;
-DROP TABLE public.PublicTest;
+DELETE FROM public.pubTest;
 
-
---Read from columns in RoleBase table
-SELECT * FROM ClassDB.RoleBase;
+DROP TABLE public.pubTest;
 
 
---Read from columns in User, Student, Instructor, and DBManager views
-SELECT * FROM ClassDB.User;
-SELECT * FROM ClassDB.DBManager;
-SELECT * FROM ClassDB.Student;
-SELECT * FROM ClassDB.Instructor;
+--Read from columns in Student and Instructor tables
+SELECT * FROM classdb.Student;
+SELECT * FROM classdb.Instructor;
 
 
---Update FullName and ExtraInfo in RoleBase table
-SELECT ClassDB.createStudent('updateInfoTest', 'Temp name', NULL, 'Temp info');
+--Update name and schoolID in Student table
+SELECT classdb.createStudent('teststu1', 'Nonme', '50124');
 
-UPDATE ClassDB.RoleBase
-SET FullName = 'Updated name', ExtraInfo = 'Updated info'
-WHERE roleName = 'updateInfoTest';
+UPDATE classdb.Student
+SET studentName = 'NoName', schoolID = '50125'
+WHERE userName = 'teststu1';
 
-SELECT ClassDB.dropStudent('updateInfoTest', TRUE, TRUE, 'drop_c');
+SELECT classdb.dropStudent('teststu1');
 
 
---Create table in public schema to test read privileges for all users
-CREATE TABLE public.TestInsPublic
-(
-   Col1 VARCHAR(20)
-);
-
-INSERT INTO public.testInsPublic VALUES ('Read by: anyone');
-
---Create table in $user schema to test non-access for other roles
-CREATE TABLE TestInsUsr
+--Create table in public schema to test read privileges for Students and DBManagers
+DROP TABLE IF EXISTS public.testInsPub;
+CREATE TABLE public.testInsPub
 (
    col1 VARCHAR(20)
 );
 
-INSERT INTO testInsUsr VALUES('Read by: ptins0');
+INSERT INTO public.testInsPub VALUES ('Read by: anyone');
 
+--Create table in $user schema to test non-access for other roles
+DROP TABLE IF EXISTS testInsUsr;
+CREATE TABLE testInsUsr
+(
+   col1 VARCHAR(20)
+);
 
-COMMIT;
+INSERT INTO testInsUsr VALUES('Read by: no one');

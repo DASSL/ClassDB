@@ -3,9 +3,9 @@
 ---
 # Limitations on Student Users
 
-_Author: Andrew Figueroa, Steven Rollo_
+_Author: Andrew Figueroa_
 
-In order to reduce the impact that any one student has on a server that is running an instance of ClassDB, students may have a limit on the number of connections they have open, and on the amount of time that a query can run. These limitations are enabled by default, but can be changed or disabled if desired. Currently, these values are set in `addClassDBRolesMgmtCore.sql`, in the `ClassDB.createStudent()` function.
+In order to reduce the impact that any one student has on a server that is running an instance of ClassDB, students may have a limit on the number of connections they have open, and on the amount of time that a query can run. These limitations are enabled by default, but can be changed or disabled if desired. Currently, these values are set in `addUserMgmt.sql`, in the `createStudent()` function.
 
 ## Number of Connections
 
@@ -15,10 +15,10 @@ Typically, each Student will only be interacting with the database in one or two
 
 Sometimes, connections are not automatically closed by a client, and need to be closed manually. Refer to [Managing User Connections](https://github.com/DASSL/ClassDB/wiki/Managing-User-Connections) for information on viewing currently open connections and killing unused idle connections.
 
-This value can be set by modifying the number the following line in the `ClassDB.createStudent()` function in `addClassDBRolesMgmtCore.sql`:
+This value can be set by modifying the number the following line in the `createStudent()` function in `addUserMgmt.sql`:
 
 ```sql
-EXECUTE FORMAT('ALTER ROLE %s CONNECTION LIMIT 5', $1);
+EXECUTE format('ALTER ROLE %s CONNECTION LIMIT 5', $1);
 ```
 More information on the `CONNECTION LIMIT` setting can be found in [Postgres' documentation](https://www.postgresql.org/docs/9.6/static/sql-createrole.html).
 
@@ -28,10 +28,10 @@ Another action performed by Students that can unnecessarily consume server resou
 
 By default, the query timeout for students is set to 2 seconds. The majority of queries that Students are likely to perform will take significantly shorter that that. However, certain workloads may lead to this value being too low.
 
-This value can be set by modifying the following line in the `ClassDB.createStudent()` function in `addClassDBRolesMgmtCore.sql`:
+This value can be set by modifying the following line in the `createStudent()` function in `addUserMgmt.sql`:
 
 ```sql
-EXECUTE FORMAT('ALTER ROLE %s SET statement_timeout = 2000', $1);
+EXECUTE format('ALTER ROLE %s SET statement_timeout = 2000', $1);
 ```
 
 More information on the `statement_timeout` setting can be found in [Postgres' documentation](https://www.postgresql.org/docs/9.6/static/runtime-config-client.html).
