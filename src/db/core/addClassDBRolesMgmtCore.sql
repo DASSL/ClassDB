@@ -49,10 +49,8 @@ $$
 BEGIN
    IF NOT ClassDB.isUser($1) THEN
       RETURN FALSE;
-   ELSIF NOT ClassDB.isMember($1, 'classdb_student') THEN
-      RETURN FALSE;
    ELSE
-      RETURN TRUE;
+      RETURN ClassDB.isMember($1, 'classdb_student');
    END IF;
 END;
 $$ LANGUAGE plpgsql
@@ -74,10 +72,8 @@ $$
 BEGIN
    IF NOT ClassDB.isUser($1) THEN
       RETURN FALSE;
-   ELSIF NOT ClassDB.isMember($1, 'classdb_instructor') THEN
-      RETURN FALSE;
    ELSE
-      RETURN TRUE;
+      RETURN ClassDB.isMember($1, 'classdb_instructor');
    END IF;
 END;
 $$ LANGUAGE plpgsql
@@ -99,10 +95,8 @@ $$
 BEGIN
    IF NOT ClassDB.isUser($1) THEN
       RETURN FALSE;
-   ELSIF NOT ClassDB.isMember($1, 'classdb_dbmanager') THEN
-      RETURN FALSE;
    ELSE
-      RETURN TRUE;
+      RETURN ClassDB.isMember($1, 'classdb_dbmanager');
    END IF;
 END;
 $$ LANGUAGE plpgsql
