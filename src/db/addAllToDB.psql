@@ -1,6 +1,6 @@
---addAllServerCore.psql - ClassDB
+--addAllToDB.psql - ClassDB
 
---Steven Rollo, Andrew Figueroa, Sean Murthy, Kevin Kelly
+--Steven Rollo, Andrew Figueroa, Sean Murthy
 --Data Science & Systems Lab (DASSL)
 --https://dassl.github.io/
 
@@ -12,10 +12,12 @@
 
 --This script must be executed as a superuser
 
---This script should be run once on the server to which ClassDB is to be added
--- it should be the first script to run in the ClassDB installation process
+--This script should be run in a database to which ClassDB is to be added
 
---This script runs other scripts that add core ClassDB functionality to the current server
+--This script runs other scripts that add all core, reco, and opt DB components
+
+--If you are installing all DB components, this is the only DB level script that
+-- must be run
 
 --This script uses psql meta-commands run other scripts and so it should be run using psql.
 -- the script can be run using the -f command line switch of psql or using the \i command
@@ -25,4 +27,6 @@
 -- used rather then the program's current directory
 
 \set ON_ERROR_STOP on
-\ir initalizeServerCore.sql
+\ir core/addAllDBCore.psql
+\ir opt/addAllDBOpt.psql
+\ir reco/addAllDBReco.psql
