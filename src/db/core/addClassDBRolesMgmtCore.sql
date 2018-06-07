@@ -135,12 +135,15 @@ $$
 BEGIN
    --If password was supplied give warning
    IF ($7 IS NOT NULL) THEN
-      RAISE WARNING 'initialPwd is no longer a valid parameter, password will be
-          be set to the default password.';
+      RAISE WARNING 'For security reasons, parameter "initialPwd" is ignored '
+                    'and user password has been set using the default password '
+                    'policy described in the API documentation.'
+         USING HINT = 'Parameter "initialPwd" will be dropped in the next API'
+                      'release. Please update your code.';
    END IF;
 
    --record ClassDB role
-   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $1);
+   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6);
 
    --get name of role's schema (possibly not the original value of schemaName)
    $3 = ClassDB.getSchemaName($1);
@@ -312,12 +315,15 @@ $$
 BEGIN
    --If password was supplied give warning
    IF ($7 IS NOT NULL) THEN
-       RAISE WARNING 'initialPwd is no longer a valid parameter, password will be
-           be set to the default password.';
+      RAISE WARNING 'For security reasons, parameter "initialPwd" is ignored '
+                    'and user password has been set using the default password '
+                    'policy described in the API documentation.'
+         USING HINT = 'Parameter "initialPwd" will be dropped in the next API'
+                      'release. Please update your code.';
    END IF;
 
    --record ClassDB role
-   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $1);
+   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6);
 
    --grant server-level instructor group role to new instructor
    PERFORM ClassDB.grantRole('ClassDB_Instructor', $1);
@@ -443,12 +449,15 @@ $$
 BEGIN
    --If password was supplied give warning
    IF ($7 IS NOT NULL) THEN
-       RAISE WARNING 'initialPwd is no longer a valid parameter, password will be
-           be set to the default password.';
+      RAISE WARNING 'For security reasons, parameter "initialPwd" is ignored '
+                    'and user password has been set using the default password '
+                    'policy described in the API documentation.'
+         USING HINT = 'Parameter "initialPwd" will be dropped in the next API'
+                      'release. Please update your code.';
    END IF;
 
    --record ClassDB role
-   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $1);
+   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6);
 
    --grant server-level DB manager group role to new DB manager
    PERFORM ClassDB.grantRole('ClassDB_DBManager', $1);
