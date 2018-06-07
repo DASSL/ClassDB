@@ -24,22 +24,6 @@
 -- can't be run inside a TRANSACTION block, however they will still fail if they
 -- are run with insufficient permissions.
 
-
---Changing logging_collector from 'off' to 'on' requires a server restart,
--- so notify the user if they need to take this step
-DO
-$$
-BEGIN
-   IF NOT(SELECT setting::BOOLEAN
-          FROM pg_settings
-          WHERE name = 'logging_collector') THEN
-          RAISE WARNING 'Setting ''logging_collector'' to ''on''. You must restart'
-            ' this Postgres instance before ClassDB connection logging will function.';
-   END IF;
-END;
-$$;
-
-
 --The following changes are made:
 --logging_collector TO 'on' enables Postgres' internal log redirection system.
 -- Otherwise, all logging info is sent to stderr.
@@ -52,8 +36,26 @@ $$;
 ALTER SYSTEM SET logging_collector TO 'on';
 ALTER SYSTEM SET log_destination TO 'csvlog';
 ALTER SYSTEM SET log_filename TO 'postgresql-%m.%d.log';
-ALTER SYSTEM SET log_connections TO 'on';
 
---pg_reload_conf() reloads the postgres setting so the changes from ALTER SYSTEM
--- statements apply without having to restart the server
-SELECT pg_reload_conf();
+--Changing logging_collector from 'off' to 'on' requires a server restart,
+-- so notify the user if they need to take this step
+DO
+$$
+BEGIN
+   IF NOT(COALESCE(
+          (SELECT setting::BOOLEAN
+           FROM pg_settings
+           WHERE name = 'logging_collector'), FALSE)) THEN
+
+      RAISE WARNING  'Setting ''logging_collector'' to ''on''.'
+      USING HINT =   'You must restart this Postgres instance before ClassDB'
+                     ' connection logging will function.';
+   ELSE
+      --pg_reload_conf() reloads the postgres setting so the changes from ALTER SYSTEM
+      -- statements apply without having to restart the server
+      PERFORM pg_reload_conf();
+   END IF;
+END;
+$$;
+
+ALTER SYSTEM SET log_connections TO 'on';
