@@ -42,7 +42,7 @@ CREATE OR REPLACE FUNCTION ClassDB.isConnectionLoggingEnabled()
    RETURNS BOOLEAN AS
 $$
    --This query returns 'on' or 'off', which can be cast to a boolean
-   SELECT setting::BOOLEAN
+   SELECT COALESCE(setting::BOOLEAN, FALSE)
    FROM pg_settings
    WHERE name = 'log_connections';
 $$ LANGUAGE sql
@@ -59,7 +59,7 @@ CREATE OR REPLACE FUNCTION ClassDB.isLoggingCollectorEnabled()
    RETURNS BOOLEAN AS
 $$
    --This query returns 'on' or 'off', which can be cast to a boolean
-   SELECT setting::BOOLEAN
+   SELECT COALESCE(setting::BOOLEAN, FALSE)
    FROM pg_settings
    WHERE name = 'logging_collector';
 $$ LANGUAGE sql
