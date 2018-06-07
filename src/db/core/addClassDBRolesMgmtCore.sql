@@ -133,8 +133,14 @@ CREATE OR REPLACE FUNCTION
    RETURNS VOID AS
 $$
 BEGIN
+   --If password was supplied give warning
+   IF ($7 IS NOT NULL) THEN
+      RAISE WARNING 'initialPwd is no longer a valid parameter, password will be
+          be set to the default password.';
+   END IF;
+
    --record ClassDB role
-   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $7);
+   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $1);
 
    --get name of role's schema (possibly not the original value of schemaName)
    $3 = ClassDB.getSchemaName($1);
@@ -304,8 +310,14 @@ CREATE OR REPLACE FUNCTION
    RETURNS VOID AS
 $$
 BEGIN
+   --If password was supplied give warning
+   IF ($7 IS NOT NULL) THEN
+       RAISE WARNING 'initialPwd is no longer a valid parameter, password will be
+           be set to the default password.';
+   END IF;
+
    --record ClassDB role
-   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $7);
+   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $1);
 
    --grant server-level instructor group role to new instructor
    PERFORM ClassDB.grantRole('ClassDB_Instructor', $1);
@@ -429,8 +441,14 @@ CREATE OR REPLACE FUNCTION
    RETURNS VOID AS
 $$
 BEGIN
+   --If password was supplied give warning
+   IF ($7 IS NOT NULL) THEN
+       RAISE WARNING 'initialPwd is no longer a valid parameter, password will be
+           be set to the default password.';
+   END IF;
+
    --record ClassDB role
-   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $7);
+   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $1);
 
    --grant server-level DB manager group role to new DB manager
    PERFORM ClassDB.grantRole('ClassDB_DBManager', $1);
