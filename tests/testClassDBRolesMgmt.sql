@@ -108,7 +108,7 @@ BEGIN
    PERFORM ClassDB.createStudent('testStu0', 'Test student 0');
    --Extra info given: Pwd and schema set to username, extrainfo should be stored
    PERFORM ClassDB.createStudent('testStu1', 'Test student 1', NULL, '101');
-   --initialPassword given: Password should be set to 'testpass'
+   --initialPassword given: Password should be set to 'testStu2'
    PERFORM ClassDB.createStudent('testStu2', 'Test student 2', NULL, '102',
                                  FALSE, FALSE, 'testpass');
    --initialPassword with no extra info
@@ -154,9 +154,9 @@ BEGIN
    --Test password (hashes) set to students
    IF NOT(pg_temp.checkEncryptedPwd('testStu0', 'teststu0')
       AND pg_temp.checkEncryptedPwd('testStu1', 'teststu1')
-      AND pg_temp.checkEncryptedPwd('testStu2', 'testpass')
-      AND pg_temp.checkEncryptedPwd('testStu3', 'testpass2')
-      AND pg_temp.checkEncryptedPwd('testStuDBM0', 'testpass3')
+      AND pg_temp.checkEncryptedPwd('testStu2', 'testStu2')
+      AND pg_temp.checkEncryptedPwd('testStu3', 'testStu3')
+      AND pg_temp.checkEncryptedPwd('testStuDBM0', 'testStuDBM0')
       AND pg_temp.checkEncryptedPwd('testStu4', 'teststu4'))
    THEN
       RETURN 'FAIL: Code 3';
@@ -234,7 +234,7 @@ BEGIN
    PERFORM ClassDB.createInstructor('testIns0', 'Test instructor 0');
    --Extra info given: Pwd and schema set to username, extrainfo should be stored
    PERFORM ClassDB.createInstructor('testIns1', 'Test instructor 1', NULL, '101');
-   --initialPassword given: Password should be set to 'testpass'
+   --initialPassword given: Password should be set to 'testIns2'
    PERFORM ClassDB.createInstructor('testIns2', 'Test instructor 2', NULL, '102',
                                  FALSE, FALSE, 'testpass');
    --initialPassword with no extra info
@@ -280,9 +280,9 @@ BEGIN
    --Test password (hashes) set to instructors
    IF NOT(pg_temp.checkEncryptedPwd('testIns0', 'testins0')
       AND pg_temp.checkEncryptedPwd('testIns1', 'testins1')
-      AND pg_temp.checkEncryptedPwd('testIns2', 'testpass')
-      AND pg_temp.checkEncryptedPwd('testIns3', 'testpass2')
-      AND pg_temp.checkEncryptedPwd('testInsDBM0', 'testpass3')
+      AND pg_temp.checkEncryptedPwd('testIns2', 'testIns2')
+      AND pg_temp.checkEncryptedPwd('testIns3', 'testIns3')
+      AND pg_temp.checkEncryptedPwd('testInsDBM0', 'testInsDBM0')
       AND pg_temp.checkEncryptedPwd('testIns4', 'testins4'))
    THEN
       RETURN 'FAIL: Code 3';
@@ -358,7 +358,7 @@ BEGIN
    PERFORM ClassDB.createDBManager('testDBM0', 'Test DB manager 0');
    --Extra info given: Pwd and schema set to username, extrainfo should be stored
    PERFORM ClassDB.createDBManager('testDBM1', 'Test DB manager 1', NULL, '101');
-   --initialPassword given: Password should be set to 'testpass'
+   --initialPassword given: Password should be set to 'testDBM2'
    PERFORM ClassDB.createDBManager('testDBM2', 'Test DB manager 2', NULL, '102',
                                  FALSE, FALSE, 'testpass');
    --initialPassword with no extra info
@@ -404,9 +404,9 @@ BEGIN
    --Test password (hashes) set to DB managers
    IF NOT(pg_temp.checkEncryptedPwd('testDBM0', 'testdbm0')
       AND pg_temp.checkEncryptedPwd('testDBM1', 'testdbm1')
-      AND pg_temp.checkEncryptedPwd('testDBM2', 'testpass')
-      AND pg_temp.checkEncryptedPwd('testDBM3', 'testpass2')
-      AND pg_temp.checkEncryptedPwd('testDBMStu0', 'testpass3')
+      AND pg_temp.checkEncryptedPwd('testDBM2', 'testDBM2')
+      AND pg_temp.checkEncryptedPwd('testDBM3', 'testDBM3')
+      AND pg_temp.checkEncryptedPwd('testDBMStu0', 'testDBMStu0')
       AND pg_temp.checkEncryptedPwd('testDBM4', 'testdbm4'))
    THEN
       RETURN 'FAIL: Code 3';
@@ -689,11 +689,11 @@ BEGIN
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createDBManager('testStuDBM0', 'Test student/DB manager 0');
    RESET client_min_messages;
-   
+
    --Create DB manager to handle default object disposition
-   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');  
+   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');
    SET SESSION AUTHORIZATION tempDBM0;
-   
+
    --Suppress NOTICEs about ownership reassignment
    SET SESSION client_min_messages TO WARNING;
 
@@ -723,10 +723,10 @@ BEGIN
 
    --Switch back to superuser role before validating test cases
    RESET SESSION AUTHORIZATION;
-   
+
    --Turn all messages back on
    RESET client_min_messages;
-   
+
    --Check for correct existence of roles
    IF    NOT ClassDB.isServerRoleDefined('testStu0')
       OR ClassDB.isServerRoleDefined('testStu1')
@@ -790,11 +790,11 @@ BEGIN
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createDBManager('testInsDBM0', 'Test instructor/DB manager 0');
    RESET client_min_messages;
-   
+
    --Create DB manager to handle default object disposition
-   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');  
+   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');
    SET SESSION AUTHORIZATION tempDBM0;
-   
+
    --Suppress NOTICEs about ownership reassignment
    SET SESSION client_min_messages TO WARNING;
 
@@ -824,10 +824,10 @@ BEGIN
 
    --Switch back to superuser role before validating test cases
    RESET SESSION AUTHORIZATION;
-   
+
    --Turn all messages back on
    RESET client_min_messages;
-   
+
    --Check for correct existence of roles
    IF    NOT ClassDB.isServerRoleDefined('testIns0')
       OR ClassDB.isServerRoleDefined('testIns1')
@@ -891,11 +891,11 @@ BEGIN
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createStudent('testDBMStu0', 'Test DB manager/Student 0');
    RESET client_min_messages;
-   
+
    --Create DB manager to handle default object disposition
-   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');  
+   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');
    SET SESSION AUTHORIZATION tempDBM0;
-   
+
    --Suppress NOTICEs about ownership reassignment
    SET SESSION client_min_messages TO WARNING;
 
@@ -925,10 +925,10 @@ BEGIN
 
    --Switch back to superuser role before validating test cases
    RESET SESSION AUTHORIZATION;
-   
+
    --Turn all messages back on
    RESET client_min_messages;
-   
+
    --Check for correct existence of roles
    IF    NOT ClassDB.isServerRoleDefined('testDBM0')
       OR ClassDB.isServerRoleDefined('testDBM1')
@@ -978,14 +978,14 @@ BEGIN
    --Create two test students
    PERFORM ClassDB.createStudent('testStu0', 'Test student 0');
    PERFORM ClassDB.createStudent('testStu1', 'Test student 1');
-   
+
    --Create DB manager to handle default object disposition
-   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');  
+   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');
    SET SESSION AUTHORIZATION tempDBM0;
 
    --Minimal drop
    PERFORM ClassDB.dropAllStudents();
-   
+
    --Reset back to superuser role for test case validation
    RESET SESSION AUTHORIZATION;
 
@@ -1034,12 +1034,12 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 5';
    END IF;
-   
+
    --Cleanup
    DROP OWNED BY tempDBM0;
    DROP ROLE tempDBM0;
    DELETE FROM ClassDB.RoleBase WHERE RoleName = 'tempdbm0';
-   
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
