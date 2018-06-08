@@ -24,13 +24,6 @@
 -- can't be run inside a TRANSACTION block, however they will still fail if they
 -- are run with insufficient permissions.
 
---Get the current value of 'logging_collector'. A temporary table is the only way
--- to store this value, beacuse ALTER SYSTEM statements cannot be using in PL/pgSQL
--- statements (which have variables)
-CREATE TEMPORARY TABLE LoggingCollectorValue AS
-SELECT COALESCE(setting::BOOLEAN, FALSE) AS value
-FROM pg_settings
-WHERE name = 'logging_collector';
 
 --The following changes are made:
 --logging_collector TO 'on' enables Postgres' internal log redirection system.
@@ -66,8 +59,3 @@ BEGIN
    END IF;
 END;
 $$;
-
---Manually drop the temporary table. This is done at the end to avoid a NOTICE
--- from DROP IF EXISTS, which cannot be suppressed because we are not in a
--- transaction
-DROP TABLE IF EXISTS pg_temp.LoggingCollectorValue;
