@@ -24,6 +24,14 @@
 -- can't be run inside a TRANSACTION block, however they will still fail if they
 -- are run with insufficient permissions.
 
+--Get the current value of 'logging_collector'. A temporary table is the only way
+-- to store this value, beacuse ALTER SYSTEM statements cannot be using in PL/pgSQL
+-- statements (which have variables)
+CREATE TEMPORARY TABLE LoggingCollectorValue AS
+SELECT COALESCE(setting::BOOLEAN, FALSE) AS value
+FROM pg_settings
+WHERE name = 'logging_collector';
+
 --The following changes are made:
 --logging_collector TO 'on' enables Postgres' internal log redirection system.
 -- Otherwise, all logging info is sent to stderr.
@@ -36,6 +44,7 @@
 ALTER SYSTEM SET logging_collector TO 'on';
 ALTER SYSTEM SET log_destination TO 'csvlog';
 ALTER SYSTEM SET log_filename TO 'postgresql-%m.%d.log';
+ALTER SYSTEM SET log_connections TO 'on';
 
 --Changing logging_collector from 'off' to 'on' requires a server restart,
 -- so notify the user if they need to take this step
@@ -47,9 +56,9 @@ BEGIN
            FROM pg_settings
            WHERE name = 'logging_collector'), FALSE)) THEN
 
-      RAISE WARNING  'Setting ''logging_collector'' to ''on''.'
-      USING HINT =   'You must restart this Postgres instance before ClassDB'
-                     ' connection logging will function.';
+      RAISE WARNING  'Enabling ''logging_collector'': server restart required'
+      USING DETAIL = 'You must restart this PostgreSQL instance for ClassDB '
+                     'connection logging to function.';
    ELSE
       --pg_reload_conf() reloads the postgres setting so the changes from ALTER SYSTEM
       -- statements apply without having to restart the server
@@ -58,4 +67,7 @@ BEGIN
 END;
 $$;
 
-ALTER SYSTEM SET log_connections TO 'on';
+--Manually drop the temporary table. This is done at the end to avoid a NOTICE
+-- from DROP IF EXISTS, which cannot be suppressed because we are not in a
+-- transaction
+DROP TABLE IF EXISTS pg_temp.LoggingCollectorValue;
