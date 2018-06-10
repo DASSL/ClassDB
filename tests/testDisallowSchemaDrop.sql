@@ -55,7 +55,7 @@ BEGIN
    EXCEPTION
       WHEN OTHERS THEN
          RAISE INFO '%   drop table by student', 'FAIL: Code 2'
-                    USING HINT = SQLERRM;
+                    USING DETAIL = SQLERRM;
    END;
 
    --schema create: should not cause exception
@@ -66,17 +66,25 @@ BEGIN
    EXCEPTION
       WHEN OTHERS THEN
          RAISE INFO '%   create schema by student', 'FAIL: Code 3'
-                    USING HINT = SQLERRM;
+                    USING DETAIL = SQLERRM;
    END;
 
    --schema drop (schema created by student): should cause exception
+   --spelling 'scHema' intentional to test if the event handler ignores case
    BEGIN
-      DROP scHema schema_created_by_s1; --spelling 'scHema' intentional
+      DROP scHema schema_created_by_s1;
       RAISE INFO '%   drop schema created by student disallowed', 'FAIL: Code 4';
 
    EXCEPTION
-      WHEN OTHERS THEN
+      --raise_exception is the name of the error condition associated with the
+      -- exception the event handler raises: corresponds to SQLSTATE P0001
+      -- https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
+      WHEN raise_exception THEN
          RAISE INFO '%   drop schema created by student disallowed', 'PASS';
+      WHEN OTHERS THEN
+         RAISE INFO '%   drop schema created by student disallowed',
+                    'FAIL: Code 4'
+                    USING DETAIL = SQLERRM;
    END;
 
    --schema drop (schema assigned to student): should cause exception
@@ -85,18 +93,27 @@ BEGIN
       RAISE INFO '%   drop schema assigned to student disallowed', 'FAIL: Code 5';
 
    EXCEPTION
-      WHEN OTHERS THEN
+      WHEN raise_exception THEN
          RAISE INFO '%   drop schema assigned to student disallowed', 'PASS';
+      WHEN OTHERS THEN
+         RAISE INFO '%   drop schema assigned to student disallowed',
+                    'FAIL: Code 5'
+                    USING DETAIL = SQLERRM;
    END;
 
    --drop owned objects: should cause exception
+   --spelling 'DrOP oWNeD' intentional to test if the event handler ignores case
    BEGIN
-      DrOP oWNeD BY CURRENT_USER; --spelling 'DrOP oWNeD' intentional
+      DrOP oWNeD BY CURRENT_USER;
       RAISE INFO '%   drop owned by student disallowed', 'FAIL: Code 6';
 
    EXCEPTION
-      WHEN OTHERS THEN
+      WHEN raise_exception THEN
          RAISE INFO '%   drop owned by student disallowed', 'PASS';
+      WHEN OTHERS THEN
+         RAISE INFO '%   drop owned by student disallowed',
+                    'FAIL: Code 6'
+                    USING DETAIL = SQLERRM;
    END;
 
 --------------------------------------------------------------------------------
@@ -115,7 +132,7 @@ BEGIN
    EXCEPTION
       WHEN OTHERS THEN
          RAISE INFO '%   drop schema by instructor', 'FAIL: Code 7'
-                    USING HINT = SQLERRM;
+                    USING DETAIL = SQLERRM;
    END;
 
    --drop owned objects: should not cause exception
@@ -126,7 +143,7 @@ BEGIN
    EXCEPTION
       WHEN OTHERS THEN
          RAISE INFO '%   drop owned by instructor', 'FAIL: Code 8'
-                    USING HINT = SQLERRM;
+                    USING DETAIL = SQLERRM;
    END;
 
 --------------------------------------------------------------------------------
@@ -145,7 +162,7 @@ BEGIN
    EXCEPTION
       WHEN OTHERS THEN
          RAISE INFO '%   drop schema by DB manager', 'FAIL: Code 9'
-                    USING HINT = SQLERRM;
+                    USING DETAIL = SQLERRM;
    END;
 
    --drop owned objects: should not cause exception
@@ -156,7 +173,7 @@ BEGIN
    EXCEPTION
       WHEN OTHERS THEN
          RAISE INFO '%   drop owned by DB manager', 'FAIL: Code 10'
-                    USING HINT = SQLERRM;
+                    USING DETAIL = SQLERRM;
    END;
 
 --------------------------------------------------------------------------------
@@ -176,7 +193,7 @@ BEGIN
    EXCEPTION
       WHEN OTHERS THEN
          RAISE INFO '%   drop schema by non-ClassDB user', 'FAIL: Code 10'
-                    USING HINT = SQLERRM;
+                    USING DETAIL = SQLERRM;
    END;
 
    --drop owned objects: should not cause exception
@@ -187,7 +204,7 @@ BEGIN
    EXCEPTION
       WHEN OTHERS THEN
          RAISE INFO '%   drop owned by non-ClassDB user', 'FAIL: Code 11'
-                    USING HINT = SQLERRM;
+                    USING DETAIL = SQLERRM;
    END;
 
 --------------------------------------------------------------------------------
@@ -216,7 +233,7 @@ BEGIN
    EXCEPTION
       WHEN OTHERS THEN
          RAISE INFO '%   drop schema by student allowed', 'FAIL: Code 13'
-                    USING HINT = SQLERRM;
+                    USING DETAIL = SQLERRM;
    END;
 
    --drop owned objects: should not cause exception
@@ -227,7 +244,7 @@ BEGIN
    EXCEPTION
       WHEN OTHERS THEN
          RAISE INFO '%   drop owned by student allowed', 'FAIL: Code 14'
-                    USING HINT = SQLERRM;
+                    USING DETAIL = SQLERRM;
    END;
 
 --------------------------------------------------------------------------------
