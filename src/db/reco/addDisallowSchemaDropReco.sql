@@ -14,8 +14,8 @@
 --This script should be run in each database to which ClassDB is to be added
 -- it should be run after running addClassDBRolesMgmtCore.sql
 
---This script adds event triggers and corresponding handlers to prevent students
--- from executing DROP SCHEMA and DROP OWNED
+--This script adds an event trigger and a corresponding handler to prevent
+-- students from executing DROP SCHEMA and DROP OWNED BY
 
 START TRANSACTION;
 
@@ -36,14 +36,14 @@ SET LOCAL client_min_messages TO WARNING;
 
 
 
---Define a function to handle the start of any DDL stmt that leads to dropping
--- raises an exception if the function is called for a student user
+--Define a function to raise an exception if it is called for a student user
+--Called by the event trigger defined to prevent student-initiated schema drop
 CREATE OR REPLACE FUNCTION ClassDB.handleDropSchemaDDLStart()
 RETURNS event_trigger AS
 $$
 BEGIN
    IF ClassDB.isStudent(SESSION_USER::ClassDB.IDNameDomain) THEN
-      RAISE EXCEPTION 'Invalid operation: student users may not perform '
+      RAISE EXCEPTION 'invalid operation: student users may not perform '
                          'operation "%"', TG_TAG;
    END IF;
 END;
@@ -58,8 +58,8 @@ REVOKE ALL ON FUNCTION ClassDB.handleDropSchemaDDLStart() FROM PUBLIC;
 
 --Event trigger to handle start of any DDL stmt that leads to dropping a schema
 -- limited only to stmts DROP SCHEMA and DROP OWNED
---CAUTION: change function isSchemaDropAllowed if the name or the event of this
--- trigger changes
+--CAUTION: change the function isSchemaDropAllowed if the name or the event of
+-- this trigger changes
 DROP EVENT TRIGGER IF EXISTS triggerDropSchemaDDLStart;
 CREATE EVENT TRIGGER triggerDropSchemaDDLStart
 ON ddl_command_start
@@ -99,8 +99,8 @@ GRANT EXECUTE ON FUNCTION ClassDB.allowSchemaDrop()
 
 
 
---Define a function to test if student-initiated schema schema is  allowed
---Queries pg catalog to determine the presence and state of a specific trigger
+--Define a function to test if student-initiated schema drop is allowed
+--Uses pg catalog to determine the presence and state of a specific trigger
 -- https://www.postgresql.org/docs/9.6/static/catalog-pg-event-trigger.html
 CREATE OR REPLACE FUNCTION ClassDB.isSchemaDropAllowed()
 RETURNS BOOLEAN AS
@@ -115,12 +115,15 @@ $$
       SELECT evtenabled FROM pg_event_trigger
       WHERE evtname = 'triggerdropschemaddlstart'
             AND evtevent = 'ddl_command_start'
-            AND evtenabled <> 'D' --D means
+            AND evtenabled <> 'D' --D means the trigger is disabled
    );
 $$ LANGUAGE sql
    SECURITY DEFINER;
 
 ALTER FUNCTION ClassDB.isSchemaDropAllowed() OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION ClassDB.isSchemaDropAllowed() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ClassDB.isSchemaDropAllowed()
+   TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 COMMIT;
