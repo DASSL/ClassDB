@@ -155,7 +155,8 @@ CREATE OR REPLACE FUNCTION
    RETURNS BOOLEAN AS
 $$
    SELECT ClassDB.foldPgID($1)
-          IN ('classdb_instructor', 'classdb_student', 'classdb_dbmanager');
+          IN ('classdb_instructor', 'classdb_student',
+              'classdb_dbmanager', 'classdb_team');
 $$ LANGUAGE sql
    IMMUTABLE
    RETURNS NULL ON NULL INPUT;
