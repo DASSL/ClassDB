@@ -213,8 +213,7 @@ $$
          SELECT * FROM pg_catalog.pg_roles
          WHERE pg_catalog.pg_has_role(ClassDB.foldPgID($1), oid, 'member')
                AND
-               rolname IN
-               ('classdb_instructor', 'classdb_student', 'classdb_dbmanager')
+               ClassDB.isClassDBRoleName(rolname::ClassDB.IDNameDomain)
       );
 $$ LANGUAGE sql
    STABLE
