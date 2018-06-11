@@ -141,7 +141,7 @@ BEGIN
    (
       logDate DATE,
       connectionsLogged INT,
-      message VARCHAR
+      info VARCHAR
    ) ON COMMIT DROP;
 
    --Get the timestamp (at UTC) of the latest connection activity entry. Then
