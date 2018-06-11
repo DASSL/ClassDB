@@ -91,28 +91,19 @@ $$;
 --Check the logs
 DO
 $$
-DECLARE
-   initialLogSize INT;
-   newLogSize INT;
 BEGIN
-   --Get the initial size of the connection log
-   RAISE NOTICE 'Checking for new connections';
-   SELECT COUNT(*)
-   INTO initialLogSize
-   FROM ClassDB.ConnectionActivity;
-
-   PERFORM ClassDB.importConnectionLog();
-
-   SELECT COUNT(*)
-   INTO newLogSize
-   FROM ClassDB.ConnectionActivity;
-
-   --Check if the number of new connections in the log equals the number of connections
-   -- from ClasDB users made in the test
+   --Check if the correct number of connections were logged
    RAISE NOTICE 'Checking if the correct number of new connections were logged';
-   IF newLogSize - initialLogSize <> 4 THEN
+   IF (SELECT connectionsLogged
+       FROM ClassDB.importConnectionLog()) <> 4 THEN
+
       RAISE EXCEPTION 'ERROR CODE 1';
    END IF;
+
+   --Check if importing a nonexistant log raises an EXCEPTION
+   RAISE NOTICE 'Importing non-existant log - should see a warning';
+   PERFORM ClassDB.importConnectionLog(CURRENT_DATE + 1);
+
 
    --Drop users & related objects
    PERFORM ClassDB.dropStudent('constu01', true, true, 'drop_c');
