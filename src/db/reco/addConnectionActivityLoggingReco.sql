@@ -95,18 +95,19 @@ DECLARE
    logPath VARCHAR(4096); --Max file path length on Linux, > max length on Windows
    lastConTimestampUTC TIMESTAMP; --Hold the latest time (UTC) a connection was logged
    lastConDateLocal DATE; --Hold the latest date (local time) a connection was logged
+   disabledLogSettings VARCHAR(50); --Holds any disabled log settings for warning output
 BEGIN
    --Warn the user if any server connection logging parameters are disabled
-   IF NOT(ClassDB.isLoggingCollectorEnabled()) THEN
-      RAISE WARNING  'Connection log might be missing/incomplete because log collection is off'
-      USING DETAIL = '"logging_collector" SET TO "off"',
-            HINT   = 'See "Managing Log Files" for more information';
-   END IF;
+   IF NOT(ClassDB.isLoggingCollectorEnabled() AND ClassDB.isConnectionLoggingEnabled()) THEN
+      --Get a string containing the setting names of any disabled log settings
+      SELECT INTO disabledLogSettings string_agg(name, ',')
+      FROM pg_settings
+      WHERE name IN ('logging_collector', 'log_connections', 'log_disconnections')
+      AND setting = 'off';
 
-   IF NOT(ClassDB.isConnectionLoggingEnabled()) THEN
-      RAISE WARNING  'Connection log might be missing/incomplete because connection logging is off'
-      USING DETAIL = '"log_connections" SET TO "off"',
-            HINT   = 'See "Managing Log Files" for more information';
+      RAISE WARNING  'log files might be missing or incomplete'
+      USING DETAIL = 'The following server parameters are currently off: ' || disabledLogSettings,
+            HINT   = 'Consult the ClassDB documentation for details on setting logging-related parameters.';
    END IF;
 
    --Temporary staging table for data imported from the logs.
