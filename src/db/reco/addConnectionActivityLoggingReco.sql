@@ -201,18 +201,24 @@ BEGIN
       RETURNING ClassDB.changeTimeZone(AcceptedAtUTC)::DATE AS logDate
    )
    UPDATE ImportResult lr --Next, update the totals in the result table
-   SET connectionsLogged = COALESCE((SELECT COUNT(*)
-                                     FROM LogInsertedCount ic
-                                     WHERE ic.logDate = lr.logDate
-                                     GROUP BY ic.logDate), 0);
+   SET numEntries = COALESCE((SELECT COUNT(*)
+                              FROM LogInsertedCount ic
+                              WHERE ic.logDate = lr.logDate
+                              GROUP BY ic.logDate), 0);
 
-    --Return the result table
+    --Set output of this query as the return table. Note that the function does
+    -- not terminate here (https://www.postgresql.org/docs/current/static/plpgsql-control-structures.html)
     RETURN QUERY SELECT * FROM ImportResult;
 
    --Drop the temp tables - running this function twice inside a transactions will
    -- otherwise result in an error
+   --ImportResult must be dropped after the RETURN QUERY, since its data is used
+   -- for the return value
    DROP TABLE pg_temp.ImportedLogData;
    DROP TABLE pg_temp.ImportResult;
+
+   --Explicity return to clarify the RETURN QUERY usage
+   RETURN;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
