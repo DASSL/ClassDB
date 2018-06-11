@@ -87,7 +87,7 @@ CREATE OR REPLACE FUNCTION ClassDB.importConnectionLog(startDate DATE DEFAULT NU
    RETURNS TABLE
    (
       logDate DATE,
-      connectionsLogged INT,
+      numEntries INT,
       info VARCHAR
    ) AS
 $$
@@ -148,7 +148,7 @@ BEGIN
    CREATE TEMPORARY TABLE ImportResult
    (
       logDate DATE,
-      connectionsLogged INT,
+      numEntries INT,
       info VARCHAR
    );
 
