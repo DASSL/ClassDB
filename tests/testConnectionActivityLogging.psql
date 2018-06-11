@@ -31,7 +31,7 @@
 -- at the end of the script
 \set psqlCurrentUser postgres
 
-SET SESSION client_min_messages TO WARNING;
+--SET SESSION client_min_messages TO WARNING;
 
 --Tests for superuser privilege on current_user
 DO
@@ -49,17 +49,15 @@ BEGIN
    RAISE NOTICE 'Testing ClassDB connection logging';
 
    --Create ClassDB users to test connection logging
-   --Each user is given a passowrd of ' ' (single space) to make switching connections
-   -- less labor intensive
    RAISE NOTICE 'Creating test users';
-   PERFORM ClassDB.createStudent('conStudent01', 'con test student 01',
-      NULL, NULL, TRUE, TRUE, ' ');
-   PERFORM ClassDB.createStudent('conStudent02', 'con test student 02',
-      NULL, NULL, TRUE, TRUE, ' ');
-   PERFORM ClassDB.createInstructor('conInstructor01', 'con test instructor 01',
-      NULL, NULL, TRUE, TRUE, ' ');
-   PERFORM ClassDB.createDBManager('conDBManager01', 'con test db manager 01',
-      NULL, NULL, TRUE, TRUE, ' ');
+   PERFORM ClassDB.createStudent('constu01', 'con test student 01',
+      NULL, NULL, TRUE, TRUE);
+   PERFORM ClassDB.createStudent('constu02', 'con test student 02',
+      NULL, NULL, TRUE, TRUE);
+   PERFORM ClassDB.createInstructor('conins01', 'con test instructor 01',
+      NULL, NULL, TRUE, TRUE);
+   PERFORM ClassDB.createDBManager('condbm01', 'con test db manager 01',
+      NULL, NULL, TRUE, TRUE);
 
    --Create a non-ClassDB user ensure their conenctions are not logged
    --CREATE USER conNonClassDB ENCRYPTED PASSWORD ' ';
@@ -69,7 +67,7 @@ BEGIN
    RAISE NOTICE 'Importing any existing connections in the logs';
    PERFORM ClassDB.importConnectionLog();
 
-   RAISE NOTICE 'Creating new connections to the server. Please enter a single space '
+   RAISE NOTICE 'Creating new connections to the server. Please enter the username '
                 'when prompted for a test user''s password. You must also enter the password '
                 'for :psqlCurrentUser to return to your superuser account.';
 END;
@@ -78,13 +76,13 @@ $$;
 --Switch to different user to get some conenction in the log
 -- the '-' tells psql to connect to the current database with the supplied
 -- user name
-\c  - constudent01
+\c  - constu01
 
-\c - constudent02
+\c - constu02
 
-\c - condbmanager01
+\c - condbm01
 
-\c - coninstructor01
+\c - conins01
 
 --\c - conNonClassDB
 
@@ -117,10 +115,10 @@ BEGIN
    END IF;
 
    --Drop users & related objects
-   PERFORM ClassDB.dropStudent('conStudent01', true, true, 'drop_c');
-   PERFORM ClassDB.dropStudent('conStudent02', true, true, 'drop_c');
-   PERFORM ClassDB.dropInstructor('conInstructor01', true, true, 'drop_c');
-   PERFORM ClassDB.dropDBManager('conDBManager01', true, true, 'drop_c');
+   PERFORM ClassDB.dropStudent('constu01', true, true, 'drop_c');
+   PERFORM ClassDB.dropStudent('constu02', true, true, 'drop_c');
+   PERFORM ClassDB.dropInstructor('conins01', true, true, 'drop_c');
+   PERFORM ClassDB.dropDBManager('condbm01', true, true, 'drop_c');
 
    --DROP OWNED BY conNonClassDB;
    --DROP USER conNonClassDB CASCADE;

@@ -32,10 +32,10 @@ BEGIN
 
 
    --Remove orpahned users
-   PERFORM ClassDB.dropStudent('conStudent01', true, true, 'drop_c');
-   PERFORM ClassDB.dropStudent('conStudent02', true, true, 'drop_c');
-   PERFORM ClassDB.dropInstructor('conInstructor01', true, true, 'drop_c');
-   PERFORM ClassDB.dropDBManager('conDBManager01', true, true, 'drop_c');
+   PERFORM ClassDB.dropStudent('constu01', true, true, 'drop_c');
+   PERFORM ClassDB.dropStudent('constu02', true, true, 'drop_c');
+   PERFORM ClassDB.dropInstructor('conins01', true, true, 'drop_c');
+   PERFORM ClassDB.dropDBManager('condbm01', true, true, 'drop_c');
 
    --DROP OWNED BY conNonClassDB;
    --DROP USER conNonClassDB;
