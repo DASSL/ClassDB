@@ -88,7 +88,7 @@ CREATE OR REPLACE FUNCTION ClassDB.importConnectionLog(startDate DATE DEFAULT NU
    (
       logDate DATE,
       connectionsLogged INT,
-      errorMessage VARCHAR
+      info VARCHAR
    ) AS
 $$
 DECLARE
@@ -140,7 +140,7 @@ BEGIN
       location TEXT,
       application_name TEXT,
       PRIMARY KEY (session_id, session_line_num)
-   ) ON COMMIT DROP;
+   );
 
    --Temporary table that will store the status of each import
    -- ON COMMIT DROP drops the table at the end of the current transaction (ie.
@@ -150,7 +150,7 @@ BEGIN
       logDate DATE,
       connectionsLogged INT,
       info VARCHAR
-   ) ON COMMIT DROP;
+   );
 
    --Get the timestamp (at UTC) of the latest connection activity entry. Then
    -- convert the timestamp to local time to get a 'best-guess' of the last log
@@ -205,6 +205,11 @@ BEGIN
                                      FROM LogInsertedCount ic
                                      WHERE ic.logDate = lr.logDate
                                      GROUP BY ic.logDate), 0);
+
+   --Drop the temp tables - running this function twice inside a transactions will
+   -- otherwise result in an error
+   DROP TABLE pg_temp.ImportResult;
+   DROP TABLE pg_temp.ImportedLogData;
 
    --Return the result table
    RETURN QUERY SELECT * FROM ImportResult;
