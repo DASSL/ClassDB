@@ -98,13 +98,15 @@ DECLARE
 BEGIN
    --Warn the user if any server connection logging parameters are disabled
    IF NOT(ClassDB.isLoggingCollectorEnabled()) THEN
-      RAISE WARNING '''logging_collector'' is set to ''off'', connection log'
-         ' import may not work as expected.';
+      RAISE WARNING 'Connection log might be missing/incomplete because log collection is off'
+      WITH DETAIL = '"logging_collector" SET TO "off"'
+      WITH HINT   = 'See "Managing Log Files" for more information';
    END IF;
 
    IF NOT(ClassDB.isConnectionLoggingEnabled()) THEN
-      RAISE WARNING '''log_connections'' is set to ''off'', connection log'
-         ' import may not work as expected.';
+      RAISE WARNING 'Connection log might be missing/incomplete because connection logging is off'
+      WITH DETAIL = '"log_connections" SET TO "off"'
+      WITH HINT   = 'See "Managing Log Files" for more information';
    END IF;
 
    --Temporary staging table for data imported from the logs.
@@ -196,7 +198,7 @@ BEGIN
             COALESCE(lastConTimeStampUTC, to_timestamp(0))
          AND message LIKE 'connection%' --Only pick connection-related entries
          AND database_name = CURRENT_DATABASE() --Only pick entries from current DB
-         RETURNING ClassDB.changeTimeZone(AcceptedAtUTC)::DATE AS logDate
+      RETURNING ClassDB.changeTimeZone(AcceptedAtUTC)::DATE AS logDate
    )
    UPDATE ImportResult lr --Next, update the totals in the result table
    SET connectionsLogged = COALESCE((SELECT COUNT(*)
