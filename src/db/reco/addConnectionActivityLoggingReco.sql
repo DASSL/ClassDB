@@ -98,15 +98,15 @@ DECLARE
 BEGIN
    --Warn the user if any server connection logging parameters are disabled
    IF NOT(ClassDB.isLoggingCollectorEnabled()) THEN
-      RAISE WARNING 'Connection log might be missing/incomplete because log collection is off'
-      WITH DETAIL = '"logging_collector" SET TO "off"'
-      WITH HINT   = 'See "Managing Log Files" for more information';
+      RAISE WARNING  'Connection log might be missing/incomplete because log collection is off'
+      USING DETAIL = '"logging_collector" SET TO "off"',
+            HINT   = 'See "Managing Log Files" for more information';
    END IF;
 
    IF NOT(ClassDB.isConnectionLoggingEnabled()) THEN
-      RAISE WARNING 'Connection log might be missing/incomplete because connection logging is off'
-      WITH DETAIL = '"log_connections" SET TO "off"'
-      WITH HINT   = 'See "Managing Log Files" for more information';
+      RAISE WARNING  'Connection log might be missing/incomplete because connection logging is off'
+      USING DETAIL = '"log_connections" SET TO "off"',
+            HINT   = 'See "Managing Log Files" for more information';
    END IF;
 
    --Temporary staging table for data imported from the logs.
