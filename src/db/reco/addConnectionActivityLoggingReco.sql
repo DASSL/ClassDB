@@ -160,14 +160,14 @@ BEGIN
 
    lastConDateLocal = date(ClassDB.ChangeTimeZone(lastConTimeStampUTC));
 
-	--Set the date of last logged connection. We prefer the user-supplied parameter, but
+   --Set the date of last logged connection. We prefer the user-supplied parameter, but
    -- defer to our 'best-guess' and finally, the current date if preceding values are null
-	lastConDateLocal = COALESCE(startDate, lastConDateLocal, CURRENT_DATE);
+   lastConDateLocal = COALESCE(startDate, lastConDateLocal, CURRENT_DATE);
 
-	--We want to import all logs between the lastConDate and current date
-	WHILE lastConDateLocal <= CURRENT_DATE LOOP
-	   --Get the full path to the log, assumes a log file name of postgresql-%m.%d.csv
-	   -- the log_directory setting holds the log path
+   --We want to import all logs between the lastConDate and current date
+   WHILE lastConDateLocal <= CURRENT_DATE LOOP
+      --Get the full path to the log, assumes a log file name of postgresql-%m.%d.csv
+      -- the log_directory setting holds the log path
       logPath := (SELECT setting FROM pg_settings WHERE "name" = 'log_directory') ||
          '/postgresql-' || to_char(lastConDateLocal, 'MM.DD') || '.csv';
 
