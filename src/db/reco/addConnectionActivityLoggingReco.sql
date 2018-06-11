@@ -53,6 +53,9 @@ ALTER FUNCTION ClassDB.isConnectionLoggingEnabled() OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION ClassDB.isConnectionLoggingEnabled()
    FROM PUBLIC;
 
+GRANT EXECUTE ON FUNCTION classdb.isConnectionLoggingEnabled()
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
 
 --Helper function to check if logging_collector is set to 'on' or 'off'.
 CREATE OR REPLACE FUNCTION ClassDB.isLoggingCollectorEnabled()
@@ -69,6 +72,9 @@ ALTER FUNCTION ClassDB.isLoggingCollectorEnabled() OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION ClassDB.isLoggingCollectorEnabled()
    FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION classdb.isLoggingCollectorEnabled()
+   TO ClassDB_Instructor, ClassDB_DBManager;
 
 --Function to import all log files between a starting date and the current date
 -- and update student connection information.
