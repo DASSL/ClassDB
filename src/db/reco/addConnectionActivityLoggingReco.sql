@@ -174,7 +174,7 @@ BEGIN
       --Import entries from the day's server log into our log table
       BEGIN
          EXECUTE format('COPY ImportedLogData FROM ''%s'' WITH csv', logPath);
-         INSERT INTO ImportResult VALUES (lastConDateLocal, 0, '');
+         INSERT INTO ImportResult VALUES (lastConDateLocal, 0, NULL);
       EXCEPTION WHEN undefined_file THEN
          --If an expected log file is missing, skip importing that log and
          -- try the next log file. Store the error in the result table
@@ -206,13 +206,13 @@ BEGIN
                                      WHERE ic.logDate = lr.logDate
                                      GROUP BY ic.logDate), 0);
 
+    --Return the result table
+    RETURN QUERY SELECT * FROM ImportResult;
+
    --Drop the temp tables - running this function twice inside a transactions will
    -- otherwise result in an error
-   DROP TABLE pg_temp.ImportResult;
    DROP TABLE pg_temp.ImportedLogData;
-
-   --Return the result table
-   RETURN QUERY SELECT * FROM ImportResult;
+   DROP TABLE pg_temp.ImportResult;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;

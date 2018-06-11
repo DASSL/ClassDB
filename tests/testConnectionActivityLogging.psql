@@ -101,8 +101,8 @@ BEGIN
    END IF;
 
    --Check if importing a nonexistant log raises an EXCEPTION
-   RAISE NOTICE 'Importing non-existant log - should see a warning';
-   PERFORM ClassDB.importConnectionLog(CURRENT_DATE + 1);
+   --RAISE NOTICE 'Importing non-existant log - should see a warning';
+   --PERFORM ClassDB.importConnectionLog(CURRENT_DATE + 1);
 
 
    --Drop users & related objects
