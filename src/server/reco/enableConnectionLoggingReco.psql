@@ -24,17 +24,38 @@
 -- can't be run inside a TRANSACTION block, however they will still fail if they
 -- are run with insufficient permissions.
 
+
 --The following changes are made:
--- log_connections TO 'on' causes user connections to the DBMS to be reported in
--- the log file
 --log_destination TO 'csvlog' cause the logs to be recorded in a csv format,
 -- making it possible to use the COPY statement on them
 --log_filename sets the log file name. %m and %d are placeholders for month and
 -- day respectively, ie. the log file name on June 10th would be postgresql-06.10.
-ALTER SYSTEM SET log_connections TO 'on';
+--log_connections TO 'on' causes user connections to the DBMS to be reported in
+-- the log file
+--logging_collector TO 'on' enables Postgres' internal log redirection system.
+-- Otherwise, all logging info is sent to stderr.
 ALTER SYSTEM SET log_destination TO 'csvlog';
 ALTER SYSTEM SET log_filename TO 'postgresql-%m.%d.log';
+ALTER SYSTEM SET log_connections TO 'on';
+ALTER SYSTEM SET logging_collector TO 'on';
 
---pg_reload_conf() reloads the postgres setting so the changes from ALTER SYSTEM
--- statements apply without having to restart the server
-SELECT pg_reload_conf();
+--Changing logging_collector from 'off' to 'on' requires a server restart,
+-- so notify the user if they need to take this step
+DO
+$$
+BEGIN
+   IF NOT(COALESCE(
+          (SELECT setting::BOOLEAN
+           FROM pg_settings
+           WHERE name = 'logging_collector'), FALSE)) THEN
+
+      RAISE WARNING  'Enabling ''logging_collector'': server restart required'
+      USING DETAIL = 'You must restart this PostgreSQL instance for ClassDB '
+                     'connection logging to function.';
+   ELSE
+      --pg_reload_conf() reloads the postgres setting so the changes from ALTER SYSTEM
+      -- statements apply without having to restart the server
+      PERFORM pg_reload_conf();
+   END IF;
+END;
+$$;
