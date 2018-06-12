@@ -55,7 +55,7 @@ ALTER FUNCTION ClassDB.isConnectionLoggingEnabled() OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION ClassDB.isConnectionLoggingEnabled()
    FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION ClassDB..isConnectionLoggingEnabled()
+GRANT EXECUTE ON FUNCTION ClassDB.isConnectionLoggingEnabled()
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
@@ -75,7 +75,7 @@ ALTER FUNCTION ClassDB.isLoggingCollectorEnabled() OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION ClassDB.isLoggingCollectorEnabled()
    FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION ClassDB..isLoggingCollectorEnabled()
+GRANT EXECUTE ON FUNCTION ClassDB.isLoggingCollectorEnabled()
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
@@ -180,14 +180,15 @@ BEGIN
       BEGIN
          EXECUTE format('COPY pg_temp.ImportedLogData FROM ''%s'' WITH csv', logPath);
          INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, NULL);
-      EXCEPTION WHEN undefined_file THEN
-         --If an expected log file is missing, skip importing that log and
-         -- try the next log file. Store the error in the result table
-         RAISE WARNING 'Log file for % not found, skipping.', lastConDateLocal;
-         INSERT INTO pg._temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
-      EXCEPTION WHEN OTHERS
-         RAISE WARNING 'Import failed for %s, %s', lastConDateLocal, SQLERRM;
-         INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
+      EXCEPTION
+         WHEN undefined_file THEN
+            --If an expected log file is missing, skip importing that log and
+            -- try the next log file. Store the error in the result table
+            RAISE WARNING 'Log file for % not found, skipping.', lastConDateLocal;
+            INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
+         WHEN OTHERS THEN
+            RAISE WARNING 'Import failed for %s, %s', lastConDateLocal, SQLERRM;
+            INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
       END;
 
       lastConDateLocal := lastConDateLocal + 1; --Check the next day
