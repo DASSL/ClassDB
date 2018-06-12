@@ -12,12 +12,14 @@
 
 --This script must be run as superuser.
 --This script should be run in every database in which log management is required
--- it should be run after running enableServerLogging.sql for the server and after running
--- addUserMgmt.sql for the current database
+-- it should be run after running enableConnectionActivityLogging.psql for the
+-- server and after running addUserMgmtCore.sql for the current database
 
 --This script adds the connection logging portion of the ClassDB user monitoring
--- system.  It provides the ClassDB.importLog () function to import
+-- system.  It provides the ClassDB.importConnectionLog () function to import
 -- the Postgres connection logs and record student connection data.
+-- Additionally, this file provides helper functions to check the status of
+-- logging settings on the server
 
 
 START TRANSACTION;
@@ -76,18 +78,22 @@ REVOKE ALL ON FUNCTION ClassDB.isLoggingCollectorEnabled()
 GRANT EXECUTE ON FUNCTION classdb.isLoggingCollectorEnabled()
    TO ClassDB_Instructor, ClassDB_DBManager;
 
---Function to import all log files between a starting date and the current date
--- and update student connection information.
--- The latest connection in the student table supplied the assumed last import date,
--- so logs later than this date are imported.  If this value is null, logs are parsed,
--- starting with the supplied date (startDate)
--- For each line containing connection information, the matching student's
--- connection info is updated
+
+--Function to imports all log files between a starting date and the current date
+-- and update ClassDB.ConnectionActivity.
+--For each line containing connection information, a new record is added to
+-- ClassDB.ConnectionActivity.
+--By default, this function imports all log files between the last imported log
+-- and today's log. If logs have never been imported, only today's log will be imported.
+-- This behavior can be overridden by supplying a date parameter. All logs between
+-- the supplied date and today's will be imported.
+--Note that connection activity records will not be added for any connections prior
+-- to the latest connection in ClassDB.ConnectionActivity.
 CREATE OR REPLACE FUNCTION ClassDB.importConnectionLog(startDate DATE DEFAULT NULL)
    RETURNS TABLE
    (
       logDate DATE,
-      numEntries INT,
+      numEntries INTEGER,
       info VARCHAR
    ) AS
 $$
@@ -95,16 +101,16 @@ DECLARE
    logPath VARCHAR(4096); --Max file path length on Linux, > max length on Windows
    lastConTimestampUTC TIMESTAMP; --Hold the latest time (UTC) a connection was logged
    lastConDateLocal DATE; --Hold the latest date (local time) a connection was logged
-   disabledLogSettings VARCHAR(50); --Holds any disabled log settings for warning output
+   disabledLogSettings VARCHAR(100); --Holds any disabled log settings for warning output
 BEGIN
-   --Warn the user if any server connection logging parameters are disabled
-   IF NOT(ClassDB.isLoggingCollectorEnabled() AND ClassDB.isConnectionLoggingEnabled()) THEN
-      --Get a string containing the setting names of any disabled log settings
-      SELECT INTO disabledLogSettings string_agg(name, ',')
-      FROM pg_settings
-      WHERE name IN ('logging_collector', 'log_connections', 'log_disconnections')
-      AND setting = 'off';
+   --Get a string containing the setting names of any disabled log settings
+   SELECT INTO disabledLogSettings string_agg(name, ',')
+   FROM pg_settings
+   WHERE name IN ('logging_collector', 'log_connections')
+   AND setting = 'off';
 
+   --Warn the user if any server connection logging parameters are disabled
+   IF (disabledLogSettings IS NOT NULL) THEN
       RAISE WARNING  'log files might be missing or incomplete'
       USING DETAIL = 'The following server parameters are currently off: ' || disabledLogSettings,
             HINT   = 'Consult the ClassDB documentation for details on setting logging-related parameters.';
@@ -143,9 +149,7 @@ BEGIN
       PRIMARY KEY (session_id, session_line_num)
    );
 
-   --Temporary table that will store the status of each import
-   -- ON COMMIT DROP drops the table at the end of the current transaction (ie.
-   -- end of this function)
+   --Temporary table that stores a summary of the data imported from each log
    CREATE TEMPORARY TABLE ImportResult
    (
       logDate DATE,
@@ -165,7 +169,7 @@ BEGIN
    -- defer to our 'best-guess' and finally, the current date if preceding values are null
    lastConDateLocal = COALESCE(startDate, lastConDateLocal, CURRENT_DATE);
 
-   --We want to import all logs between the lastConDate and current date
+   --We want to import all logs between the lastConDateLocal and current date
    WHILE lastConDateLocal <= CURRENT_DATE LOOP
       --Get the full path to the log, assumes a log file name of postgresql-%m.%d.csv
       -- the log_directory setting holds the log path
@@ -186,9 +190,9 @@ BEGIN
       lastConDateLocal := lastConDateLocal + 1; --Check the next day
    END LOOP;
 
-   --Update the connection activity table based on the temp log table
-   -- We only want to insert new activity records that are newer than the current
-   -- latest connection, and are by ClassDB users to the current DB
+   --Update ClassDB.ConnectionActivity based on the imported data
+   -- We only want to insert activity records that are newer than the current
+   -- latest activity record, and are by ClassDB users to the current DB
    WITH LogInsertedCount AS
    (
       INSERT INTO ClassDB.ConnectionActivity
@@ -201,15 +205,16 @@ BEGIN
          AND database_name = CURRENT_DATABASE() --Only pick entries from current DB
       RETURNING ClassDB.changeTimeZone(AcceptedAtUTC)::DATE AS logDate
    )
-   UPDATE ImportResult lr --Next, update the totals in the result table
+   UPDATE pg_temp.ImportResult ir --Next, update the totals in the result table
    SET numEntries = COALESCE((SELECT COUNT(*)
                               FROM LogInsertedCount ic
-                              WHERE ic.logDate = lr.logDate
+                              WHERE ic.logDate = ir.logDate
                               GROUP BY ic.logDate), 0);
 
     --Set output of this query as the return table. Note that the function does
-    -- not terminate here (https://www.postgresql.org/docs/current/static/plpgsql-control-structures.html)
-    RETURN QUERY SELECT * FROM ImportResult;
+    -- not terminate here
+    -- (https://www.postgresql.org/docs/current/static/plpgsql-control-structures.html)
+    RETURN QUERY SELECT * FROM pg_temp.ImportResult;
 
    --Drop the temp tables - running this function twice inside a transactions will
    -- otherwise result in an error
