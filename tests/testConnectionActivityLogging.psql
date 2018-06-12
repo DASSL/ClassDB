@@ -76,10 +76,6 @@ BEGIN
 
    --Fill up the log with any existing connections
    PERFORM ClassDB.importConnectionLog();
-
-   RAISE NOTICE 'Creating new connections to the server. Please enter the username '
-                'when prompted for a test user''s password. You will be prompted to login '
-                'to your original account at the end of the test.';
 END;
 $$;
 
@@ -87,14 +83,20 @@ $$;
 --Switch to different users to create connection activity
 -- the '-' tells psql to connect to the current database with the supplied
 -- user name
+--PGPASSWORD is an enviroment variable that allows auto-login using the set password
+\setenv PGPASSWORD constu01
 \c  - constu01
 
+\setenv PGPASSWORD constu02
 \c - constu02
 
+\setenv PGPASSWORD condbm01
 \c - condbm01
 
+\setenv PGPASSWORD unown01
 \c - unown01
 
+\setenv PGPASSWORD conins01
 \c - conins01
 
 --Test importing logs as an instructor
@@ -120,6 +122,8 @@ ROLLBACK;
 
 
 --Prompt to relogin to the original executing user
+--Clear PGPASSWORD so user can enter their password
+\setenv PGPASSWORD
 \c - :POSTGRES_USER
 
 DO
