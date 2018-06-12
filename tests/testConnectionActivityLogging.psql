@@ -24,6 +24,7 @@
 
 \set ON_ERROR_STOP on
 
+--Stores the original executing user from psql's :USER environment variable
 \set POSTGRES_USER :USER
 
 SET SESSION client_min_messages TO WARNING;
@@ -41,8 +42,6 @@ $$;
 DO
 $$
 BEGIN
-   RAISE NOTICE 'Testing ClassDB connection logging';
-
    --Remove test users, if they still exist
    --Need to gaurd these because they fail if the users do not exist
    IF(EXISTS (SELECT TRUE FROM ClassDB.USER WHERE userName = 'constu01')) THEN
@@ -60,12 +59,11 @@ BEGIN
 
    --Need to check if users exists to use DROP OWNED BY
    IF(EXISTS (SELECT TRUE FROM pg_catalog.pg_roles WHERE rolname = 'unown01')) THEN
-      DROP OWNED BY unown01; --Drops permissions granted to unown01
+      DROP OWNED BY unown01; --Drops connect permissions granted to unown01
       DROP USER unown01;
    END IF;
 
    --Create ClassDB users to test connection log importing
-   RAISE NOTICE 'Creating test users';
    PERFORM ClassDB.createStudent('constu01', 'con test student 01');
    PERFORM ClassDB.createStudent('constu02', 'con test student 02');
    PERFORM ClassDB.createDBManager('condbm01', 'con test db manager 01');
@@ -76,12 +74,11 @@ BEGIN
    EXECUTE FORMAT('GRANT CONNECT ON DATABASE %I TO unown01', CURRENT_DATABASE());
 
    --Fill up the log with any existing connections
-   RAISE NOTICE 'Importing any existing connections in the logs';
    PERFORM ClassDB.importConnectionLog();
 
    RAISE NOTICE 'Creating new connections to the server. Please enter the username '
-                'when prompted for a test user''s password. Use \\c - <username> '
-                'to return to your original account at the end of the test';
+                'when prompted for a test user''s password. You will be prompted to login '
+                'to your original account at the end of the test.';
 END;
 $$;
 
@@ -103,17 +100,17 @@ DO
 $$
 BEGIN
    --Check if the correct number of connections were logged
-   RAISE NOTICE 'Testing ClassDB.importConnectionLog()';
    IF (SELECT numEntries
        FROM ClassDB.importConnectionLog()) <> 4 THEN
 
       RAISE INFO 'FAIL: Code 1';
    ELSE
-      RAISE INFO 'PASS: Import connection log';
+      RAISE INFO 'PASS: ClassDB.importConnectionLog()';
    END IF;
 END;
 $$;
 
+--Prompt to relogin to the original executing user
 \c - :POSTGRES_USER
 
 DO
