@@ -104,6 +104,8 @@ DO
 $$
 BEGIN
    --Check if the correct number of connections were logged
+   -- Only check current date, since all new connections should be from the current
+   -- log file
    IF (SELECT numEntries
        FROM ClassDB.importConnectionLog(CURRENT_DATE)) <> 4 THEN
 
