@@ -45,7 +45,7 @@ CREATE OR REPLACE FUNCTION ClassDB.isConnectionLoggingEnabled()
 $$
    --This query returns 'on' or 'off', which can be cast to a boolean
    SELECT COALESCE(setting::BOOLEAN, FALSE)
-   FROM pg_settings
+   FROM pg_catalog.pg_settings
    WHERE name = 'log_connections';
 $$ LANGUAGE sql
    SECURITY DEFINER;
@@ -55,7 +55,7 @@ ALTER FUNCTION ClassDB.isConnectionLoggingEnabled() OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION ClassDB.isConnectionLoggingEnabled()
    FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION classdb.isConnectionLoggingEnabled()
+GRANT EXECUTE ON FUNCTION ClassDB..isConnectionLoggingEnabled()
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
@@ -65,7 +65,7 @@ CREATE OR REPLACE FUNCTION ClassDB.isLoggingCollectorEnabled()
 $$
    --This query returns 'on' or 'off', which can be cast to a boolean
    SELECT COALESCE(setting::BOOLEAN, FALSE)
-   FROM pg_settings
+   FROM pg_catalog.pg_settings
    WHERE name = 'logging_collector';
 $$ LANGUAGE sql
    SECURITY DEFINER;
@@ -75,7 +75,7 @@ ALTER FUNCTION ClassDB.isLoggingCollectorEnabled() OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION ClassDB.isLoggingCollectorEnabled()
    FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION classdb.isLoggingCollectorEnabled()
+GRANT EXECUTE ON FUNCTION ClassDB..isLoggingCollectorEnabled()
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
@@ -104,8 +104,8 @@ DECLARE
    disabledLogSettings VARCHAR(100); --Holds any disabled log settings for warning output
 BEGIN
    --Get a string containing the setting names of any disabled log settings
-   SELECT INTO disabledLogSettings string_agg(name, ',')
-   FROM pg_settings
+   SELECT INTO disabledLogSettings string_agg(name, ', ')
+   FROM pg_catalog.pg_settings
    WHERE name IN ('logging_collector', 'log_connections')
    AND setting = 'off';
 
@@ -153,7 +153,7 @@ BEGIN
    CREATE TEMPORARY TABLE ImportResult
    (
       logDate DATE,
-      numEntries INT,
+      numEntries INTEGER,
       info VARCHAR
    );
 
@@ -173,7 +173,7 @@ BEGIN
    WHILE lastConDateLocal <= CURRENT_DATE LOOP
       --Get the full path to the log, assumes a log file name of postgresql-%m.%d.csv
       -- the log_directory setting holds the log path
-      logPath := (SELECT setting FROM pg_settings WHERE "name" = 'log_directory') ||
+      logPath := (SELECT setting FROM pg_catalog.pg_settings WHERE "name" = 'log_directory') ||
          '/postgresql-' || to_char(lastConDateLocal, 'MM.DD') || '.csv';
 
       --Import entries from the day's server log into our log table
@@ -186,7 +186,7 @@ BEGIN
          RAISE WARNING 'Log file for % not found, skipping.', lastConDateLocal;
          INSERT INTO pg._temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
       EXCEPTION WHEN OTHERS
-         RAISE WARNING '%s', SQLERRM;
+         RAISE WARNING 'Import failed for %s, %s', lastConDateLocal, SQLERRM;
          INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
       END;
 
@@ -226,7 +226,7 @@ BEGIN
    DROP TABLE pg_temp.ImportedLogData;
    DROP TABLE pg_temp.ImportResult;
 
-   --Explicity return to clarify the RETURN QUERY usage
+   --Explicitly return to clarify the RETURN QUERY usage
    RETURN;
 END;
 $$ LANGUAGE plpgsql
