@@ -39,7 +39,7 @@ $$;
 SET LOCAL client_min_messages TO WARNING;
 
 
---Helper function to check if log_connections is set to 'on' or 'off'.
+--Helper function to check if server parameter log_connections is set to 'on' or 'off'.
 CREATE OR REPLACE FUNCTION ClassDB.isConnectionLoggingEnabled()
    RETURNS BOOLEAN AS
 $$
@@ -59,7 +59,7 @@ GRANT EXECUTE ON FUNCTION classdb.isConnectionLoggingEnabled()
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
---Helper function to check if logging_collector is set to 'on' or 'off'.
+--Helper function to check if server parameter logging_collector is set to 'on' or 'off'.
 CREATE OR REPLACE FUNCTION ClassDB.isLoggingCollectorEnabled()
    RETURNS BOOLEAN AS
 $$
@@ -79,14 +79,14 @@ GRANT EXECUTE ON FUNCTION classdb.isLoggingCollectorEnabled()
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
---Function to imports all log files between a starting date and the current date
+--Function to import log files between a starting date and the current date
 -- and update ClassDB.ConnectionActivity.
---For each line containing connection information, a new record is added to
--- ClassDB.ConnectionActivity.
+--For each log entry containing connection information about a ClassDB user,
+-- a new record is added to ClassDB.ConnectionActivity.
 --By default, this function imports all log files between the last imported log
 -- and today's log. If logs have never been imported, only today's log will be imported.
--- This behavior can be overridden by supplying a date parameter. All logs between
--- the supplied date and today's will be imported.
+--This behavior can be overridden by supplying a date parameter. All logs between
+-- the supplied date and today's will then be imported.
 --Note that connection activity records will not be added for any connections prior
 -- to the latest connection in ClassDB.ConnectionActivity.
 CREATE OR REPLACE FUNCTION ClassDB.importConnectionLog(startDate DATE DEFAULT NULL)
@@ -178,13 +178,16 @@ BEGIN
 
       --Import entries from the day's server log into our log table
       BEGIN
-         EXECUTE format('COPY ImportedLogData FROM ''%s'' WITH csv', logPath);
-         INSERT INTO ImportResult VALUES (lastConDateLocal, 0, NULL);
+         EXECUTE format('COPY pg_temp.ImportedLogData FROM ''%s'' WITH csv', logPath);
+         INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, NULL);
       EXCEPTION WHEN undefined_file THEN
          --If an expected log file is missing, skip importing that log and
          -- try the next log file. Store the error in the result table
          RAISE WARNING 'Log file for % not found, skipping.', lastConDateLocal;
-         INSERT INTO ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
+         INSERT INTO pg._temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
+      EXCEPTION WHEN OTHERS
+         RAISE WARNING '%s', SQLERRM;
+         INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
       END;
 
       lastConDateLocal := lastConDateLocal + 1; --Check the next day
@@ -197,7 +200,7 @@ BEGIN
    (
       INSERT INTO ClassDB.ConnectionActivity
          SELECT user_name, log_time AT TIME ZONE 'utc'
-         FROM ImportedLogData
+         FROM pg_temp.ImportedLogData
          WHERE ClassDB.isUser(user_name) --Check the connection is from a ClassDB user
          AND (log_time AT TIME ZONE 'utc') > --Check that the entry is new
             COALESCE(lastConTimeStampUTC, to_timestamp(0))
