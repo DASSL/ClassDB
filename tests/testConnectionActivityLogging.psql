@@ -105,7 +105,7 @@ $$
 BEGIN
    --Check if the correct number of connections were logged
    IF (SELECT numEntries
-       FROM ClassDB.importConnectionLog()) <> 4 THEN
+       FROM ClassDB.importConnectionLog(CURRENT_DATE)) <> 4 THEN
 
       RAISE INFO 'FAIL: Code 1';
    ELSE
