@@ -39,6 +39,7 @@ BEGIN
 END
 $$;
 
+
 DO
 $$
 BEGIN
@@ -82,6 +83,7 @@ BEGIN
 END;
 $$;
 
+
 --Switch to different users to create connection activity
 -- the '-' tells psql to connect to the current database with the supplied
 -- user name
@@ -96,6 +98,8 @@ $$;
 \c - conins01
 
 --Test importing logs as an instructor
+BEGIN TRANSACTION;
+
 DO
 $$
 BEGIN
@@ -109,6 +113,9 @@ BEGIN
    END IF;
 END;
 $$;
+
+ROLLBACK;
+
 
 --Prompt to relogin to the original executing user
 \c - :POSTGRES_USER
