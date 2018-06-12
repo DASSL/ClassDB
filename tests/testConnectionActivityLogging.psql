@@ -15,8 +15,7 @@
 
 --This script uses psql's \c command to change connections. You will have to
 -- input the password for each role manually during the switch
--- Currently, each user is given a password of ' ' (a single space) to make switching
--- connections less labor intensive
+--The password for each user is their username.
 
 --The following tests are performed. An error code of ERROR X indicates that test x
 -- failed
@@ -25,13 +24,9 @@
 
 \set ON_ERROR_STOP on
 
---Remember the current user so we can switch back at the end
--- Currently, this is assuming the starting superuser account is 'postgres'
--- you must change this if you want to switch back to a different superuser account
--- at the end of the script
-\set psqlCurrentUser postgres
+\set POSTGRES_USER :USER
 
---SET SESSION client_min_messages TO WARNING;
+SET SESSION client_min_messages TO WARNING;
 
 --Tests for superuser privilege on current_user
 DO
@@ -48,32 +43,49 @@ $$
 BEGIN
    RAISE NOTICE 'Testing ClassDB connection logging';
 
-   --Create ClassDB users to test connection logging
-   RAISE NOTICE 'Creating test users';
-   PERFORM ClassDB.createStudent('constu01', 'con test student 01',
-      NULL, NULL, TRUE, TRUE);
-   PERFORM ClassDB.createStudent('constu02', 'con test student 02',
-      NULL, NULL, TRUE, TRUE);
-   PERFORM ClassDB.createInstructor('conins01', 'con test instructor 01',
-      NULL, NULL, TRUE, TRUE);
-   PERFORM ClassDB.createDBManager('condbm01', 'con test db manager 01',
-      NULL, NULL, TRUE, TRUE);
+   --Remove test users, if they still exist
+   --Need to gaurd these because they fail if the users do not exist
+   IF(EXISTS (SELECT TRUE FROM ClassDB.USER WHERE userName = 'constu01')) THEN
+      PERFORM ClassDB.dropStudent('constu01', TRUE, TRUE, 'drop_c');
+   END IF;
+   IF(EXISTS (SELECT TRUE FROM ClassDB.USER WHERE userName = 'constu02')) THEN
+      PERFORM ClassDB.dropStudent('constu02', TRUE, TRUE, 'drop_c');
+   END IF;
+   IF(EXISTS (SELECT TRUE FROM ClassDB.USER WHERE userName = 'condbm01')) THEN
+      PERFORM ClassDB.dropDBManager('condbm01', TRUE, TRUE, 'drop_c');
+   END IF;
+   IF(EXISTS (SELECT TRUE FROM ClassDB.USER WHERE userName = 'conins01')) THEN
+      PERFORM ClassDB.dropInstructor('conins01', TRUE, TRUE, 'drop_c');
+   END IF;
 
-   --Create a non-ClassDB user ensure their conenctions are not logged
-   --CREATE USER conNonClassDB ENCRYPTED PASSWORD ' ';
-   --EXECUTE FORMAT('GRANT CONNECT ON DATABASE %I TO conNonClassDB', CURRENT_DATABASE());
+   --Need to check if users exists to use DROP OWNED BY
+   IF(EXISTS (SELECT TRUE FROM pg_catalog.pg_roles WHERE rolname = 'unown01')) THEN
+      DROP OWNED BY unown01; --Drops permissions granted to unown01
+      DROP USER unown01;
+   END IF;
+
+   --Create ClassDB users to test connection log importing
+   RAISE NOTICE 'Creating test users';
+   PERFORM ClassDB.createStudent('constu01', 'con test student 01');
+   PERFORM ClassDB.createStudent('constu02', 'con test student 02');
+   PERFORM ClassDB.createDBManager('condbm01', 'con test db manager 01');
+   PERFORM ClassDB.createInstructor('conins01', 'con test instructor 01');
+
+   --Create a non-ClassDB user to ensure their connections are not imported
+   CREATE USER unown01 ENCRYPTED PASSWORD 'unown01';
+   EXECUTE FORMAT('GRANT CONNECT ON DATABASE %I TO unown01', CURRENT_DATABASE());
 
    --Fill up the log with any existing connections
    RAISE NOTICE 'Importing any existing connections in the logs';
    PERFORM ClassDB.importConnectionLog();
 
    RAISE NOTICE 'Creating new connections to the server. Please enter the username '
-                'when prompted for a test user''s password. You must also enter the password '
-                'for :psqlCurrentUser to return to your superuser account.';
+                'when prompted for a test user''s password. Use \\c - <username> '
+                'to return to your original account at the end of the test';
 END;
 $$;
 
---Switch to different user to get some conenction in the log
+--Switch to different users to create connection activity
 -- the '-' tells psql to connect to the current database with the supplied
 -- user name
 \c  - constu01
@@ -82,38 +94,38 @@ $$;
 
 \c - condbm01
 
+\c - unown01
+
 \c - conins01
 
---\c - conNonClassDB
-
-\c - :psqlCurrentUser
-
---Check the logs
+--Test importing logs as an instructor
 DO
 $$
 BEGIN
    --Check if the correct number of connections were logged
-   RAISE NOTICE 'Checking if the correct number of new connections were logged';
-   IF (SELECT connectionsLogged
+   RAISE NOTICE 'Testing ClassDB.importConnectionLog()';
+   IF (SELECT numEntries
        FROM ClassDB.importConnectionLog()) <> 4 THEN
 
-      RAISE EXCEPTION 'ERROR CODE 1';
+      RAISE INFO 'FAIL: Code 1';
+   ELSE
+      RAISE INFO 'PASS: Import connection log';
    END IF;
+END;
+$$;
 
-   --Check if importing a nonexistant log raises an EXCEPTION
-   --RAISE NOTICE 'Importing non-existant log - should see a warning';
-   --PERFORM ClassDB.importConnectionLog(CURRENT_DATE + 1);
+\c - :POSTGRES_USER
 
-
+DO
+$$
+BEGIN
    --Drop users & related objects
    PERFORM ClassDB.dropStudent('constu01', true, true, 'drop_c');
    PERFORM ClassDB.dropStudent('constu02', true, true, 'drop_c');
-   PERFORM ClassDB.dropInstructor('conins01', true, true, 'drop_c');
    PERFORM ClassDB.dropDBManager('condbm01', true, true, 'drop_c');
+   PERFORM ClassDB.dropInstructor('conins01', true, true, 'drop_c');
 
-   --DROP OWNED BY conNonClassDB;
-   --DROP USER conNonClassDB CASCADE;
-
-   RAISE NOTICE 'Success!';
+   DROP OWNED BY unown01;
+   DROP USER unown01;
 END;
 $$;
