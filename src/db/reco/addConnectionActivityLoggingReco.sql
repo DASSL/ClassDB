@@ -184,10 +184,11 @@ BEGIN
          WHEN undefined_file THEN
             --If an expected log file is missing, skip importing that log and
             -- try the next log file. Store the error in the result table
-            RAISE WARNING 'Log file for % not found, skipping.', lastConDateLocal;
+            RAISE WARNING 'log file for % not found, skipping.', lastConDateLocal;
             INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
          WHEN OTHERS THEN
-            RAISE WARNING 'Import failed for %s, %s', lastConDateLocal, SQLERRM;
+            RAISE WARNING 'importing log file for %s failed', lastConDateLocal
+            USING DETAIL = SQLERRM;
             INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
       END;
 
