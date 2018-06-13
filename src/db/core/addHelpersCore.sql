@@ -149,7 +149,7 @@ ALTER FUNCTION ClassDB.getSchemaOwnerName(ClassDB.IDNameDomain) OWNER TO ClassDB
 
 --Define a function to test if a role name is a ClassDB role name
 -- tests if the name supplied is one of the following strings:
---  'classdb_student', 'classdb_instructor', 'classdb_manager'
+--  'classdb_student', 'classdb_instructor', 'classdb_manager', 'classdb_team'
 CREATE OR REPLACE FUNCTION
    ClassDB.isClassDBRoleName(roleName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
