@@ -219,7 +219,7 @@ BEGIN
 
    --Updating with different schema: Create instructor, create schema, then update
    PERFORM ClassDB.createInstructor('testIns2', 'Wrong Name');
-   CREATE SCHEMA newTestIns2 AUTHORIZATION testIns4;
+   CREATE SCHEMA newTestIns2 AUTHORIZATION testIns2;
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createInstructor('testIns2', 'Test instructor 2');
    RESET client_min_messages;
@@ -318,7 +318,7 @@ BEGIN
 
    --Updating with different schema: Create DB manager, create schema, then update
    PERFORM ClassDB.createDBManager('testDBM2', 'Wrong Name');
-   CREATE SCHEMA newTestDBM4 AUTHORIZATION testDBM4;
+   CREATE SCHEMA newTestDBM2 AUTHORIZATION testDBM2;
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createDBManager('testDBM2', 'Test DB manager 2');
    RESET client_min_messages;
@@ -603,9 +603,9 @@ BEGIN
    PERFORM ClassDB.createStudent('testStu2', 'Test student 2');
    PERFORM ClassDB.createStudent('testStu3', 'Test student 3');
 
-   --ExtraInfo and initialPwd provided, then create schema owned by student
+   --ExtraInfo provided, then create schema owned by student
    PERFORM ClassDB.createStudent('testStu4', 'Test student 4', NULL, '100',
-                                 FALSE, FALSE, 'testpass');
+                                 FALSE, FALSE);
    CREATE SCHEMA testSchema AUTHORIZATION testStu1;
 
    --Multi-role user
