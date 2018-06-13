@@ -474,6 +474,84 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION pg_temp.createTeamTest() RETURNS TEXT AS
+$$
+BEGIN
+   --Minimal test: Schema should be set to teamName
+   PERFORM ClassDB.createTeam('testTeam0');
+   
+   --Name and extra info given
+   PERFORM ClassDB.createTeam('testTeam1', 'Test team 1', NULL, 'Test info');
+   
+   --Updating with different schema: Create team, create schema, then update
+   PERFORM ClassDB.createTeam('testTeam2', 'Previous name');
+   CREATE SCHEMA newTestTeam2 AUTHORIZATION testTeam2;
+   SET LOCAL client_min_messages TO WARNING;
+   PERFORM ClassDB.createTeam('testTeam2', 'Test team 2');
+   RESET client_min_messages;
+   
+   --Test role membership (and existence)
+   IF NOT(pg_has_role('testTeam0', 'classdb_team', 'member')
+      AND pg_has_role('testTeam1', 'classdb_team', 'member')
+     AND pg_has_role('testTeam2', 'classdb_team', 'member'))
+   THEN
+      RETURN 'FAIL: Code 1';
+   END IF;
+   
+   --Test existence of all schemas
+   IF NOT(pg_temp.isSchemaDefined('testTeam0')
+      AND pg_temp.isSchemaDefined('testTeam1')
+      AND pg_temp.isSchemaDefined('testTeam2')
+      AND pg_temp.isSchemaDefined('newTestTeam2'))
+   THEN
+      RETURN 'FAIL: Code 2';
+   END IF;
+   
+   --Test role-schema correspondence with ClassDB function
+   IF NOT(ClassDB.getSchemaName('testTeam0') = ClassDB.foldPgID('testTeam0')
+      AND ClassDB.getSchemaName('testTeam1') = ClassDB.foldPgID('testTeam1')
+      AND ClassDB.getSchemaName('testTeam2') = ClassDB.foldPgID('newTestTeam2'))
+   THEN
+      RETURN 'FAIL: Code 3';
+   END IF;
+     
+   --Test extra info stored for each team
+   IF NOT(pg_temp.checkRoleInfo('testTeam0', NULL, NULL)
+      AND pg_temp.checkRoleInfo('testTeam1', 'Test team 1', 'Test info')
+      AND pg_temp.checkRoleInfo('testTeam2', 'Test team 2', NULL))
+   THEN
+      RETURN 'FAIL: Code 4';
+   END IF;
+   
+   --Test login privilege
+   IF EXISTS(
+      SELECT * FROM pg_catalog.pg_roles
+      WHERE rolName IN (ClassDB.foldPgID('testTeam0'), 
+                        ClassDB.foldPgID('testTeam1'), 
+                        ClassDB.foldPgID('testTeam2'))
+            AND rolCanLogin
+            )
+   THEN
+      RETURN 'FAIL: Code 5';
+   END IF;
+
+   --Cleanup
+   DROP OWNED BY testTeam0;
+   DROP ROLE testTeam0;
+   DELETE FROM ClassDB.RoleBase WHERE roleName = ClassDB.foldPgID('testTeam0');
+   
+   DROP OWNED BY testTeam1;
+   DROP ROLE testTeam1;
+   DELETE FROM ClassDB.RoleBase WHERE roleName = ClassDB.foldPgID('testTeam1');
+   
+   DROP OWNED BY testTeam2;
+   DROP ROLE testTeam2;
+   DELETE FROM ClassDB.RoleBase WHERE roleName = ClassDB.foldPgID('testTeam2');
+   
+   RETURN 'PASS';
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION pg_temp.revokeStudentTest() RETURNS TEXT AS
 $$
 BEGIN
@@ -1051,6 +1129,7 @@ BEGIN
    RAISE INFO '%   createStudentTest()', pg_temp.createStudentTest();
    RAISE INFO '%   createInstructorTest()', pg_temp.createInstructorTest();
    RAISE INFO '%   createDBManagerTest()', pg_temp.createDBManagerTest();
+   RAISE INFO '%   createTeamTest()', pg_temp.createTeamTest();
    RAISE INFO '%   revokeStudentTest()', pg_temp.revokeStudentTest();
    RAISE INFO '%   revokeInstructorTest()', pg_temp.revokeInstructorTest();
    RAISE INFO '%   revokeDBManagerTest()', pg_temp.revokeDBManagerTest();
