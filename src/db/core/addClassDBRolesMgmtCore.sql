@@ -520,4 +520,57 @@ GRANT EXECUTE ON FUNCTION
 
 
 
+--Define function to register a team and perform corresponding configuration
+--Calls ClassDB.createRole with corresponding parameters
+--Grants appropriate privileges to newly established role and schema
+CREATE OR REPLACE FUNCTION
+   ClassDB.createTeam(teamName ClassDB.IDNameDomain,
+                      fullName ClassDB.RoleBase.FullName%Type DEFAULT NULL,
+                      schemaName ClassDB.IDNameDomain DEFAULT NULL,
+                      extraInfo ClassDB.RoleBase.ExtraInfo%Type DEFAULT NULL,
+                      okIfRoleExists BOOLEAN DEFAULT TRUE,
+                      okIfSchemaExists BOOLEAN DEFAULT TRUE)
+   RETURNS VOID AS
+$$
+BEGIN
+   --record ClassDB role
+   PERFORM ClassDB.createRole($1, COALESCE($2, teamName), TRUE, $3, $4, $5, $6);
+   
+   --get name of role's schema (possibly not the original value of schemaName)
+   $3 = ClassDB.getSchemaName($1);
+   
+   --grant server-level team group role to new team
+   PERFORM ClassDB.grantRole('ClassDB_Team', $1);
+   
+   --grant instructors privileges to the team's schema
+   EXECUTE FORMAT('GRANT USAGE ON SCHEMA %s TO ClassDB_Instructor', $3);
+   EXECUTE FORMAT('GRANT SELECT ON ALL TABLES IN SCHEMA %s TO' 
+                  ' ClassDB_Instructor', $3);
+   EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
+                  ' GRANT SELECT ON TABLES TO ClassDB_Instructor', $1, $3);
+END;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
+
+
+--Change function ownership and set permissions
+ALTER FUNCTION
+   ClassDB.createTeam(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
+                      ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
+                      BOOLEAN, BOOLEAN)
+   OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.createTeam(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
+                      ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
+                      BOOLEAN, BOOLEAN)
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION
+   ClassDB.createTeam(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
+                      ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
+                      BOOLEAN, BOOLEAN)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+   
 COMMIT;
