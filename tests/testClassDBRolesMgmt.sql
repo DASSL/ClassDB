@@ -1248,8 +1248,10 @@ BEGIN
    PERFORM ClassDB.createDBManager('DBM0_dropAllTeams', 'Temp DB manager 0');  
    SET SESSION AUTHORIZATION DBM0_dropAllTeams;
 
-   --Minimal drop
+   --Minimal drop, NOTICEs are silenced
+   SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.dropAllTeams();
+   RESET client_min_messages;
    
    --Reset back to superuser role for test case validation
    RESET SESSION AUTHORIZATION;
@@ -1281,8 +1283,10 @@ BEGIN
    PERFORM ClassDB.createTeam('team2_dropAllTeams', 'Test team 2');
    PERFORM ClassDB.createTeam('team3_dropAllTeams', 'Test team 3');
 
-   --Drop from server and drop owned objects
+   --Drop from server and drop owned objects, NOTICEs are silenced
+   SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.dropAllTeams(TRUE, FALSE, 'drop_c');
+   RESET client_min_messages;
 
    --Check for correct existence of roles
    IF    ClassDB.isServerRoleDefined('team2_dropAllTeams')
