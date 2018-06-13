@@ -747,6 +747,57 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION pg_temp.revokeTeamTest() RETURNS TEXT AS
+$$
+BEGIN
+   --Create basic DB manager, then revoke
+   PERFORM ClassDB.createTeam('testTeam0', 'Test team 0');
+   PERFORM ClassDB.revokeTeam('testTeam0');
+   
+   --Create team with two schemas, then revoke
+   PERFORM ClassDB.createTeam('testTeam1', 'Test team 1');
+   CREATE SCHEMA newtestTeam1 AUTHORIZATION testTeam1;
+   SET LOCAL client_min_messages TO WARNING;
+   PERFORM ClassDB.createTeam('testTeam1', 'Test team 1', 'newTestTeam1');
+   RESET client_min_messages;
+   PERFORM ClassDB.revokeTeam('testTeam1');
+   
+   --Test if roles still exist on server
+   IF NOT(ClassDB.isServerRoleDefined('testTeam0')
+      AND ClassDB.isServerRoleDefined('testTeam1'))
+   THEN
+      RETURN 'FAIL: Code 1';
+   END IF;
+   
+   --Test if their schemas still exist
+   IF NOT(pg_temp.isSchemaDefined('testTeam0')
+      AND pg_temp.isSchemaDefined('testTeam1')
+      AND pg_temp.isSchemaDefined('newTestTeam1'))
+   THEN
+      RETURN 'FAIL: Code 2';
+   END IF;
+   
+   --Test if roles no longer have team ClassDB role
+   IF ClassDB.isMember('testTeam0', 'classdb_team')
+      OR ClassDB.isMember('testTeam1', 'classDB_team')
+   THEN
+      RETURN 'FAIL: Code 3';
+   END IF;
+   
+   
+   --Create team, add students, then revoke
+   --RETURN 'FAIL: Code xx Not Implemented';
+   
+   --Cleanup
+   DROP OWNED BY testTeam0, testTeam1;
+   DROP ROLE testTeam0, testTeam1;
+   DELETE FROM ClassDB.RoleBase WHERE roleName IN(ClassDB.pgFoldID('testTeam0'),
+                                                  ClassDB.pgFoldID('testTeam1'));
+   RETURN 'PASS';
+END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION pg_temp.dropStudentTest() RETURNS TEXT AS
 $$
 BEGIN
@@ -1133,6 +1184,7 @@ BEGIN
    RAISE INFO '%   revokeStudentTest()', pg_temp.revokeStudentTest();
    RAISE INFO '%   revokeInstructorTest()', pg_temp.revokeInstructorTest();
    RAISE INFO '%   revokeDBManagerTest()', pg_temp.revokeDBManagerTest();
+   RAISE INFO '%   revokeTeamTest()', pg_temp.revokeTeamTest();
    RAISE INFO '%   dropStudentTest()', pg_temp.dropStudentTest();
    RAISE INFO '%   dropInstructorTest()', pg_temp.dropInstructorTest();
    RAISE INFO '%   dropDBManagerTest()', pg_temp.dropDBManagerTest();

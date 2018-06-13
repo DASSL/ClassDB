@@ -572,5 +572,38 @@ GRANT EXECUTE ON FUNCTION
                       BOOLEAN, BOOLEAN)
    TO ClassDB_Instructor, ClassDB_DBManager;
 
+
+
+--Define function to unregister a team and undo team configurations
+CREATE OR REPLACE FUNCTION
+   ClassDB.revokeTeam(teamName Classdb.IDNameDomain)
+   RETURNS VOID AS
+$$
+BEGIN
+   --revoke team ClassDB role
+   PERFORM ClassDB.revokeClassDBRole($1, 'ClassDB_Team');
    
+   --revoke privileges on the role's schema from instructors
+   IF ClassDB.isServerRoleDefined($1) THEN
+      EXECUTE FORMAT('REVOKE USAGE ON SCHEMA %s FROM ClassDB_Instructor',
+                     ClassDB.getSchemaName($1));
+      EXECUTE FORMAT('REVOKE SELECT ON ALL TABLES IN SCHEMA %s FROM'
+                     ' ClassDB_Instructor', ClassDB.getSchemaName($1));
+      EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s REVOKE'
+                     ' SELECT ON TABLES FROM ClassDB_Instructor', $1,
+                     ClassDB.getSchemaName($1));
+   END IF;
+END;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
+
+
+ALTER FUNCTION ClassDB.revokeTeam(ClassDB.IDNameDomain) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION ClassDB.revokeTeam(ClassDB.IDNameDomain) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.revokeTeam(ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+
 COMMIT;
