@@ -343,9 +343,9 @@ REVOKE ALL ON FUNCTION
 
 
 
---Define a function to revoke a ClassDB role from a known user
+--Define a function to revoke a ClassDB role from a known ClassDB role
 CREATE OR REPLACE FUNCTION
-   ClassDB.revokeClassDBRole(userName ClassDB.IDNameDomain,
+   ClassDB.revokeClassDBRole(roleName ClassDB.IDNameDomain,
                              classdbRoleName ClassDB.IDNameDomain)
    RETURNS VOID AS
 $$
@@ -359,23 +359,23 @@ BEGIN
 
    --should be a server role
    IF NOT ClassDB.isServerRoleDefined($1) THEN
-      RAISE NOTICE 'User "%" is not defined in the server', $1;
+      RAISE NOTICE 'Role "%" is not defined in the server', $1;
       RETURN;
    END IF;
 
-   --should be a known user
-   IF NOT ClassDB.isUser($1) THEN
-      RAISE NOTICE 'User "%" is not known', $1;
+   --should be a known role
+   IF NOT ClassDB.isRoleKnown($1) THEN
+      RAISE NOTICE 'Role "%" is not known', $1;
       RETURN;
    END IF;
 
-   --user should already have the role to revoke
+   --role should already have the group role to revoke
    IF NOT ClassDB.isMember($1, $2) THEN
-      RAISE NOTICE 'User "%" is not a member of role "%"', $1, $2;
+      RAISE NOTICE 'Role "%" is not a member of ClassDB role "%"', $1, $2;
       RETURN;
    END IF;
 
-   --revoke the specified ClassDB role from the user
+   --revoke the specified ClassDB role from the role
    EXECUTE FORMAT('REVOKE %s FROM %s', $2, $1);
 
 END;
