@@ -598,12 +598,52 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 
+--Change function ownership and set permissions
 ALTER FUNCTION ClassDB.revokeTeam(ClassDB.IDNameDomain) OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION ClassDB.revokeTeam(ClassDB.IDNameDomain) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION ClassDB.revokeTeam(ClassDB.IDNameDomain)
    TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+
+--Define a function to drop a team
+CREATE OR REPLACE FUNCTION 
+   ClassDB.dropTeam(teamName ClassDB.IDNameDomain,
+                    dropFromServer BOOLEAN DEFAULT FALSE,
+                    okIfRemainsClassDBRoleMember BOOLEAN DEFAULT TRUE,
+                    objectsDisposition VARCHAR DEFAULT 'assign',
+                    newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL)
+   RETURNS VOID AS
+$$
+BEGIN
+   --revoke team role (also asserts that teamName is a known team)
+   PERFORM ClassDB.revokeTeam($1);
+   
+   --drop team
+   PERFORM ClassDB.dropRole($1, $2, $3, $4, $5);
+END;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
+
+
+--Change function ownership and set permissions
+ALTER FUNCTION
+   ClassDB.dropTeam(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
+                    ClassDB.IDNameDomain)
+   OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.dropTeam(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
+                    ClassDB.IDNameDomain)
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION
+   ClassDB.dropTeam(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
+                    ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
 
 
 COMMIT;
