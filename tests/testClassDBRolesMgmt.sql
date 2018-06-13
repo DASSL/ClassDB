@@ -1000,93 +1000,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION pg_temp.dropTeamTest() RETURNS TEXT AS
-$$
-BEGIN
-   --Basic teams
-   PERFORM ClassDB.createTeam('testTeam0', 'Test team 0');
-   PERFORM ClassDB.createTeam('testTeam1', 'Test team 1');
-   PERFORM ClassDB.createTeam('testTeam2', 'Test team 2');
-   PERFORM ClassDB.createTeam('testTeam3', 'Test team 3');
-
-   --ExtraInfo provided, then create additional schema owned by team
-   PERFORM ClassDB.createTeam('testTeam4', 'Test team 4', NULL, 'Info');
-   CREATE SCHEMA testSchema AUTHORIZATION testTeam4;
-   
-   --Create DB manager to handle default object disposition
-   PERFORM ClassDB.createDBManager('tempDBM0', 'Temporary DB manager 0');  
-   SET SESSION AUTHORIZATION tempDBM0;
-   
-   --Suppress NOTICEs about ownership reassignment
-   SET SESSION client_min_messages TO WARNING;
-
-   --Drop first team
-   PERFORM ClassDB.dropTeam('testTeam0');
-
-   --Drop second team, including dropping from server
-   PERFORM ClassDB.dropTeam('testTeam1', TRUE);
-
-   --Manually drop server role for third team (must be done as superuser), then
-   -- from ClassDB (as DB manager again)
-   RESET SESSION AUTHORIZATION;
-   DROP OWNED BY testTeam2;
-   DROP ROLE testTeam2;
-
-   SET SESSION AUTHORIZATION tempDBM0;
-   PERFORM ClassDB.dropTeam('testTeam2');
-
-   --Drop server role and owned objects for fourth team
-   PERFORM ClassDB.dropTeam('testTeam3', TRUE, TRUE, 'drop_c');
-
-   --Drop fifth team, who has an additional non-ClassDB schema
-   PERFORM ClassDB.dropTeam('testTeam4');
-
-   --Switch back to superuser role before validating test cases
-   RESET SESSION AUTHORIZATION;
-   
-   --Turn all messages back on
-   RESET client_min_messages;
-   
-   --Check for correct existence of roles
-   IF    NOT ClassDB.isServerRoleDefined('testTeam0')
-      OR ClassDB.isServerRoleDefined('testTeam1')
-      OR ClassDB.isServerRoleDefined('testTeam2')
-      OR ClassDB.isServerRoleDefined('testTeam3')
-      OR NOT ClassDB.isServerRoleDefined('testTeam4')
-   THEN
-      RETURN 'FAIL: Code 1';
-   END IF;
-
-   --Check for existence of schemas
-   IF    NOT pg_temp.isSchemaDefined('testTeam0')
-      OR NOT pg_temp.isSchemaDefined('testTeam1')
-      OR pg_temp.isSchemaDefined('testTeam2')
-      OR pg_temp.isSchemaDefined('testTeam3')
-      OR NOT pg_temp.isSchemaDefined('testTeam4')
-      OR NOT pg_temp.isSchemaDefined('testSchema')
-   THEN
-      RETURN 'FAIL: Code 2';
-   END IF;
-
-   --Check for ownership of existing schemas
-   IF NOT(ClassDB.getSchemaOwnerName('testTeam0') = ClassDB.foldPgID('tempDBM0')
-      AND ClassDB.getSchemaOwnerName('testTeam1') = ClassDB.foldPgID('tempDBM0')
-      AND ClassDB.getSchemaOwnerName('testTeam4') = ClassDB.foldPgID('tempDBM0')
-      AND ClassDB.getSchemaOwnerName('testSchema') = ClassDB.foldPgID('tempDBM0'))
-   THEN
-      RETURN 'FAIL: Code 3';
-   END IF;
-
-   --Cleanup
-   DROP OWNED BY tempDBM0;
-   DROP ROLE testIns0, testTeam4, tempDBM0;
-   DELETE FROM ClassDB.RoleBase WHERE RoleName = ClassDB.foldPgID('tempDBM0');
-
-   RETURN 'PASS';
-END;
-$$ LANGUAGE plpgsql;
-
-
 CREATE OR REPLACE FUNCTION pg_temp.dropDBManagerTest() RETURNS TEXT AS
 $$
 BEGIN
@@ -1188,6 +1101,93 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION pg_temp.dropTeamTest() RETURNS TEXT AS
+$$
+BEGIN
+   --Basic teams
+   PERFORM ClassDB.createTeam('testTeam0', 'Test team 0');
+   PERFORM ClassDB.createTeam('testTeam1', 'Test team 1');
+   PERFORM ClassDB.createTeam('testTeam2', 'Test team 2');
+   PERFORM ClassDB.createTeam('testTeam3', 'Test team 3');
+
+   --ExtraInfo provided, then create additional schema owned by team
+   PERFORM ClassDB.createTeam('testTeam4', 'Test team 4', NULL, 'Info');
+   CREATE SCHEMA testSchema AUTHORIZATION testTeam4;
+   
+   --Create DB manager to handle default object disposition
+   PERFORM ClassDB.createDBManager('tempDBM0', 'Temporary DB manager 0');  
+   SET SESSION AUTHORIZATION tempDBM0;
+   
+   --Suppress NOTICEs about ownership reassignment
+   SET SESSION client_min_messages TO WARNING;
+
+   --Drop first team
+   PERFORM ClassDB.dropTeam('testTeam0');
+
+   --Drop second team, including dropping from server
+   PERFORM ClassDB.dropTeam('testTeam1', TRUE);
+
+   --Manually drop server role for third team (must be done as superuser), then
+   -- from ClassDB (as DB manager again)
+   RESET SESSION AUTHORIZATION;
+   DROP OWNED BY testTeam2;
+   DROP ROLE testTeam2;
+
+   SET SESSION AUTHORIZATION tempDBM0;
+   PERFORM ClassDB.dropTeam('testTeam2');
+
+   --Drop server role and owned objects for fourth team
+   PERFORM ClassDB.dropTeam('testTeam3', TRUE, TRUE, 'drop_c');
+
+   --Drop fifth team, who has an additional non-ClassDB schema
+   PERFORM ClassDB.dropTeam('testTeam4');
+
+   --Switch back to superuser role before validating test cases
+   RESET SESSION AUTHORIZATION;
+   
+   --Turn all messages back on
+   RESET client_min_messages;
+   
+   --Check for correct existence of roles
+   IF    NOT ClassDB.isServerRoleDefined('testTeam0')
+      OR ClassDB.isServerRoleDefined('testTeam1')
+      OR ClassDB.isServerRoleDefined('testTeam2')
+      OR ClassDB.isServerRoleDefined('testTeam3')
+      OR NOT ClassDB.isServerRoleDefined('testTeam4')
+   THEN
+      RETURN 'FAIL: Code 1';
+   END IF;
+
+   --Check for existence of schemas
+   IF    NOT pg_temp.isSchemaDefined('testTeam0')
+      OR NOT pg_temp.isSchemaDefined('testTeam1')
+      OR pg_temp.isSchemaDefined('testTeam2')
+      OR pg_temp.isSchemaDefined('testTeam3')
+      OR NOT pg_temp.isSchemaDefined('testTeam4')
+      OR NOT pg_temp.isSchemaDefined('testSchema')
+   THEN
+      RETURN 'FAIL: Code 2';
+   END IF;
+
+   --Check for ownership of existing schemas
+   IF NOT(ClassDB.getSchemaOwnerName('testTeam0') = ClassDB.foldPgID('tempDBM0')
+      AND ClassDB.getSchemaOwnerName('testTeam1') = ClassDB.foldPgID('tempDBM0')
+      AND ClassDB.getSchemaOwnerName('testTeam4') = ClassDB.foldPgID('tempDBM0')
+      AND ClassDB.getSchemaOwnerName('testSchema') = ClassDB.foldPgID('tempDBM0'))
+   THEN
+      RETURN 'FAIL: Code 3';
+   END IF;
+
+   --Cleanup
+   DROP OWNED BY tempDBM0;
+   DROP ROLE testIns0, testTeam4, tempDBM0;
+   DELETE FROM ClassDB.RoleBase WHERE RoleName = ClassDB.foldPgID('tempDBM0');
+
+   RETURN 'PASS';
+END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION pg_temp.dropAllStudentsTest() RETURNS TEXT AS
 $$
 BEGIN
@@ -1261,6 +1261,72 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION pg_temp.dropAllTeamsTest() RETURNS TEXT AS
+$$
+BEGIN
+   --Create two test teams
+   PERFORM ClassDB.createTeam('team0_dropAllTeams', 'Test team 0');
+   PERFORM ClassDB.createTeam('team1_dropAllTeams', 'Test team 1');
+   
+   --Create DB manager to handle default object disposition
+   PERFORM ClassDB.createDBManager('DBM0_dropAllTeams', 'Temp DB manager 0');  
+   SET SESSION AUTHORIZATION DBM0_dropAllTeams;
+
+   --Minimal drop
+   PERFORM ClassDB.dropAllTeams();
+   
+   --Reset back to superuser role for test case validation
+   RESET SESSION AUTHORIZATION;
+
+   --Check for correct existence of roles
+   IF    NOT ClassDB.isServerRoleDefined('team0_dropAllTeams')
+      OR NOT ClassDB.isServerRoleDefined('team1_dropAllTeams')
+   THEN
+      RETURN 'FAIL: Code 1';
+   END IF;
+
+   --Check for existence of schemas
+   IF    NOT pg_temp.isSchemaDefined('team0_dropAllTeams')
+      OR NOT pg_temp.isSchemaDefined('team1_dropAllTeams')
+   THEN
+      RETURN 'FAIL: Code 2';
+   END IF;
+
+   --Check for ownership of existing schemas
+   IF NOT(ClassDB.getSchemaOwnerName('team0_dropAllTeams') 
+                                    = ClassDB.foldPgID('DBM0_dropAllTeams')
+      AND ClassDB.getSchemaOwnerName('team1_dropAllTeams') 
+                                    = ClassDB.foldPgID('DBM0_dropAllTeams'))
+   THEN
+      RETURN 'FAIL: Code 3';
+   END IF;
+
+   --Create two more test teams
+   PERFORM ClassDB.createTeam('team2_dropAllTeams', 'Test team 2');
+   PERFORM ClassDB.createTeam('team3_dropAllTeams', 'Test team 3');
+
+   --Drop from server and drop owned objects
+   PERFORM ClassDB.dropAllTeams(TRUE, FALSE, 'drop_c');
+
+   --Check for correct existence of roles
+   IF    ClassDB.isServerRoleDefined('team2_dropAllTeams')
+      OR ClassDB.isServerRoleDefined('team3_dropAllTeams')
+   THEN
+      RETURN 'FAIL: Code 4';
+   END IF;
+
+   --Check for existence of schemas
+   IF    pg_temp.isSchemaDefined('team2_dropAllTeams')
+      OR pg_temp.isSchemaDefined('team3_dropAllTeams')
+   THEN
+      RETURN 'FAIL: Code 5';
+   END IF;
+   
+   RETURN 'PASS';
+END;
+$$ LANGUAGE plgpsql;
+
+
 CREATE OR REPLACE FUNCTION pg_temp.prepareClassDBTest() RETURNS VOID AS
 $$
 BEGIN
@@ -1277,6 +1343,7 @@ BEGIN
    RAISE INFO '%   dropDBManagerTest()', pg_temp.dropDBManagerTest();
    RAISE INFO '%   dropTeamTest()', pg_temp.dropTeamTest();
    RAISE INFO '%   dropAllStudentsTest()', pg_temp.dropAllStudentsTest();
+   RAISE INFO '%   dropAllTeamsTest()', pg_temp.dropAllTeamsTest();
 END;
 $$  LANGUAGE plpgsql;
 

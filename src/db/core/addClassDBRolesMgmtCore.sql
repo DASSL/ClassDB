@@ -645,5 +645,36 @@ GRANT EXECUTE ON FUNCTION
    TO ClassDB_Instructor, ClassDB_DBManager;
 
 
+--Define function to drop all known teams
+CREATE OR REPLACE FUNCTION
+   ClassDB.dropAllTeams(dropFromServer BOOLEAN DEFAULT FALSE,
+                        okIfRemainsClassDBRoleMember BOOLEAN DEFAULT TRUE,
+                        objectsDisposition VARCHAR DEFAULT 'assign',
+                        newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL)
+   RETURNS VOID AS
+$$
+BEGIN
+   PERFORM ClassDB.dropTeam(R.RoleName, $1, $2, $3, $4)
+   FROM ClassDB.RoleBase R
+   WHERE ClassDB.isTeam(RoleName);
+END;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
+
+
+--Change function ownership and set permissions
+ALTER FUNCTION
+   ClassDB.dropAllTeams(BOOLEAN, BOOLEAN, VARCHAR,
+                       ClassDB.IDNameDomain) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.dropAllTeams(BOOLEAN, BOOLEAN, VARCHAR,
+                        ClassDB.IDNameDomain) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION
+   ClassDB.dropAllTeams(BOOLEAN, BOOLEAN, VARCHAR,
+                        ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
 
 COMMIT;
