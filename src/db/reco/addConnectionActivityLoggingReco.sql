@@ -43,7 +43,7 @@ SET LOCAL client_min_messages TO WARNING;
 -- These statements are needed when upgrading ClassDB from 2.0 to 2.x, and can
 -- be removed in a future version
 DROP TABLE IF EXISTS ClassDB.PostgresLog; --Now a temp table in importConnectionLog
-DROP FUNCTION IF EXISTS ClassDB.importConnectionLog(); --Return type changed
+DROP FUNCTION IF EXISTS ClassDB.importConnectionLog(DATE); --Return type changed
 
 
 --Helper function to check if server parameter log_connections is set to 'on' or 'off'.
