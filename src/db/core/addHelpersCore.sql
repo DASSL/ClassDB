@@ -149,13 +149,14 @@ ALTER FUNCTION ClassDB.getSchemaOwnerName(ClassDB.IDNameDomain) OWNER TO ClassDB
 
 --Define a function to test if a role name is a ClassDB role name
 -- tests if the name supplied is one of the following strings:
---  'classdb_student', 'classdb_instructor', 'classdb_manager'
+--  'classdb_student', 'classdb_instructor', 'classdb_manager', 'classdb_team'
 CREATE OR REPLACE FUNCTION
    ClassDB.isClassDBRoleName(roleName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
 $$
    SELECT ClassDB.foldPgID($1)
-          IN ('classdb_instructor', 'classdb_student', 'classdb_dbmanager');
+          IN ('classdb_instructor', 'classdb_student',
+              'classdb_dbmanager', 'classdb_team');
 $$ LANGUAGE sql
    IMMUTABLE
    RETURNS NULL ON NULL INPUT;
@@ -212,8 +213,7 @@ $$
          SELECT * FROM pg_catalog.pg_roles
          WHERE pg_catalog.pg_has_role(ClassDB.foldPgID($1), oid, 'member')
                AND
-               rolname IN
-               ('classdb_instructor', 'classdb_student', 'classdb_dbmanager')
+               ClassDB.isClassDBRoleName(rolname::ClassDB.IDNameDomain)
       );
 $$ LANGUAGE sql
    STABLE
