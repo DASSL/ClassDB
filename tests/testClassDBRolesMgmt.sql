@@ -770,9 +770,6 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
-   
-   --Create team, add students, then revoke
-   --RETURN 'FAIL: Code xx Not Implemented';
 
    RETURN 'PASS';
 END;
