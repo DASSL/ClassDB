@@ -1021,7 +1021,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DO language plpgsql $$
+DO
+$$
 BEGIN
   RAISE INFO '%   rejectCustomPasswordTest()', pg_temp.rejectCustomPasswordTest();
 END
