@@ -1000,24 +1000,24 @@ CREATE OR REPLACE FUNCTION pg_temp.rejectCustomPasswordTest() RETURNS TEXT AS
 $$
 BEGIN
    --Test password creation for student
-   PERFORM ClassDB.createStudent('testStuCustomPwd', 'Wrong Name', NULL, NULL,
+   PERFORM ClassDB.createStudent('testStuCustomPwd', 'TestStu', NULL, NULL,
                                    FALSE, FALSE, 'TestPassStudent');
    --Test password creation for instructor
-   PERFORM ClassDB.createInstructor('testInsCustomPwd', 'Wrong Name', NULL, NULL,
+   PERFORM ClassDB.createInstructor('testInsCustomPwd', 'TestIns', NULL, NULL,
                                    FALSE, FALSE, 'TestPassInstuctor');
    --Test password creation for database manager
-   PERFORM ClassDB.createDBManager('testDBMCustomPwd', 'Wrong Name', NULL, NULL,
+   PERFORM ClassDB.createDBManager('testDBMCustomPwd', 'TestDBM', NULL, NULL,
                                    FALSE, FALSE, 'TestPassDMB');
 
    --Test password for all test roles
-   IF NOT(pg_temp.checkEncryptedPwd('testStuCustomPwd', ClassDB.foldPgID('testStuCustomPwd'))
+   IF (pg_temp.checkEncryptedPwd('testStuCustomPwd', ClassDB.foldPgID('testStuCustomPwd'))
       AND pg_temp.checkEncryptedPwd('testInsCustomPwd', ClassDB.foldPgID('testInsCustomPwd'))
       AND pg_temp.checkEncryptedPwd('testDBMCustomPwd', ClassDB.foldPgID('testDBMCustomPwd')))
    THEN
+      RETURN 'PASS';
+   ELSE
       RETURN 'FAIL: Code 3';
    END IF;
-
-   RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
 
