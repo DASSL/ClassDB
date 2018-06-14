@@ -485,7 +485,7 @@ BEGIN
 
    --Creating team with pre-owned schema
    CREATE ROLE team2_createTeam;
-   CREATE SCHEMA newSchema_createTeam AUTHORIZATION team2_createTeam;
+   CREATE SCHEMA nonDefaultSchema_createTeam AUTHORIZATION team2_createTeam;
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createTeam('team2_createTeam', 'Test team 2',
                               'nonDefaultSchema_createTeam');
