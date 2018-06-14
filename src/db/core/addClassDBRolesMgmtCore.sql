@@ -158,7 +158,7 @@ BEGIN
    RAISE WARNING 'parameter "initialPwd" ignored and password set to default value'
          USING DETAIL = 'Parameter "initialPwd" is deprecated and will be '
          'dropped in the next release. Please update your code.',
-         HINT = 'Consult the API documentation for details on the password policy.';
+         HINT = 'Consult ClassDB documentation for details on password policy.';
    END IF;
 END;
 $$ LANGUAGE plpgsql
@@ -327,7 +327,7 @@ BEGIN
    RAISE WARNING 'parameter "initialPwd" ignored and password set to default value'
          USING DETAIL = 'Parameter "initialPwd" is deprecated and will be '
          'dropped in the next release. Please update your code.',
-         HINT = 'Consult the API documentation for details on the password policy.';
+         HINT = 'Consult ClassDB documentation for details on password policy.';
    END IF;
 END;
 $$ LANGUAGE plpgsql
@@ -456,7 +456,7 @@ BEGIN
    RAISE WARNING 'parameter "initialPwd" ignored and password set to default value'
          USING DETAIL = 'Parameter "initialPwd" is deprecated and will be '
          'dropped in the next release. Please update your code.',
-         HINT = 'Consult the API documentation for details on the password policy.';
+         HINT = 'Consult ClassDB documentation for details on password policy.';
    END IF;
 END;
 $$ LANGUAGE plpgsql
