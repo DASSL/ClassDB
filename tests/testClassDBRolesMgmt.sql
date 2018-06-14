@@ -1,6 +1,6 @@
 --testClassDBRolesMgmt.sql - ClassDB
 
---Andrew Figueroa, Steven Rollo, Sean Murthy
+--Andrew Figueroa, Steven Rollo, Sean Murthy, Kevin Kelly
 --Data Science & Systems Lab (DASSL)
 --https://dassl.github.io/
 
@@ -990,49 +990,41 @@ $$  LANGUAGE plpgsql;
 SELECT pg_temp.prepareClassDBTest();
 
 --Section 2
--- This section tests each of the createXYZ functions to make sure that if
--- supplied with a password that the function raises a warning and sets the
--- password to the default
+-- This section tests each of the createXYZ functions to ensure that if the function
+-- is supplied with a initialPwd that the function rejects the password and sets
+-- the password to the default. This section will be removed when parameter
+-- initialPwd is removed from createXYZ functions.
 
-CREATE OR REPLACE FUNCTION pg_temp.defaultPasswordTest() RETURNS TEXT AS
+
+CREATE OR REPLACE FUNCTION pg_temp.rejectCustomPasswordTest() RETURNS TEXT AS
 $$
 BEGIN
-    --Test password creation for instructor
-    PERFORM ClassDB.createStudent('testStu', 'Wrong Name', NULL, NULL,
-                                    FALSE, FALSE, 'TestPass1');
+   --Test password creation for student
+   PERFORM ClassDB.createStudent('testStuCustomPwd', 'Wrong Name', NULL, NULL,
+                                   FALSE, FALSE, 'TestPassStudent');
    --Test password creation for instructor
-   PERFORM ClassDB.createInstructor('testIns', 'Wrong Name', NULL, NULL,
-                                   FALSE, FALSE, 'TestPass2');
-   --Test password creation for instructor
-   PERFORM ClassDB.createDBManager('testDBM', 'Wrong Name', NULL, NULL,
-                                   FALSE, FALSE, 'TestPass3');
+   PERFORM ClassDB.createInstructor('testInsCustomPwd', 'Wrong Name', NULL, NULL,
+                                   FALSE, FALSE, 'TestPassInstuctor');
+   --Test password creation for database manager
+   PERFORM ClassDB.createDBManager('testDBMCustomPwd', 'Wrong Name', NULL, NULL,
+                                   FALSE, FALSE, 'TestPassDMB');
 
-   --Test password (hashes) set to DB managers
-   IF NOT(pg_temp.checkEncryptedPwd('testStu', ClassDB.foldPgID('testStu'))
-      AND pg_temp.checkEncryptedPwd('testIns', ClassDB.foldPgID('testIns'))
-      AND pg_temp.checkEncryptedPwd('testDBM', ClassDB.foldPgID('testDBM')))
+   --Test password for all test roles
+   IF NOT(pg_temp.checkEncryptedPwd('testStuCustomPwd', ClassDB.foldPgID('testStuCustomPwd'))
+      AND pg_temp.checkEncryptedPwd('testInsCustomPwd', ClassDB.foldPgID('testInsCustomPwd'))
+      AND pg_temp.checkEncryptedPwd('testDBMCustomPwd', ClassDB.foldPgID('testDBMCustomPwd')))
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
-
-   --Cleanup
-   DROP OWNED BY testStu;
-   DROP ROLE testStu;
-   DELETE FROM ClassDB.RoleBase WHERE roleName = 'teststu';
-
-   DROP OWNED BY testIns;
-   DROP ROLE testIns;
-   DELETE FROM ClassDB.RoleBase WHERE roleName = 'testins';
-
-   DROP OWNED BY testDBM;
-   DROP ROLE testDBM;
-   DELETE FROM ClassDB.RoleBase WHERE roleName = 'testdbm';
 
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
 
-SELECT pg_temp.defaultPasswordTest();
-
+DO language plpgsql $$
+BEGIN
+  RAISE INFO '%   rejectCustomPasswordTest()', pg_temp.rejectCustomPasswordTest();
+END
+$$;
 
 ROLLBACK;
