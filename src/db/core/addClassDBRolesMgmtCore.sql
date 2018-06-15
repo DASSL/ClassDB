@@ -534,7 +534,7 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
    --record ClassDB role
-   PERFORM ClassDB.createRole($1, COALESCE($2, teamName), TRUE, $3, $4, $5, $6);
+   PERFORM ClassDB.createRole($1, $2, TRUE, $3, $4, $5, $6);
    
    --get name of role's schema (possibly not the original value of schemaName)
    $3 = ClassDB.getSchemaName($1);

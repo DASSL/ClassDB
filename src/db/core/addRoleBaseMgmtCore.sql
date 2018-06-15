@@ -45,11 +45,13 @@ $$;
 -- users and teams
 -- No primary key is defined because uniqueness depends on case folding
 --  instead, uniqueness is enforced using an index on an expression
+-- A non-NULL and non-empty FullName is enforced for users (but not for teams)
 CREATE TABLE IF NOT EXISTS ClassDB.RoleBase
 (
   RoleName ClassDB.IDNameDomain NOT NULL --server role name
    CHECK(TRIM(RoleName) <> '' AND NOT ClassDB.isClassDBRoleName(RoleName)),
-  FullName VARCHAR NOT NULL CHECK(TRIM(FullName) <> ''), --role's given name
+  FullName VARCHAR --role's given name
+   CHECK(isTeam OR (TRIM(FullName) <> '' AND FullName IS NOT NULL)), 
   IsTeam BOOLEAN NOT NULL DEFAULT FALSE, --is the role a team or a user?
   SchemaName ClassDB.IDNameDomain NOT NULL --name of the role-specific schema
    CHECK(TRIM(SchemaName) <> ''),
@@ -199,8 +201,9 @@ DECLARE
 BEGIN
 
    --validate inputs:
-   -- neither roleName nor fullName may be empty or NULL
+   -- roleName may not be empty or NULL
    -- isTeam may not be NULL
+   -- fullName may not be empty or NULL if isTeam is false
    -- schemaName may not be empty
    -- stored and new values of isTeam and schemaName should match for known roles
 
@@ -208,14 +211,14 @@ BEGIN
    IF ($1 = '' OR $1 IS NULL) THEN
       RAISE EXCEPTION 'Invalid argument: roleName is NULL or empty';
    END IF;
-
-   $2 = TRIM($2);
-   IF ($2 = '' OR $2 IS NULL) THEN
-      RAISE EXCEPTION 'Invalid argument: fullName is NULL or empty';
-   END IF;
-
+   
    IF ($3 IS NULL) THEN
       RAISE EXCEPTION 'Invalid argument: isTeam is NULL';
+   END IF;
+
+   $2 = TRIM($2);
+   IF (NOT $3 AND ($2 = '' OR $2 IS NULL)) THEN
+      RAISE EXCEPTION 'Invalid argument: fullName is NULL or empty';
    END IF;
 
    $4 = TRIM($4);
