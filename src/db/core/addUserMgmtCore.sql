@@ -76,7 +76,11 @@ GRANT SELECT ON ClassDB.DDLActivity TO ClassDB_Instructor, ClassDB_DBManager;
 CREATE TABLE IF NOT EXISTS ClassDB.ConnectionActivity
 (
   UserName ClassDB.IDNameDomain NOT NULL, --session user creating the connection
-  AcceptedAtUTC TIMESTAMP NOT NULL --time at which the server accepted connection
+  ActivityAtUTC TIMESTAMP NOT NULL --time at which the server accepted connection
+  ActivityType CHAR(1) DEFAULT 'C'
+   CHECK(ActivityType IN ('C', 'D')),
+  SessionID VARCHAR(17) NOT NULL,
+  ApplicationName ClassDB.IDNameDomain
 );
 
 ALTER TABLE ClassDB.ConnectionActivity OWNER TO ClassDB;
