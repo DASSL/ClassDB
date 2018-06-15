@@ -76,6 +76,21 @@ BEGIN
    PERFORM ClassDB.importConnectionLog();
 
 
+   --Test table. Used to store the test start timestamp, which would otherwise
+   -- be lost between connection switches. Not temporary so it persists across
+   -- connection changes
+   DROP TABLE IF EXISTS ClassDB.testConnectionActivityLogging;
+   CREATE TABLE ClassDB.testConnectionActivityLogging
+   (
+      testStartTime TIMESTAMP
+   );
+
+   --An instructor will perform the test to check effective permissions
+   GRANT SELECT ON ClassDB.testConnectionActivityLogging TO ClassDB_Instructor;
+
+   INSERT INTO ClassDB.testConnectionActivityLogging VALUES (CURRENT_TIMESTAMP);
+
+
    --Test functions. These are not temporary so they persist across connection
    -- changes durting the testing
 
@@ -98,43 +113,37 @@ BEGIN
    END;
    $testImport$ LANGUAGE plpgsql;
 
+   --Test for connection entries in ClassDB.ConnectionActivity, using the saved
+   -- test start timestamp to filter out old entries
+   CREATE OR REPLACE FUNCTION ClassDB.testConnectionLogging()
+   RETURNS VOID AS
+   $testCon$
+   BEGIN
+      --Check that the activity table contains the new connections
+      -- Use the stored test start time to filter out old connections
+      IF (SELECT COUNT(*)
+          FROM  ClassDB.ConnectionActivity
+          WHERE ClassDB.changeTimeZone(acceptedAtUTC)
+            >= ClassDB.changeTimeZone((SELECT testStartTime FROM ClassDB.testConnectionActivityLogging))
+          AND   userName IN ('constu01', 'constu02', 'condbm01', 'conins01'))
+         <> 4 THEN
 
-   --Test for connection entries in ClassDB.ConnectionActivity, using the current
-   -- to filter out old entries. Created dynamically so the test start time is
-   -- preserved acrross conection changes
-   EXECUTE FORMAT($testCon$
-                  CREATE OR REPLACE FUNCTION ClassDB.testConnectionLogging()
-                  RETURNS VOID AS
-                  $conBody$
-                  BEGIN
-                     --Check that the activity table contains the new connections
-                     -- Use the stored test start time to filter out old connections
-                     IF (SELECT COUNT(*)
-                         FROM  ClassDB.ConnectionActivity
-                         WHERE ClassDB.changeTimeZone(acceptedAtUTC) >= ClassDB.changeTimeZone('%s')
-                         AND   userName IN ('constu01', 'constu02', 'condbm01', 'conins01'))
-                        <> 4 THEN
-
-                        RAISE INFO 'FAIL: Code 2';
-                     ELSE
-                        RAISE INFO 'PASS: Connection Logging';
-                     END IF;
-                  END;
-                  $conBody$ LANGUAGE plpgsql;
-                  $testCon$, CURRENT_TIMESTAMP);
+         RAISE INFO 'FAIL: Code 2';
+      ELSE
+         RAISE INFO 'PASS: Connection Logging';
+      END IF;
+   END;
+   $testCon$ LANGUAGE plpgsql;
 
 
-   --Stub for the disconnection logging test. Will also require the CURRENT_TIMESTAMP
-   -- be dynamically inserted
-   EXECUTE FORMAT($testDis$
-                  CREATE OR REPLACE FUNCTION ClassDB.testDisconnectionLogging()
-                  RETURNS VOID AS
-                  $disBody$
-                  BEGIN
-                     RAISE INFO 'NOT IMPLEMENTED: Disconnection Logging';
-                  END;
-                  $disBody$ LANGUAGE plpgsql;
-                  $testDis$);
+   --Stub for the disconnection logging
+   CREATE OR REPLACE FUNCTION ClassDB.testDisconnectionLogging()
+   RETURNS VOID AS
+   $disBody$
+   BEGIN
+      RAISE INFO 'NOT IMPLEMENTED: Disconnection Logging';
+   END;
+   $disBody$ LANGUAGE plpgsql;
 END;
 $$;
 
@@ -181,10 +190,11 @@ ROLLBACK;
 DO
 $$
 BEGIN
-   --Drop the test function
+   --Drop the test objects
    DROP FUNCTION ClassDB.testImportConnectionLog();
    DROP FUNCTION ClassDB.testConnectionLogging();
    DROP FUNCTION ClassDB.testDisconnectionLogging();
+   DROP TABLE ClassDB.testConnectionActivityLogging;
 
    --Drop users & related objects
    PERFORM ClassDB.dropStudent('constu01', true, true, 'drop_c');
