@@ -124,7 +124,7 @@ BEGIN
       IF (SELECT COUNT(*)
           FROM  ClassDB.ConnectionActivity
           WHERE ClassDB.changeTimeZone(acceptedAtUTC)
-            >= ClassDB.changeTimeZone((SELECT testStartTime FROM ClassDB.testConnectionActivityLogging))
+            >= (SELECT testStartTime FROM ClassDB.testConnectionActivityLogging)
           AND   userName IN ('constu01', 'constu02', 'condbm01', 'conins01'))
          <> 4 THEN
 
