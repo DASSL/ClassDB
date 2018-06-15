@@ -37,6 +37,18 @@ END
 $$;
 
 
+
+--UPGRADE FROM 2.0 TO 2.1
+-- These statements are needed when upgrading ClassDB from 2.0 to 2.1
+-- These can be removed in a future version of ClassDB
+--NOT NULL on FullName is dropped
+-- Constraint definition updates to only enforce if isTeam is true
+ALTER TABLE IF EXISTS ClassDB.RoleBase ALTER COLUMN FullName DROP NOT NULL;
+ALTER TABLE IF EXISTS ClassDB.RoleBase
+   DROP CONSTRAINT IF EXISTS rolebase_fullname_check;
+ALTER TABLE IF EXISTS ClassDB.RoleBase ADD CONSTRAINT rolebase_fullname_check
+   CHECK(isTeam OR (TRIM(FullName) <> '' AND FullName IS NOT NULL));
+
 --Define a table of users and teams recorded (made known) for this DB
 -- each user/team has their own DBMS role
 -- a "user" is a DBMS role who can log in and represents a human user
@@ -51,7 +63,7 @@ CREATE TABLE IF NOT EXISTS ClassDB.RoleBase
   RoleName ClassDB.IDNameDomain NOT NULL --server role name
    CHECK(TRIM(RoleName) <> '' AND NOT ClassDB.isClassDBRoleName(RoleName)),
   FullName VARCHAR --role's given name
-   CHECK(isTeam OR (TRIM(FullName) <> '' AND FullName IS NOT NULL)), 
+   CHECK(isTeam OR (TRIM(FullName) <> '' AND FullName IS NOT NULL)),
   IsTeam BOOLEAN NOT NULL DEFAULT FALSE, --is the role a team or a user?
   SchemaName ClassDB.IDNameDomain NOT NULL --name of the role-specific schema
    CHECK(TRIM(SchemaName) <> ''),
@@ -211,7 +223,7 @@ BEGIN
    IF ($1 = '' OR $1 IS NULL) THEN
       RAISE EXCEPTION 'Invalid argument: roleName is NULL or empty';
    END IF;
-   
+
    IF ($3 IS NULL) THEN
       RAISE EXCEPTION 'Invalid argument: isTeam is NULL';
    END IF;
@@ -345,6 +357,12 @@ REVOKE ALL ON FUNCTION
    FROM PUBLIC;
 
 
+--UPGRADE FROM 2.0 TO 2.1
+-- This following statement is needed when upgrading ClassDB from 2.0 to 2.1
+-- It can be removed in a future version of ClassDB
+--Parameter $1 name changes from userName to roleName
+DROP FUNCTION IF EXISTS ClassDB.revokeClassDBRole(ClassDB.IDNameDomain,
+                                                  ClassDB.IDNameDomain);
 
 --Define a function to revoke a ClassDB role from a known ClassDB role
 CREATE OR REPLACE FUNCTION
