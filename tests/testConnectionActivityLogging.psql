@@ -17,8 +17,12 @@
 
 --The following tests are performed. An error code of ERROR X indicates that test x
 -- failed
---1) Test that connections from all ClassDB user types are recorded, and connections
--- from non-ClassDB users are not
+--1) Test that connections from all ClassDB user types are recorded, connections from
+-- non-ClassDB users are not, and that the result table from ClassDB.importConnectionLog()
+-- returns the correct number of new entries
+--2) Tests that the correct connection activity rows are added to ClassDB.ConnectionActivity
+--3) (NOT IMPLEMENTED) Tests that the correct disconnection activity rows are added
+-- to ClassDB.ConnectionActivity
 
 \set ON_ERROR_STOP on
 
