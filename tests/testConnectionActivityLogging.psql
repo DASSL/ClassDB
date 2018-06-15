@@ -1,0 +1,208 @@
+--testConnectionActivityLogging.psql - ClassDB
+
+--Andrew Figueroa, Steven Rollo, Sean Murthy
+--Data Science & Systems Lab (DASSL)
+--https://dassl.github.io
+
+--(C) 2017- DASSL. ALL RIGHTS RESERVED.
+--Licensed to others under CC 4.0 BY-SA-NC
+--https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+--PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+
+
+--The following test script should be run as a superuser, otherwise tests will fail
+
+--This script uses psql's \c command to change connections.
+
+--The following tests are performed. An error code of ERROR X indicates that test x
+-- failed
+--1) Test that connections from all ClassDB user types are recorded, and connections
+-- from non-ClassDB users are not
+
+\set ON_ERROR_STOP on
+
+--Stores the original executing user from psql's :USER environment variable
+\set POSTGRES_USER :USER
+
+SET SESSION client_min_messages TO WARNING;
+
+--Tests for superuser privilege on current_user
+DO
+$$
+BEGIN
+   IF NOT classdb.isSuperUser() THEN
+      RAISE EXCEPTION 'Insufficient privileges: script must be run as a superuser';
+   END IF;
+END
+$$;
+
+
+DO
+$$
+BEGIN
+   --Remove test users, if they still exist
+   --Need to gaurd these because they fail if the users do not exist
+   IF(EXISTS (SELECT TRUE FROM ClassDB.USER WHERE userName = 'constu01')) THEN
+      PERFORM ClassDB.dropStudent('constu01', TRUE, TRUE, 'drop_c');
+   END IF;
+   IF(EXISTS (SELECT TRUE FROM ClassDB.USER WHERE userName = 'constu02')) THEN
+      PERFORM ClassDB.dropStudent('constu02', TRUE, TRUE, 'drop_c');
+   END IF;
+   IF(EXISTS (SELECT TRUE FROM ClassDB.USER WHERE userName = 'condbm01')) THEN
+      PERFORM ClassDB.dropDBManager('condbm01', TRUE, TRUE, 'drop_c');
+   END IF;
+   IF(EXISTS (SELECT TRUE FROM ClassDB.USER WHERE userName = 'conins01')) THEN
+      PERFORM ClassDB.dropInstructor('conins01', TRUE, TRUE, 'drop_c');
+   END IF;
+
+   --Need to check if users exists to use DROP OWNED BY
+   IF(EXISTS (SELECT TRUE FROM pg_catalog.pg_roles WHERE rolname = 'unown01')) THEN
+      DROP OWNED BY unown01; --Drops connect permissions granted to unown01
+      DROP USER unown01;
+   END IF;
+
+   --Create ClassDB users to test connection log importing
+   PERFORM ClassDB.createStudent('constu01', 'con test student 01');
+   PERFORM ClassDB.createStudent('constu02', 'con test student 02');
+   PERFORM ClassDB.createDBManager('condbm01', 'con test db manager 01');
+   PERFORM ClassDB.createInstructor('conins01', 'con test instructor 01');
+
+   --Create a non-ClassDB user to ensure their connections are not imported
+   CREATE USER unown01 ENCRYPTED PASSWORD 'unown01';
+   EXECUTE FORMAT('GRANT CONNECT ON DATABASE %I TO unown01', CURRENT_DATABASE());
+
+   --Fill up the log with any existing connections
+   PERFORM ClassDB.importConnectionLog();
+
+
+   --Test table. Used to store the test start timestamp, which would otherwise
+   -- be lost between connection switches. Not temporary so it persists across
+   -- connection changes
+   DROP TABLE IF EXISTS ClassDB.testConnectionActivityLogging;
+   CREATE TABLE ClassDB.testConnectionActivityLogging
+   (
+      testStartTime TIMESTAMP
+   );
+
+   --An instructor will perform the test to check effective permissions
+   GRANT SELECT ON ClassDB.testConnectionActivityLogging TO ClassDB_Instructor;
+
+   INSERT INTO ClassDB.testConnectionActivityLogging VALUES (CURRENT_TIMESTAMP);
+
+
+   --Test functions. These are not temporary so they persist across connection
+   -- changes durting the testing
+
+   --Function to test ClassDB.importConnectionLog(). Imports the current log,
+   -- then checks of the numEntries return matches the expectation
+   CREATE OR REPLACE FUNCTION ClassDB.testImportConnectionLog()
+   RETURNS VOID AS
+   $testImport$
+   BEGIN
+      --Check that the correct number of new connections were imported
+      -- Only check current date, since all new connections should be from the current
+      -- log file
+      IF (SELECT numEntries
+          FROM ClassDB.importConnectionLog(CURRENT_DATE)) <> 4 THEN
+
+         RAISE INFO 'FAIL: Code 1';
+      ELSE
+         RAISE INFO 'PASS: ClassDB.importConnectionLog()';
+      END IF;
+   END;
+   $testImport$ LANGUAGE plpgsql;
+
+   --Test for connection entries in ClassDB.ConnectionActivity, using the saved
+   -- test start timestamp to filter out old entries
+   CREATE OR REPLACE FUNCTION ClassDB.testConnectionLogging()
+   RETURNS VOID AS
+   $testCon$
+   BEGIN
+      --Check that the activity table contains the new connections
+      -- Use the stored test start time to filter out old connections
+      IF (SELECT COUNT(*)
+          FROM  ClassDB.ConnectionActivity
+          WHERE ClassDB.changeTimeZone(acceptedAtUTC)
+            >= ClassDB.changeTimeZone((SELECT testStartTime FROM ClassDB.testConnectionActivityLogging))
+          AND   userName IN ('constu01', 'constu02', 'condbm01', 'conins01'))
+         <> 4 THEN
+
+         RAISE INFO 'FAIL: Code 2';
+      ELSE
+         RAISE INFO 'PASS: Connection Logging';
+      END IF;
+   END;
+   $testCon$ LANGUAGE plpgsql;
+
+
+   --Stub for the disconnection logging
+   CREATE OR REPLACE FUNCTION ClassDB.testDisconnectionLogging()
+   RETURNS VOID AS
+   $disBody$
+   BEGIN
+      RAISE INFO 'NOT IMPLEMENTED: Disconnection Logging';
+   END;
+   $disBody$ LANGUAGE plpgsql;
+END;
+$$;
+
+
+--Switch to different users to create connection activity
+-- the '-' tells psql to connect to the current database with the supplied
+-- user name
+--PGPASSWORD is an enviroment variable that allows auto-login using the set password
+\setenv PGPASSWORD constu01
+\c  - constu01
+
+\setenv PGPASSWORD constu02
+\c - constu02
+
+\setenv PGPASSWORD condbm01
+\c - condbm01
+
+\setenv PGPASSWORD unown01
+\c - unown01
+
+\setenv PGPASSWORD conins01
+\c - conins01
+
+--Run the tests as instructor, to test effective permissions on relevant objects
+BEGIN TRANSACTION;
+
+DO
+$$
+BEGIN
+   PERFORM ClassDB.testImportConnectionLog();
+   PERFORM ClassDB.testConnectionLogging();
+   PERFORM ClassDB.testDisconnectionLogging();
+END;
+$$;
+
+ROLLBACK;
+
+
+--Prompt to relogin to the original executing user
+--Clear PGPASSWORD so user can enter their password
+\setenv PGPASSWORD
+\c - :POSTGRES_USER
+
+DO
+$$
+BEGIN
+   --Drop the test objects
+   DROP FUNCTION ClassDB.testImportConnectionLog();
+   DROP FUNCTION ClassDB.testConnectionLogging();
+   DROP FUNCTION ClassDB.testDisconnectionLogging();
+   DROP TABLE ClassDB.testConnectionActivityLogging;
+
+   --Drop users & related objects
+   PERFORM ClassDB.dropStudent('constu01', true, true, 'drop_c');
+   PERFORM ClassDB.dropStudent('constu02', true, true, 'drop_c');
+   PERFORM ClassDB.dropDBManager('condbm01', true, true, 'drop_c');
+   PERFORM ClassDB.dropInstructor('conins01', true, true, 'drop_c');
+
+   DROP OWNED BY unown01;
+   DROP USER unown01;
+END;
+$$;

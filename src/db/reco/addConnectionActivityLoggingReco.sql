@@ -12,12 +12,14 @@
 
 --This script must be run as superuser.
 --This script should be run in every database in which log management is required
--- it should be run after running enableServerLogging.sql for the server and after running
--- addUserMgmt.sql for the current database
+-- it should be run after running enableConnectionActivityLogging.psql for the
+-- server and after running addUserMgmtCore.sql for the current database
 
 --This script adds the connection logging portion of the ClassDB user monitoring
--- system.  It provides the classdb.importLog () function to import
+-- system.  It provides the ClassDB.importConnectionLog () function to import
 -- the Postgres connection logs and record student connection data.
+-- Additionally, this file provides helper functions to check the status of
+-- logging settings on the server
 
 
 START TRANSACTION;
@@ -26,7 +28,7 @@ START TRANSACTION;
 DO
 $$
 BEGIN
-   IF NOT (SELECT classdb.isSuperUser()) THEN
+   IF NOT (SELECT ClassDB.isSuperUser()) THEN
       RAISE EXCEPTION 'Insufficient privileges for script: must be run as a superuser';
    END IF;
 END
@@ -37,61 +39,131 @@ $$;
 SET LOCAL client_min_messages TO WARNING;
 
 
---ClassDB.PostgresLog is a staging table for data imported from the logs.
--- The data is then processed in classdb.importLog().
--- This table format suggested by the Postgres documentation for use with the
--- COPY statement
--- https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html
--- We only use the log_time and message columns for the log import process
-DROP TABLE IF EXISTS ClassDB.PostgresLog;
-CREATE TABLE ClassDB.PostgresLog
-(
-   log_time TIMESTAMP(3) WITH TIME ZONE, --Holds the connection accepted timestamp
-   user_name TEXT,
-   database_name TEXT,
-   process_id INTEGER,
-   connection_from TEXT,
-   session_id TEXT,
-   session_line_num BIGINT,
-   command_tag TEXT,
-   session_start_time TIMESTAMP WITH TIME ZONE,
-   virtual_transaction_id TEXT,
-   transaction_id BIGINT,
-   error_severity TEXT,
-   sql_state_code TEXT,
-   message TEXT, --States if the log row is a connection event, or something else
-   detail TEXT,
-   hint TEXT,
-   internal_query TEXT,
-   internal_query_pos INTEGER,
-   context TEXT,
-   query TEXT,
-   query_pos INTEGER,
-   location TEXT,
-   application_name TEXT,
-   PRIMARY KEY (session_id, session_line_num)
-);
-
---Change owner of the import staging table to ClassDB
-ALTER TABLE classdb.postgresLog OWNER TO ClassDB;
-REVOKE ALL PRIVILEGES ON classdb.postgresLog FROM PUBLIC;
+--UPGRADE FROM 2.0 to 2.x
+-- These statements are needed when upgrading ClassDB from 2.0 to 2.x, and can
+-- be removed in a future version
+DROP TABLE IF EXISTS ClassDB.PostgresLog; --Now a temp table in importConnectionLog
+DROP FUNCTION IF EXISTS ClassDB.importConnectionLog(DATE); --Return type changed
 
 
---Function to import all log files between a starting date and the current date
--- and update student connection information.
--- The latest connection in the student table supplied the assumed last import date,
--- so logs later than this date are imported.  If this value is null, logs are parsed,
--- starting with the supplied date (startDate)
--- For each line containing connection information, the matching student's
--- connection info is updated
-CREATE OR REPLACE FUNCTION classdb.importConnectionLog(startDate DATE DEFAULT NULL)
-   RETURNS VOID AS
+--Helper function to check if server parameter log_connections is set to 'on' or 'off'.
+CREATE OR REPLACE FUNCTION ClassDB.isConnectionLoggingEnabled()
+   RETURNS BOOLEAN AS
+$$
+   --This query returns 'on' or 'off', which can be cast to a boolean
+   SELECT COALESCE(setting::BOOLEAN, FALSE)
+   FROM pg_catalog.pg_settings
+   WHERE name = 'log_connections';
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
+ALTER FUNCTION ClassDB.isConnectionLoggingEnabled() OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION ClassDB.isConnectionLoggingEnabled()
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.isConnectionLoggingEnabled()
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+--Helper function to check if server parameter logging_collector is set to 'on' or 'off'.
+CREATE OR REPLACE FUNCTION ClassDB.isLoggingCollectorEnabled()
+   RETURNS BOOLEAN AS
+$$
+   --This query returns 'on' or 'off', which can be cast to a boolean
+   SELECT COALESCE(setting::BOOLEAN, FALSE)
+   FROM pg_catalog.pg_settings
+   WHERE name = 'logging_collector';
+$$ LANGUAGE sql
+   SECURITY DEFINER;
+
+ALTER FUNCTION ClassDB.isLoggingCollectorEnabled() OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION ClassDB.isLoggingCollectorEnabled()
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.isLoggingCollectorEnabled()
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+--Function to import log files between a starting date and the current date
+-- and update ClassDB.ConnectionActivity.
+--For each log entry containing connection information about a ClassDB user,
+-- a new record is added to ClassDB.ConnectionActivity.
+--By default, this function imports all log files between the last imported log
+-- and today's log. If logs have never been imported, only today's log will be imported.
+--This behavior can be overridden by supplying a date parameter. All logs between
+-- the supplied date and today's will then be imported.
+--Note that connection activity records will not be added for any connections prior
+-- to the latest connection in ClassDB.ConnectionActivity.
+CREATE OR REPLACE FUNCTION ClassDB.importConnectionLog(startDate DATE DEFAULT NULL)
+   RETURNS TABLE
+   (
+      logDate DATE,
+      numEntries INTEGER,
+      info VARCHAR
+   ) AS
 $$
 DECLARE
    logPath VARCHAR(4096); --Max file path length on Linux, > max length on Windows
    lastConTimestampUTC TIMESTAMP; --Hold the latest time (UTC) a connection was logged
    lastConDateLocal DATE; --Hold the latest date (local time) a connection was logged
+   disabledLogSettings VARCHAR(100); --Holds any disabled log settings for warning output
 BEGIN
+   --Get a string containing the setting names of any disabled log settings
+   SELECT INTO disabledLogSettings string_agg(name, ', ')
+   FROM pg_catalog.pg_settings
+   WHERE name IN ('logging_collector', 'log_connections')
+   AND setting = 'off';
+
+   --Warn the user if any server connection logging parameters are disabled
+   IF (disabledLogSettings IS NOT NULL) THEN
+      RAISE WARNING  'log files might be missing or incomplete'
+      USING DETAIL = 'The following server parameters are currently off: ' || disabledLogSettings,
+            HINT   = 'Consult the ClassDB documentation for details on setting logging-related parameters.';
+   END IF;
+
+   --Temporary staging table for data imported from the logs.
+   -- This table format suggested by the Postgres documentation for use with the
+   -- COPY statement
+   -- https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html
+   -- We only use the log_time and message columns for the log import process
+   CREATE TEMPORARY TABLE ImportedLogData
+   (
+      log_time TIMESTAMP(3) WITH TIME ZONE, --Holds the connection accepted timestamp
+      user_name TEXT,
+      database_name TEXT,
+      process_id INTEGER,
+      connection_from TEXT,
+      session_id TEXT,
+      session_line_num BIGINT,
+      command_tag TEXT,
+      session_start_time TIMESTAMP WITH TIME ZONE,
+      virtual_transaction_id TEXT,
+      transaction_id BIGINT,
+      error_severity TEXT,
+      sql_state_code TEXT,
+      message TEXT, --States if the log row is a connection event, or something else
+      detail TEXT,
+      hint TEXT,
+      internal_query TEXT,
+      internal_query_pos INTEGER,
+      context TEXT,
+      query TEXT,
+      query_pos INTEGER,
+      location TEXT,
+      application_name TEXT,
+      PRIMARY KEY (session_id, session_line_num)
+   );
+
+   --Temporary table that stores a summary of the data imported from each log
+   CREATE TEMPORARY TABLE ImportResult
+   (
+      logDate DATE,
+      numEntries INTEGER,
+      info VARCHAR
+   );
+
    --Get the timestamp (at UTC) of the latest connection activity entry. Then
    -- convert the timestamp to local time to get a 'best-guess' of the last log
    -- file data that was imported
@@ -100,35 +172,71 @@ BEGIN
 
    lastConDateLocal = date(ClassDB.ChangeTimeZone(lastConTimeStampUTC));
 
-	--Set the date of last logged connection. We prefer the user-supplied parameter, but
+   --Set the date of last logged connection. We prefer the user-supplied parameter, but
    -- defer to our 'best-guess' and finally, the current date if preceding values are null
-	lastConDateLocal = COALESCE(startDate, lastConDateLocal, CURRENT_DATE);
+   lastConDateLocal = COALESCE(startDate, lastConDateLocal, CURRENT_DATE);
 
-	--We want to import all logs between the lastConDate and current date
-	WHILE lastConDateLocal <= CURRENT_DATE LOOP
-	   --Get the full path to the log, assumes a log file name of postgresql-%m.%d.csv
-	   -- the log_directory setting holds the log path
-      logPath := (SELECT setting FROM pg_settings WHERE "name" = 'log_directory') ||
+   --We want to import all logs between the lastConDateLocal and current date
+   WHILE lastConDateLocal <= CURRENT_DATE LOOP
+      --Get the full path to the log, assumes a log file name of postgresql-%m.%d.csv
+      -- the log_directory setting holds the log path
+      logPath := (SELECT setting FROM pg_catalog.pg_settings WHERE "name" = 'log_directory') ||
          '/postgresql-' || to_char(lastConDateLocal, 'MM.DD') || '.csv';
+
       --Import entries from the day's server log into our log table
-      EXECUTE format('COPY classdb.postgresLog FROM ''%s'' WITH csv', logPath);
+      BEGIN
+         EXECUTE format('COPY pg_temp.ImportedLogData FROM ''%s'' WITH csv', logPath);
+         INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, NULL);
+      EXCEPTION
+         WHEN undefined_file THEN
+            --If an expected log file is missing, skip importing that log and
+            -- try the next log file. Store the error in the result table
+            RAISE WARNING 'log file for % not found, skipping.', lastConDateLocal;
+            INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
+         WHEN OTHERS THEN
+            RAISE WARNING 'importing log file for %s failed', lastConDateLocal
+            USING DETAIL = SQLERRM;
+            INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
+      END;
+
       lastConDateLocal := lastConDateLocal + 1; --Check the next day
    END LOOP;
 
-   --Update the connection activity table based on the temp log table
-   -- We only want to insert new activity records that are newer than the current
-   -- latest connection, and are by ClassDB users to the current DB
-   INSERT INTO ClassDB.ConnectionActivity
-      SELECT user_name, log_time AT TIME ZONE 'utc'
-      FROM ClassDB.postgresLog
-      WHERE ClassDB.isUser(user_name) --Check the connection is from a ClassDB user
-      AND (log_time AT TIME ZONE 'utc') > --Check that the entry is new
-         COALESCE(lastConTimeStampUTC, to_timestamp(0))
-      AND message LIKE 'connection%' --Only pick connection-related entries
-      AND database_name = CURRENT_DATABASE(); --Only pick entries from current DB
+   --Update ClassDB.ConnectionActivity based on the imported data
+   -- We only want to insert activity records that are newer than the current
+   -- latest activity record, and are by ClassDB users to the current DB
+   WITH LogInsertedCount AS
+   (
+      INSERT INTO ClassDB.ConnectionActivity
+         SELECT user_name, log_time AT TIME ZONE 'utc'
+         FROM pg_temp.ImportedLogData
+         WHERE ClassDB.isUser(user_name) --Check the connection is from a ClassDB user
+         AND (log_time AT TIME ZONE 'utc') > --Check that the entry is new
+            COALESCE(lastConTimeStampUTC, to_timestamp(0))
+         AND message LIKE 'connection%' --Only pick connection-related entries
+         AND database_name = CURRENT_DATABASE() --Only pick entries from current DB
+      RETURNING ClassDB.changeTimeZone(AcceptedAtUTC)::DATE AS logDate
+   )
+   UPDATE pg_temp.ImportResult ir --Next, update the totals in the result table
+   SET numEntries = COALESCE((SELECT COUNT(*)
+                              FROM LogInsertedCount ic
+                              WHERE ic.logDate = ir.logDate
+                              GROUP BY ic.logDate), 0);
 
-   --Clear the log table
-   TRUNCATE ClassDB.PostgresLog;
+    --Set output of this query as the return table. Note that the function does
+    -- not terminate here
+    -- (https://www.postgresql.org/docs/current/static/plpgsql-control-structures.html)
+    RETURN QUERY SELECT * FROM pg_temp.ImportResult;
+
+   --Drop the temp tables - running this function twice inside a transactions will
+   -- otherwise result in an error
+   --ImportResult must be dropped after the RETURN QUERY, since its data is used
+   -- for the return value
+   DROP TABLE pg_temp.ImportedLogData;
+   DROP TABLE pg_temp.ImportResult;
+
+   --Explicitly return to clarify the RETURN QUERY usage
+   RETURN;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
