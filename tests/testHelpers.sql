@@ -177,6 +177,82 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+
+--Define a temporary function to test functions related to server settings
+CREATE OR REPLACE FUNCTION pg_temp.testServerSettings() RETURNS TEXT AS
+$$
+BEGIN
+
+   --test function to get any setting
+   IF ClassDB.getServerSetting('server_version')
+      <>
+      current_setting('server_version')
+   THEN
+      RETURN 'FAIL: Code 1';
+   END IF;
+
+   --test function to return server's version number
+   IF ClassDB.getServerVersion() <> current_setting('server_version') THEN
+      RETURN 'FAIL: Code 2';
+   END IF;
+
+   --test function to test any two version numbers: ignore part 2
+   IF ClassDB.compareServerVersion('9.6', '9.5') <> 0 THEN
+      RETURN 'FAIL: Code 3';
+   END IF;
+
+   IF ClassDB.compareServerVersion('9.5', '9.6') <> 0 THEN
+      RETURN 'FAIL: Code 4';
+   END IF;
+
+   IF ClassDB.compareServerVersion('8.5', '9.6') >= 0 THEN
+      RETURN 'FAIL: Code 5';
+   END IF;
+
+   IF ClassDB.compareServerVersion('9.6', '8.5') <= 0 THEN
+      RETURN 'FAIL: Code 6';
+   END IF;
+
+   --test function to test any two version numbers: test part 2
+   IF ClassDB.compareServerVersion('9.6', '9.6', TRUE) <> 0 THEN
+      RETURN 'FAIL: Code 7';
+   END IF;
+
+   IF ClassDB.compareServerVersion('9.6', '9.5', TRUE) <= 0 THEN
+      RETURN 'FAIL: Code 8';
+   END IF;
+
+   IF ClassDB.compareServerVersion('9.5', '9.6', TRUE) >= 0 THEN
+      RETURN 'FAIL: Code 9';
+   END IF;
+
+   --test function to test any two version numbers: single-part input
+   IF ClassDB.compareServerVersion('10', '10', TRUE) <> 0 THEN
+      RETURN 'FAIL: Code 10';
+   END IF;
+
+   IF ClassDB.compareServerVersion('10', '9.5', TRUE) <= 0 THEN
+      RETURN 'FAIL: Code 11';
+   END IF;
+
+   IF ClassDB.compareServerVersion('9.5', '10', TRUE) >= 0 THEN
+      RETURN 'FAIL: Code 12';
+   END IF;
+
+   --test function to test any version number with server's version number
+   IF ClassDB.compareServerVersion('9.5')
+      <>
+      ClassDB.compareServerVersion('9.5', current_setting('server_version'))
+   THEN
+      RETURN 'FAIL: Code 13';
+   END IF;
+
+   RETURN 'PASS';
+END;
+$$ LANGUAGE plpgsql;
+
+
+
 --Define a temporary function to test miscellaneous functions
 -- only one function to test as of now
 CREATE OR REPLACE FUNCTION pg_temp.testMiscellany() RETURNS TEXT AS
@@ -200,11 +276,8 @@ BEGIN
    --test if schema owner's name is retrieved
    CREATE SCHEMA tset_amehcs_iierr8;
    IF ClassDB.getSchemaOwnerName('tset_amehcs_iierr8') <> CURRENT_USER THEN
-      DROP SCHEMA tset_amehcs_iierr8;
       RETURN 'FAIL: Code 3';
    END IF;
-   DROP SCHEMA tset_amehcs_iierr8;
-
 
    RETURN 'PASS';
 END;
@@ -245,8 +318,9 @@ BEGIN
    RAISE INFO '%   testMembership',
       pg_temp.testMembership();
 
-   DROP USER testUser1_Login;
-   DROP USER testUser2_NoLogin;
+   --test functions related to server settings
+   RAISE INFO '%   testServerSettings',
+      pg_temp.testServerSettings();
 
    --test functions not tested so far
    RAISE INFO '%   Miscellany',
@@ -259,4 +333,4 @@ $$  LANGUAGE plpgsql;
 SELECT pg_temp.testHelperFunctions();
 
 
-COMMIT;
+ROLLBACK;
