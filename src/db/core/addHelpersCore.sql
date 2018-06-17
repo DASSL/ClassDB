@@ -555,6 +555,8 @@ $$ LANGUAGE plpgsql
 ALTER FUNCTION
    ClassDB.compareServerVersion(VARCHAR, VARCHAR, BOOLEAN) OWNER TO ClassDB;
 
+--Limit to ClassDB to prevent exceptions due to incorrect args
+-- too much development effort to prevent all possible exceptions
 REVOKE ALL ON FUNCTION
    ClassDB.compareServerVersion(VARCHAR, VARCHAR, BOOLEAN) FROM PUBLIC;
 
