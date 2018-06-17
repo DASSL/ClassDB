@@ -1,6 +1,6 @@
 --testClassDBRolesMgmt.sql - ClassDB
 
---Andrew Figueroa, Steven Rollo, Sean Murthy
+--Andrew Figueroa, Steven Rollo, Sean Murthy, Kevin Kelly
 --Data Science & Systems Lab (DASSL)
 --https://dassl.github.io/
 
@@ -108,56 +108,44 @@ BEGIN
    PERFORM ClassDB.createStudent('testStu0', 'Test student 0');
    --Extra info given: Pwd and schema set to username, extrainfo should be stored
    PERFORM ClassDB.createStudent('testStu1', 'Test student 1', NULL, '101');
-   --initialPassword given: Password should be set to 'testpass'
-   PERFORM ClassDB.createStudent('testStu2', 'Test student 2', NULL, '102',
-                                 FALSE, FALSE, 'testpass');
-   --initialPassword with no extra info
-   PERFORM ClassDB.createStudent('testStu3', 'Test student 3', NULL, NULL, FALSE,
-                                 FALSE, 'testpass2');
-
-   --Multi-role: NOTICE is suppressed; name should update, password should not change
+   --Multi-role: NOTICE is suppressed; name should update
    PERFORM ClassDB.createDBManager('testStuDBM0', 'Wrong Name', NULL, NULL,
-                                   FALSE, FALSE, 'testpass3');
+                                   FALSE, FALSE);
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createStudent('testStuDBM0', 'Test student/DB manager 0',
-                                 NULL, NULL, TRUE, TRUE, 'notPass');
+                                 NULL, NULL, TRUE, TRUE);
    RESET client_min_messages;
 
    --Updating with different schema: Create student, create schema, then update
-   PERFORM ClassDB.createStudent('testStu4', 'Wrong Name');
-   CREATE SCHEMA newTestStu4 AUTHORIZATION testStu4;
+   PERFORM ClassDB.createStudent('testStu2', 'Wrong Name');
+   CREATE SCHEMA newTestStu2 AUTHORIZATION testStu2;
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM ClassDB.createStudent('testStu4', 'Test student 4');
+   PERFORM ClassDB.createStudent('testStu2', 'Test student 2');
    RESET client_min_messages;
 
    --Test role membership (and existence)
    IF NOT(pg_has_role('teststu0', 'classdb_student', 'member')
       AND pg_has_role('teststu1', 'classdb_student', 'member')
-      AND pg_has_role('teststu2', 'classdb_student', 'member')
-      AND pg_has_role('teststu3', 'classdb_student', 'member')
       AND pg_has_role('teststudbm0', 'classdb_student', 'member')
       AND pg_has_role('teststudbm0', 'classdb_dbmanager', 'member')
-      AND pg_has_role('teststu4', 'classdb_student', 'member'))
+      AND pg_has_role('teststu2', 'classdb_student', 'member'))
    THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
    --Test existence of all schemas
    IF NOT(pg_temp.isSchemaDefined('testStu0') AND pg_temp.isSchemaDefined('testStu1')
-      AND pg_temp.isSchemaDefined('testStu2') AND pg_temp.isSchemaDefined('testStu3')
-      AND pg_temp.isSchemaDefined('testStuDBM0') AND pg_temp.isSchemaDefined('testStu4')
-      AND pg_temp.isSchemaDefined('newTestStu4'))
+      AND pg_temp.isSchemaDefined('testStuDBM0') AND pg_temp.isSchemaDefined('testStu2')
+      AND pg_temp.isSchemaDefined('newTestStu2'))
    THEN
       RETURN 'FAIL: Code 2';
    END IF;
 
    --Test password (hashes) set to students
-   IF NOT(pg_temp.checkEncryptedPwd('testStu0', 'teststu0')
-      AND pg_temp.checkEncryptedPwd('testStu1', 'teststu1')
-      AND pg_temp.checkEncryptedPwd('testStu2', 'testpass')
-      AND pg_temp.checkEncryptedPwd('testStu3', 'testpass2')
-      AND pg_temp.checkEncryptedPwd('testStuDBM0', 'testpass3')
-      AND pg_temp.checkEncryptedPwd('testStu4', 'teststu4'))
+   IF NOT(pg_temp.checkEncryptedPwd('testStu0', ClassDB.foldPgID('testStu0'))
+      AND pg_temp.checkEncryptedPwd('testStu1', ClassDB.foldPgID('testStu1'))
+      AND pg_temp.checkEncryptedPwd('testStuDBM0', ClassDB.foldPgID('testStuDBM0'))
+      AND pg_temp.checkEncryptedPwd('testStu2', ClassDB.foldPgID('testStu2')))
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
@@ -165,10 +153,8 @@ BEGIN
    --Test role-schema correspondence with ClassDB function
    IF NOT(ClassDB.getSchemaName('testStu0') = 'teststu0'
       AND ClassDB.getSchemaName('testStu1') = 'teststu1'
-      AND ClassDB.getSchemaName('testStu2') = 'teststu2'
-      AND ClassDB.getSchemaName('testStu3') = 'teststu3'
       AND ClassDB.getSchemaName('testStuDBM0') = 'teststudbm0'
-      AND ClassDB.getSchemaName('testStu4') = 'teststu4')
+      AND ClassDB.getSchemaName('testStu2') = 'teststu2')
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
@@ -176,10 +162,8 @@ BEGIN
    --Test extra info stored for each student
    IF NOT(pg_temp.checkRoleInfo('testStu0', 'Test student 0', NULL)
       AND pg_temp.checkRoleInfo('testStu1', 'Test student 1', '101')
-      AND pg_temp.checkRoleInfo('testStu2', 'Test student 2', '102')
-      AND pg_temp.checkRoleInfo('testStu3', 'Test student 3', NULL)
       AND pg_temp.checkRoleInfo('testStuDBM0', 'Test student/DB manager 0', NULL)
-      AND pg_temp.checkRoleInfo('testStu4', 'Test student 4', NULL))
+      AND pg_temp.checkRoleInfo('testStu2', 'Test student 2', NULL))
    THEN
       RETURN 'FAIL: Code 5';
    END IF;
@@ -187,8 +171,7 @@ BEGIN
    --Test connection limit, statement timeout, and login privileges
    IF EXISTS(
       SELECT * FROM pg_catalog.pg_roles
-      WHERE RolName IN ('teststu0', 'teststu1', 'teststu2', 'teststu3',
-                        'teststudbm0', 'teststu4')
+      WHERE RolName IN ('teststu0', 'teststu1','teststudbm0', 'teststu2')
             AND
                (NOT RolCanLogin OR RolConnLimit <> 5 OR
                 array_to_string(RolConfig, '') NOT LIKE '%statement_timeout=2000%')
@@ -210,14 +193,6 @@ BEGIN
    DROP ROLE testStu2;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'teststu2';
 
-   DROP OWNED BY testStu3;
-   DROP ROLE testStu3;
-   DELETE FROM ClassDB.RoleBase WHERE roleName = 'teststu3';
-
-   DROP OWNED BY testStu4;
-   DROP ROLE testStu4;
-   DELETE FROM ClassDB.RoleBase WHERE roleName = 'teststu4';
-
    DROP OWNED BY testStuDBM0;
    DROP ROLE testStuDBM0;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'teststudbm0';
@@ -234,56 +209,44 @@ BEGIN
    PERFORM ClassDB.createInstructor('testIns0', 'Test instructor 0');
    --Extra info given: Pwd and schema set to username, extrainfo should be stored
    PERFORM ClassDB.createInstructor('testIns1', 'Test instructor 1', NULL, '101');
-   --initialPassword given: Password should be set to 'testpass'
-   PERFORM ClassDB.createInstructor('testIns2', 'Test instructor 2', NULL, '102',
-                                 FALSE, FALSE, 'testpass');
-   --initialPassword with no extra info
-   PERFORM ClassDB.createInstructor('testIns3', 'Test instructor 3', NULL, NULL, FALSE,
-                                 FALSE, 'testpass2');
-
    --Multi-role: NOTICE is suppressed; name should update, password should not change
    PERFORM ClassDB.createDBManager('testInsDBM0', 'Wrong Name', NULL, NULL,
-                                   FALSE, FALSE, 'testpass3');
+                                   FALSE, FALSE);
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createInstructor('testInsDBM0', 'Test instructor/DB manager 0',
-                                 NULL, NULL, TRUE, TRUE, 'notPass');
+                                 NULL, NULL, TRUE, TRUE);
    RESET client_min_messages;
 
    --Updating with different schema: Create instructor, create schema, then update
-   PERFORM ClassDB.createInstructor('testIns4', 'Wrong Name');
-   CREATE SCHEMA newTestIns4 AUTHORIZATION testIns4;
+   PERFORM ClassDB.createInstructor('testIns2', 'Wrong Name');
+   CREATE SCHEMA newTestIns2 AUTHORIZATION testIns2;
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM ClassDB.createInstructor('testIns4', 'Test instructor 4');
+   PERFORM ClassDB.createInstructor('testIns2', 'Test instructor 2');
    RESET client_min_messages;
 
    --Test role membership (and existence)
    IF NOT(pg_has_role('testins0', 'classdb_instructor', 'member')
       AND pg_has_role('testins1', 'classdb_instructor', 'member')
-      AND pg_has_role('testins2', 'classdb_instructor', 'member')
-      AND pg_has_role('testins3', 'classdb_instructor', 'member')
       AND pg_has_role('testinsdbm0', 'classdb_instructor', 'member')
       AND pg_has_role('testinsdbm0', 'classdb_dbmanager', 'member')
-      AND pg_has_role('testins4', 'classdb_instructor', 'member'))
+      AND pg_has_role('testins2', 'classdb_instructor', 'member'))
    THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
    --Test existence of all schemas
    IF NOT(pg_temp.isSchemaDefined('testIns0') AND pg_temp.isSchemaDefined('testIns1')
-      AND pg_temp.isSchemaDefined('testIns2') AND pg_temp.isSchemaDefined('testIns3')
-      AND pg_temp.isSchemaDefined('testInsDBM0') AND pg_temp.isSchemaDefined('testIns4')
-      AND pg_temp.isSchemaDefined('newTestIns4'))
+      AND pg_temp.isSchemaDefined('testInsDBM0') AND pg_temp.isSchemaDefined('testIns2')
+      AND pg_temp.isSchemaDefined('newTestIns2'))
    THEN
       RETURN 'FAIL: Code 2';
    END IF;
 
    --Test password (hashes) set to instructors
-   IF NOT(pg_temp.checkEncryptedPwd('testIns0', 'testins0')
-      AND pg_temp.checkEncryptedPwd('testIns1', 'testins1')
-      AND pg_temp.checkEncryptedPwd('testIns2', 'testpass')
-      AND pg_temp.checkEncryptedPwd('testIns3', 'testpass2')
-      AND pg_temp.checkEncryptedPwd('testInsDBM0', 'testpass3')
-      AND pg_temp.checkEncryptedPwd('testIns4', 'testins4'))
+   IF NOT(pg_temp.checkEncryptedPwd('testIns0', ClassDB.foldPgID('testIns0'))
+      AND pg_temp.checkEncryptedPwd('testIns1', ClassDB.foldPgID('testIns1'))
+      AND pg_temp.checkEncryptedPwd('testInsDBM0', ClassDB.foldPgID('testInsDBM0'))
+      AND pg_temp.checkEncryptedPwd('testIns2', ClassDB.foldPgID('testIns2')))
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
@@ -291,10 +254,8 @@ BEGIN
    --Test role-schema correspondence with ClassDB function
    IF NOT(ClassDB.getSchemaName('testIns0') = 'testins0'
       AND ClassDB.getSchemaName('testIns1') = 'testins1'
-      AND ClassDB.getSchemaName('testIns2') = 'testins2'
-      AND ClassDB.getSchemaName('testIns3') = 'testins3'
       AND ClassDB.getSchemaName('testInsDBM0') = 'testinsdbm0'
-      AND ClassDB.getSchemaName('testIns4') = 'testins4')
+      AND ClassDB.getSchemaName('testIns2') = 'testins2')
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
@@ -302,10 +263,8 @@ BEGIN
    --Test extra info stored for each instructor
    IF NOT(pg_temp.checkRoleInfo('testIns0', 'Test instructor 0', NULL)
       AND pg_temp.checkRoleInfo('testIns1', 'Test instructor 1', '101')
-      AND pg_temp.checkRoleInfo('testIns2', 'Test instructor 2', '102')
-      AND pg_temp.checkRoleInfo('testIns3', 'Test instructor 3', NULL)
       AND pg_temp.checkRoleInfo('testInsDBM0', 'Test instructor/DB manager 0', NULL)
-      AND pg_temp.checkRoleInfo('testIns4', 'Test instructor 4', NULL))
+      AND pg_temp.checkRoleInfo('testIns2', 'Test instructor 2', NULL))
    THEN
       RETURN 'FAIL: Code 5';
    END IF;
@@ -313,8 +272,7 @@ BEGIN
    --Test login privilege
    IF EXISTS(
       SELECT * FROM pg_catalog.pg_roles
-      WHERE RolName IN ('testins0', 'testins1', 'testins2', 'testins3',
-                        'testinsdbm0', 'testins4')
+      WHERE RolName IN ('testins0', 'testins1','testinsdbm0', 'testins2')
             AND NOT RolCanLogin
             )
    THEN
@@ -334,14 +292,6 @@ BEGIN
    DROP ROLE testIns2;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'testins2';
 
-   DROP OWNED BY testIns3;
-   DROP ROLE testIns3;
-   DELETE FROM ClassDB.RoleBase WHERE roleName = 'testins3';
-
-   DROP OWNED BY testIns4;
-   DROP ROLE testIns4;
-   DELETE FROM ClassDB.RoleBase WHERE roleName = 'testins4';
-
    DROP OWNED BY testInsDBM0;
    DROP ROLE testInsDBM0;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'testinsdbm0';
@@ -358,56 +308,44 @@ BEGIN
    PERFORM ClassDB.createDBManager('testDBM0', 'Test DB manager 0');
    --Extra info given: Pwd and schema set to username, extrainfo should be stored
    PERFORM ClassDB.createDBManager('testDBM1', 'Test DB manager 1', NULL, '101');
-   --initialPassword given: Password should be set to 'testpass'
-   PERFORM ClassDB.createDBManager('testDBM2', 'Test DB manager 2', NULL, '102',
-                                 FALSE, FALSE, 'testpass');
-   --initialPassword with no extra info
-   PERFORM ClassDB.createDBManager('testDBM3', 'Test DB manager 3', NULL, NULL, FALSE,
-                                 FALSE, 'testpass2');
-
    --Multi-role: NOTICE is suppressed; name should update, password should not change
    PERFORM ClassDB.createDBManager('testDBMStu0', 'Wrong Name', NULL, NULL,
-                                   FALSE, FALSE, 'testpass3');
+                                   FALSE, FALSE);
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createStudent('testDBMStu0', 'Test DB manager/student 0',
-                                 NULL, NULL, TRUE, TRUE, 'notPass');
+                                 NULL, NULL, TRUE, TRUE);
    RESET client_min_messages;
 
    --Updating with different schema: Create DB manager, create schema, then update
-   PERFORM ClassDB.createDBManager('testDBM4', 'Wrong Name');
-   CREATE SCHEMA newTestDBM4 AUTHORIZATION testDBM4;
+   PERFORM ClassDB.createDBManager('testDBM2', 'Wrong Name');
+   CREATE SCHEMA newTestDBM2 AUTHORIZATION testDBM2;
    SET LOCAL client_min_messages TO WARNING;
-   PERFORM ClassDB.createDBManager('testDBM4', 'Test DB manager 4');
+   PERFORM ClassDB.createDBManager('testDBM2', 'Test DB manager 2');
    RESET client_min_messages;
 
    --Test role membership (and existence)
    IF NOT(pg_has_role('testdbm0', 'classdb_dbmanager', 'member')
       AND pg_has_role('testdbm1', 'classdb_dbmanager', 'member')
-      AND pg_has_role('testdbm2', 'classdb_dbmanager', 'member')
-      AND pg_has_role('testdbm3', 'classdb_dbmanager', 'member')
       AND pg_has_role('testdbmstu0', 'classdb_dbmanager', 'member')
       AND pg_has_role('testdbmstu0', 'classdb_student', 'member')
-      AND pg_has_role('testdbm4', 'classdb_dbmanager', 'member'))
+      AND pg_has_role('testdbm2', 'classdb_dbmanager', 'member'))
    THEN
       RETURN 'FAIL: Code 1';
    END IF;
 
    --Test existence of all schemas
    IF NOT(pg_temp.isSchemaDefined('testDBM0') AND pg_temp.isSchemaDefined('testDBM1')
-      AND pg_temp.isSchemaDefined('testDBM2') AND pg_temp.isSchemaDefined('testDBM3')
-      AND pg_temp.isSchemaDefined('testDBMStu0') AND pg_temp.isSchemaDefined('testDBM4')
-      AND pg_temp.isSchemaDefined('newTestDBM4'))
+      AND pg_temp.isSchemaDefined('testDBMStu0') AND pg_temp.isSchemaDefined('testDBM2')
+      AND pg_temp.isSchemaDefined('newTestDBM2'))
    THEN
       RETURN 'FAIL: Code 2';
    END IF;
 
    --Test password (hashes) set to DB managers
-   IF NOT(pg_temp.checkEncryptedPwd('testDBM0', 'testdbm0')
-      AND pg_temp.checkEncryptedPwd('testDBM1', 'testdbm1')
-      AND pg_temp.checkEncryptedPwd('testDBM2', 'testpass')
-      AND pg_temp.checkEncryptedPwd('testDBM3', 'testpass2')
-      AND pg_temp.checkEncryptedPwd('testDBMStu0', 'testpass3')
-      AND pg_temp.checkEncryptedPwd('testDBM4', 'testdbm4'))
+   IF NOT(pg_temp.checkEncryptedPwd('testDBM0', ClassDB.foldPgID('testDBM0'))
+      AND pg_temp.checkEncryptedPwd('testDBM1', ClassDB.foldPgID('testDBM1'))
+      AND pg_temp.checkEncryptedPwd('testDBMStu0', ClassDB.foldPgID('testDBMStu0'))
+      AND pg_temp.checkEncryptedPwd('testDBM2', ClassDB.foldPgID('testDBM2')))
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
@@ -415,10 +353,8 @@ BEGIN
    --Test role-schema correspondence with ClassDB function
    IF NOT(ClassDB.getSchemaName('testDBM0') = 'testdbm0'
       AND ClassDB.getSchemaName('testDBM1') = 'testdbm1'
-      AND ClassDB.getSchemaName('testDBM2') = 'testdbm2'
-      AND ClassDB.getSchemaName('testDBM3') = 'testdbm3'
       AND ClassDB.getSchemaName('testDBMStu0') = 'testdbmstu0'
-      AND ClassDB.getSchemaName('testDBM4') = 'testdbm4')
+      AND ClassDB.getSchemaName('testDBM2') = 'testdbm2')
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
@@ -426,10 +362,8 @@ BEGIN
    --Test extra info stored for each DB manager
    IF NOT(pg_temp.checkRoleInfo('testDBM0', 'Test DB manager 0', NULL)
       AND pg_temp.checkRoleInfo('testDBM1', 'Test DB manager 1', '101')
-      AND pg_temp.checkRoleInfo('testDBM2', 'Test DB manager 2', '102')
-      AND pg_temp.checkRoleInfo('testDBM3', 'Test DB manager 3', NULL)
       AND pg_temp.checkRoleInfo('testDBMStu0', 'Test DB manager/student 0', NULL)
-      AND pg_temp.checkRoleInfo('testDBM4', 'Test DB manager 4', NULL))
+      AND pg_temp.checkRoleInfo('testDBM2', 'Test DB manager 2', NULL))
    THEN
       RETURN 'FAIL: Code 5';
    END IF;
@@ -437,8 +371,7 @@ BEGIN
    --Test login privilege
    IF EXISTS(
       SELECT * FROM pg_catalog.pg_roles
-      WHERE RolName IN ('testdbm0', 'testdbm1', 'testdbm2', 'testdbm3',
-                        'testdbmstu0', 'testdbm4')
+      WHERE RolName IN ('testdbm0', 'testdbm1', 'testdbmstu0', 'testdbm2')
             AND NOT RolCanLogin
             )
    THEN
@@ -457,14 +390,6 @@ BEGIN
    DROP OWNED BY testDBM2;
    DROP ROLE testDBM2;
    DELETE FROM ClassDB.RoleBase WHERE roleName = 'testdbm2';
-
-   DROP OWNED BY testDBM3;
-   DROP ROLE testDBM3;
-   DELETE FROM ClassDB.RoleBase WHERE roleName = 'testdbm3';
-
-   DROP OWNED BY testDBM4;
-   DROP ROLE testDBM4;
-   DELETE FROM ClassDB.RoleBase WHERE roleName = 'testdbm4';
 
    DROP OWNED BY testDBMStu0;
    DROP ROLE testDBMStu0;
@@ -678,9 +603,9 @@ BEGIN
    PERFORM ClassDB.createStudent('testStu2', 'Test student 2');
    PERFORM ClassDB.createStudent('testStu3', 'Test student 3');
 
-   --ExtraInfo and initialPwd provided, then create schema owned by student
+   --ExtraInfo provided, then create schema owned by student
    PERFORM ClassDB.createStudent('testStu4', 'Test student 4', NULL, '100',
-                                 FALSE, FALSE, 'testpass');
+                                 FALSE, FALSE);
    CREATE SCHEMA testSchema AUTHORIZATION testStu1;
 
    --Multi-role user
@@ -689,11 +614,11 @@ BEGIN
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createDBManager('testStuDBM0', 'Test student/DB manager 0');
    RESET client_min_messages;
-   
+
    --Create DB manager to handle default object disposition
-   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');  
+   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');
    SET SESSION AUTHORIZATION tempDBM0;
-   
+
    --Suppress NOTICEs about ownership reassignment
    SET SESSION client_min_messages TO WARNING;
 
@@ -723,10 +648,10 @@ BEGIN
 
    --Switch back to superuser role before validating test cases
    RESET SESSION AUTHORIZATION;
-   
+
    --Turn all messages back on
    RESET client_min_messages;
-   
+
    --Check for correct existence of roles
    IF    NOT ClassDB.isServerRoleDefined('testStu0')
       OR ClassDB.isServerRoleDefined('testStu1')
@@ -779,9 +704,9 @@ BEGIN
    PERFORM ClassDB.createInstructor('testIns2', 'Test instructor 2');
    PERFORM ClassDB.createInstructor('testIns3', 'Test instructor 3');
 
-   --ExtraInfo and initialPwd provided, then create schema owned by instructor
+   --ExtraInfo provided, then create schema owned by instructor
    PERFORM ClassDB.createInstructor('testIns4', 'Test instructor 4', NULL, '100',
-                                 FALSE, FALSE, 'testpass');
+                                 FALSE, FALSE);
    CREATE SCHEMA testSchema AUTHORIZATION testIns1;
 
    --Multi-role user
@@ -790,11 +715,11 @@ BEGIN
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createDBManager('testInsDBM0', 'Test instructor/DB manager 0');
    RESET client_min_messages;
-   
+
    --Create DB manager to handle default object disposition
-   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');  
+   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');
    SET SESSION AUTHORIZATION tempDBM0;
-   
+
    --Suppress NOTICEs about ownership reassignment
    SET SESSION client_min_messages TO WARNING;
 
@@ -824,10 +749,10 @@ BEGIN
 
    --Switch back to superuser role before validating test cases
    RESET SESSION AUTHORIZATION;
-   
+
    --Turn all messages back on
    RESET client_min_messages;
-   
+
    --Check for correct existence of roles
    IF    NOT ClassDB.isServerRoleDefined('testIns0')
       OR ClassDB.isServerRoleDefined('testIns1')
@@ -880,9 +805,9 @@ BEGIN
    PERFORM ClassDB.createDBManager('testDBM2', 'Test DB manager 2');
    PERFORM ClassDB.createDBManager('testDBM3', 'Test DB manager 3');
 
-   --ExtraInfo and initialPwd provided, then create schema owned by DB manager
+   --ExtraInfo provided, then create schema owned by DB manager
    PERFORM ClassDB.createDBManager('testDBM4', 'Test DB manager 4', NULL, '100',
-                                 FALSE, FALSE, 'testpass');
+                                 FALSE, FALSE);
    CREATE SCHEMA testSchema AUTHORIZATION testDBM1;
 
    --Multi-role user
@@ -891,11 +816,11 @@ BEGIN
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.createStudent('testDBMStu0', 'Test DB manager/Student 0');
    RESET client_min_messages;
-   
+
    --Create DB manager to handle default object disposition
-   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');  
+   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');
    SET SESSION AUTHORIZATION tempDBM0;
-   
+
    --Suppress NOTICEs about ownership reassignment
    SET SESSION client_min_messages TO WARNING;
 
@@ -925,10 +850,10 @@ BEGIN
 
    --Switch back to superuser role before validating test cases
    RESET SESSION AUTHORIZATION;
-   
+
    --Turn all messages back on
    RESET client_min_messages;
-   
+
    --Check for correct existence of roles
    IF    NOT ClassDB.isServerRoleDefined('testDBM0')
       OR ClassDB.isServerRoleDefined('testDBM1')
@@ -978,14 +903,14 @@ BEGIN
    --Create two test students
    PERFORM ClassDB.createStudent('testStu0', 'Test student 0');
    PERFORM ClassDB.createStudent('testStu1', 'Test student 1');
-   
+
    --Create DB manager to handle default object disposition
-   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');  
+   PERFORM ClassDB.createDBManager('tempdbm0', 'Temporary DB manager 0');
    SET SESSION AUTHORIZATION tempDBM0;
 
    --Minimal drop
    PERFORM ClassDB.dropAllStudents();
-   
+
    --Reset back to superuser role for test case validation
    RESET SESSION AUTHORIZATION;
 
@@ -1034,12 +959,12 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 5';
    END IF;
-   
+
    --Cleanup
    DROP OWNED BY tempDBM0;
    DROP ROLE tempDBM0;
    DELETE FROM ClassDB.RoleBase WHERE RoleName = 'tempdbm0';
-   
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
@@ -1064,5 +989,45 @@ $$  LANGUAGE plpgsql;
 
 SELECT pg_temp.prepareClassDBTest();
 
+--Section 2
+-- This section tests each of the createXYZ functions to ensure that if the function
+-- is supplied with a initialPwd that the function rejects the password and sets
+-- the password to the default. This section will be removed when parameter
+-- initialPwd is removed from createXYZ functions.
+
+
+CREATE OR REPLACE FUNCTION pg_temp.rejectCustomPasswordTest() RETURNS TEXT AS
+$$
+BEGIN
+   RAISE NOTICE 'The following test should RAISE three warnings regarding'
+                ' ignoring of an initial password';
+   --Test password creation for student
+   PERFORM ClassDB.createStudent('testStuCustomPwd', 'TestStu', NULL, NULL,
+                                   FALSE, FALSE, 'TestPassStudent');
+   --Test password creation for instructor
+   PERFORM ClassDB.createInstructor('testInsCustomPwd', 'TestIns', NULL, NULL,
+                                   FALSE, FALSE, 'TestPassInstuctor');
+   --Test password creation for database manager
+   PERFORM ClassDB.createDBManager('testDBMCustomPwd', 'TestDBM', NULL, NULL,
+                                   FALSE, FALSE, 'TestPassDMB');
+
+   --Test password for all test roles
+   IF (pg_temp.checkEncryptedPwd('testStuCustomPwd', ClassDB.foldPgID('testStuCustomPwd'))
+      AND pg_temp.checkEncryptedPwd('testInsCustomPwd', ClassDB.foldPgID('testInsCustomPwd'))
+      AND pg_temp.checkEncryptedPwd('testDBMCustomPwd', ClassDB.foldPgID('testDBMCustomPwd')))
+   THEN
+      RETURN 'PASS';
+   ELSE
+      RETURN 'FAIL: Code 3';
+   END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+DO
+$$
+BEGIN
+  RAISE INFO '%   rejectCustomPasswordTest()', pg_temp.rejectCustomPasswordTest();
+END
+$$;
 
 ROLLBACK;

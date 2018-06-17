@@ -128,7 +128,7 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
    --record ClassDB role
-   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $7);
+   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6);
 
    --get name of role's schema (possibly not the original value of schemaName)
    $3 = ClassDB.getSchemaName($1);
@@ -146,6 +146,14 @@ BEGIN
                   ' ClassDB_Instructor', $3);
    EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                   ' GRANT SELECT ON TABLES TO ClassDB_Instructor', $1, $3);
+
+   --If password was supplied give warning
+   IF ($7 IS NOT NULL) THEN
+   RAISE WARNING 'parameter "initialPwd" ignored and password set to default value'
+         USING DETAIL = 'Parameter "initialPwd" is deprecated and will be '
+         'dropped in the next release. Please update your code.',
+         HINT = 'Consult ClassDB documentation for details on password policy.';
+   END IF;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
@@ -299,7 +307,7 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
    --record ClassDB role
-   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $7);
+   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6);
 
    --grant server-level instructor group role to new instructor
    PERFORM ClassDB.grantRole('ClassDB_Instructor', $1);
@@ -307,6 +315,14 @@ BEGIN
    --set privileges on future tables the instructor creates in 'public' schema
    EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA public GRANT'
                || ' SELECT ON TABLES TO PUBLIC', $1);
+
+   --If password was supplied give warning
+   IF ($7 IS NOT NULL) THEN
+   RAISE WARNING 'parameter "initialPwd" ignored and password set to default value'
+         USING DETAIL = 'Parameter "initialPwd" is deprecated and will be '
+         'dropped in the next release. Please update your code.',
+         HINT = 'Consult ClassDB documentation for details on password policy.';
+   END IF;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
@@ -424,10 +440,18 @@ CREATE OR REPLACE FUNCTION
 $$
 BEGIN
    --record ClassDB role
-   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6, $7);
+   PERFORM ClassDB.createRole($1, $2, FALSE, $3, $4, $5, $6);
 
    --grant server-level DB manager group role to new DB manager
    PERFORM ClassDB.grantRole('ClassDB_DBManager', $1);
+
+   --If password was supplied give warning
+   IF ($7 IS NOT NULL) THEN
+   RAISE WARNING 'parameter "initialPwd" ignored and password set to default value'
+         USING DETAIL = 'Parameter "initialPwd" is deprecated and will be '
+         'dropped in the next release. Please update your code.',
+         HINT = 'Consult ClassDB documentation for details on password policy.';
+   END IF;
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
