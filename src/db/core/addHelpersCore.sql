@@ -461,29 +461,119 @@ ALTER FUNCTION
 
 
 
---Define a function to retrieve specific capabilities a user has
--- use this function to get status of different capabilities in one call
+--Define a function to get the value of any server setting
+--Queries the catalog view pg_settings to avoid exceptions if the setting name
+-- supplied is not found
+--Returns NULL if the setting name supplied is not found
+CREATE OR REPLACE FUNCTION
+   ClassDB.getServerSetting(settingName VARCHAR)
+   RETURNS VARCHAR AS
+$$
+   SELECT setting FROM pg_catalog.pg_settings
+   WHERE name = $1;
+$$ LANGUAGE sql
+   RETURNS NULL ON NULL INPUT;
 
---Commenting out the function because a unit test is yet to be developed
---CREATE OR REPLACE FUNCTION
---   ClassDB.getRoleCapabilities(roleName ClassDB.IDNameDomain,
---                               OUT isSuperUser BOOLEAN,
---                               OUT hasCreateRole BOOLEAN,
---                               OUT canCreateDatabase BOOLEAN)
---   AS
---$$
---BEGIN
---   SELECT rolsuper, rolcreaterole, rolcreatedb FROM pg_catalog.pg_roles
---   WHERE rolname = $1;
---END;
---$$ LANGUAGE plpgsql;
+ALTER FUNCTION ClassDB.getServerSetting(VARCHAR) OWNER TO ClassDB;
 
---ALTER FUNCTION
---   ClassDB.getRoleCapabilities(roleName ClassDB.IDNameDomain,
---                               OUT isSuperUser BOOLEAN,
---                               OUT hasCreateRole BOOLEAN,
---                               OUT canCreateDatabase BOOLEAN)
---   OWNER TO ClassDB;
 
+
+--Define a function to get the server's version number
+CREATE OR REPLACE FUNCTION ClassDB.getServerVersion()
+   RETURNS VARCHAR AS
+$$
+   SELECT ClassDB.getServerSetting('server_version');
+$$ LANGUAGE sql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.getServerVersion() OWNER TO ClassDB;
+
+
+
+--Define a function to compare any two Postgres server version numbers
+--Compatible with Postgres versioning policy
+-- https://www.postgresql.org/support/versioning
+--Optionally tests the second part in a version number, e.g.: '6' in '9.6'
+--Always ignores third part of a version number, e.g., ignores the 3 in "9.6.3"
+--Return value:
+-- simply returns the integer difference between corresponding parts of version#
+-- negative number if version1 precedes version2
+-- positive number if version1 succeeds version2
+-- zero if the two versions are the same
+CREATE OR REPLACE FUNCTION
+   ClassDB.compareServerVersion(version1 VARCHAR, version2 VARCHAR,
+                                testPart2 BOOLEAN DEFAULT FALSE
+                               )
+   RETURNS INTEGER AS
+$$
+DECLARE
+   verson1Parts VARCHAR ARRAY;
+   verson2Parts VARCHAR ARRAY;
+   major1 INTEGER;
+   major2 INTEGER;
+BEGIN
+
+   $1 = TRIM($1);
+   IF ($1 = '') THEN
+      RAISE EXCEPTION 'invalid argument: version1 is empty';
+   END IF;
+
+   $2 = TRIM($2);
+   IF ($1 = '') THEN
+      RAISE EXCEPTION 'invalid argument: version2 is empty';
+   END IF;
+
+   IF (POSITION('.' IN $1) = 0) THEN
+      $1 = $1 || '.0';
+   END IF;
+
+   IF (POSITION('.' IN $2) = 0) THEN
+      $2 = $2 || '.0';
+   END IF;
+
+   --convert each version number to an array for ease of comparison
+   verson1Parts = string_to_array($1, '.');
+   verson2Parts = string_to_array($2, '.');
+
+   --cast the major version number (e.g., '9' in '9.6') to a number
+   -- causes exception if input is not really numeric
+   major1 = TRIM(verson1Parts[1])::INTEGER;
+   major2 = TRIM(verson2Parts[1])::INTEGER;
+
+   IF (major1 <> major2) THEN
+      RETURN major1 - major2;
+   ELSIF $3 THEN
+      RETURN TRIM(verson1Parts[2])::INTEGER - TRIM(verson2Parts[2])::INTEGER;
+   ELSE
+      RETURN 0;
+   END IF;
+
+END;
+$$ LANGUAGE plpgsql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION
+   ClassDB.compareServerVersion(VARCHAR, VARCHAR, BOOLEAN) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.compareServerVersion(VARCHAR, VARCHAR, BOOLEAN) FROM PUBLIC;
+
+
+--Define a function to compare some Postgres server version number to this server's
+--See version of this fn that compares any two server version numbers for details
+CREATE OR REPLACE FUNCTION
+   ClassDB.compareServerVersion(version1 VARCHAR,
+                                testPart2 BOOLEAN DEFAULT FALSE
+                               )
+   RETURNS INTEGER AS
+$$
+   SELECT ClassDB.compareServerVersion($1, ClassDB.getServerVersion(), $2);
+$$ LANGUAGE sql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.compareServerVersion(VARCHAR, BOOLEAN) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.compareServerVersion(VARCHAR, BOOLEAN) FROM PUBLIC;
 
 COMMIT;
