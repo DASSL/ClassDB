@@ -479,10 +479,14 @@ ALTER FUNCTION ClassDB.getServerSetting(VARCHAR) OWNER TO ClassDB;
 
 
 --Define a function to get the server's version number
+--Removes additional info a distro may have suffixed to the version number
+-- e.g., Ubuntu's distro is known to return '10.3 (Ubuntu 10.3-1)', whereas
+-- a Postgres distro returns just '10.3'
 CREATE OR REPLACE FUNCTION ClassDB.getServerVersion()
    RETURNS VARCHAR AS
 $$
-   SELECT ClassDB.getServerSetting('server_version');
+   --get value of setting 'server_version' and remove any distro-added suffix
+   SELECT TRIM(split_part(ClassDB.getServerSetting('server_version'), '(', 1));
 $$ LANGUAGE sql
    RETURNS NULL ON NULL INPUT;
 
@@ -523,6 +527,13 @@ BEGIN
       RAISE EXCEPTION 'invalid argument: version2 is empty';
    END IF;
 
+   --remove any distro-specific suffix from the version number
+   -- see function getServerVersion for details
+   $1 = TRIM(split_part($1, '(', 1));
+   $2 = TRIM(split_part($2, '(', 1));
+
+   --adjust version numbers such that they always have two parts
+   -- e.g., change '10' to '10.0'
    IF (POSITION('.' IN $1) = 0) THEN
       $1 = $1 || '.0';
    END IF;
