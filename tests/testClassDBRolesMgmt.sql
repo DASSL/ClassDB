@@ -999,8 +999,8 @@ SELECT pg_temp.prepareClassDBTest();
 CREATE OR REPLACE FUNCTION pg_temp.rejectCustomPasswordTest() RETURNS TEXT AS
 $$
 BEGIN
-   RAISE NOTICE 'The following test should RAISE three warnings regarding' 
-                'ignoring of an initial password';
+   RAISE NOTICE 'The following test should RAISE three warnings regarding'
+                ' ignoring of an initial password';
    --Test password creation for student
    PERFORM ClassDB.createStudent('testStuCustomPwd', 'TestStu', NULL, NULL,
                                    FALSE, FALSE, 'TestPassStudent');
