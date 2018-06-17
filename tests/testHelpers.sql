@@ -213,30 +213,44 @@ BEGIN
       RETURN 'FAIL: Code 6';
    END IF;
 
-   --test function to test any two version numbers: test part 2
-   IF ClassDB.compareServerVersion('9.6', '9.6', TRUE) <> 0 THEN
+   --test function to test any two version numbers: test distro suffix
+   IF ClassDB.compareServerVersion('10.3', '10.3 (Ubuntu 10.3-1)') <> 0 THEN
       RETURN 'FAIL: Code 7';
    END IF;
 
-   IF ClassDB.compareServerVersion('9.6', '9.5', TRUE) <= 0 THEN
+   IF ClassDB.compareServerVersion('10.3 (Ubuntu 10.3-1)', '10.3') <> 0 THEN
       RETURN 'FAIL: Code 8';
    END IF;
 
-   IF ClassDB.compareServerVersion('9.5', '9.6', TRUE) >= 0 THEN
+   --intentionally no space before opening parenthesis
+   IF ClassDB.compareServerVersion('10.1(distro 1)', '10.2(distro 2)') <> 0 THEN
       RETURN 'FAIL: Code 9';
+   END IF;
+
+   --test function to test any two version numbers: test part 2
+   IF ClassDB.compareServerVersion('9.6', '9.6', TRUE) <> 0 THEN
+      RETURN 'FAIL: Code 10';
+   END IF;
+
+   IF ClassDB.compareServerVersion('9.6', '9.5', TRUE) <= 0 THEN
+      RETURN 'FAIL: Code 11';
+   END IF;
+
+   IF ClassDB.compareServerVersion('9.5', '9.6', TRUE) >= 0 THEN
+      RETURN 'FAIL: Code 12';
    END IF;
 
    --test function to test any two version numbers: single-part input
    IF ClassDB.compareServerVersion('10', '10', TRUE) <> 0 THEN
-      RETURN 'FAIL: Code 10';
+      RETURN 'FAIL: Code 13';
    END IF;
 
    IF ClassDB.compareServerVersion('10', '9.5', TRUE) <= 0 THEN
-      RETURN 'FAIL: Code 11';
+      RETURN 'FAIL: Code 14';
    END IF;
 
    IF ClassDB.compareServerVersion('9.5', '10', TRUE) >= 0 THEN
-      RETURN 'FAIL: Code 12';
+      RETURN 'FAIL: Code 15';
    END IF;
 
    --test function to test any version number with server's version number
@@ -244,7 +258,7 @@ BEGIN
       <>
       ClassDB.compareServerVersion('9.5', current_setting('server_version'))
    THEN
-      RETURN 'FAIL: Code 13';
+      RETURN 'FAIL: Code 16';
    END IF;
 
    RETURN 'PASS';
