@@ -67,6 +67,20 @@ REVOKE ALL PRIVILEGES ON ClassDB.DDLActivity FROM PUBLIC;
 GRANT SELECT ON ClassDB.DDLActivity TO ClassDB_Instructor, ClassDB_DBManager;
 
 
+--UPGRADE FROM 2.0 TO 2.1
+-- These statements are needed when upgrading ClassDB from 2.0 to 2.1
+-- These can be removed in a future version of ClassDB
+--ActivityType, SessionID, and ApplicationName are added to ConnectionActivity
+
+ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
+   ADD COLUMN IF NOT EXISTS ActivityType CHAR(1) DEFAULT 'C'
+                            CHECK(ActivityType IN ('C', 'D'));
+
+ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
+   ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL;
+
+ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
+   ADD COLUMN IF NOT EXISTS ApplicationName ClassDB.IDNameDomain;
 
 --Define a table to record connection activity of users
 -- no primary key is defined because there are no viable key attributes, and
@@ -76,7 +90,7 @@ GRANT SELECT ON ClassDB.DDLActivity TO ClassDB_Instructor, ClassDB_DBManager;
 CREATE TABLE IF NOT EXISTS ClassDB.ConnectionActivity
 (
   UserName ClassDB.IDNameDomain NOT NULL, --session user creating the connection
-  ActivityAtUTC TIMESTAMP NOT NULL --time at which the server accepted connection
+  ActivityAtUTC TIMESTAMP NOT NULL, --time at which the server accepted connection
   ActivityType CHAR(1) DEFAULT 'C'
    CHECK(ActivityType IN ('C', 'D')),
   SessionID VARCHAR(17) NOT NULL,
