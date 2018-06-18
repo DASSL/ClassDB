@@ -265,6 +265,41 @@ BEGIN
       RETURN 'FAIL: Code 16';
    END IF;
 
+   --shortcut functions
+   IF ClassDB.isServerVersionBefore('0') THEN
+      RETURN 'FAIL: Code 17';
+   END IF;
+
+   IF ClassDB.isServerVersionBefore('0', FALSE) THEN
+      RETURN 'FAIL: Code 18';
+   END IF;
+
+   IF NOT ClassDB.isServerVersionAfter('0') THEN
+      RETURN 'FAIL: Code 19';
+   END IF;
+
+   IF NOT ClassDB.isServerVersionAfter('0', FALSE) THEN
+      RETURN 'FAIL: Code 20';
+   END IF;
+
+   IF NOT ClassDB.isServerVersion(current_setting('server_version')) THEN
+      RETURN 'FAIL: Code 21';
+   END IF;
+
+   IF ClassDB.isServerVersion('0.8') THEN
+      RETURN 'FAIL: Code 22';
+   END IF;
+
+   --the following tests fail when Postgres version reaches 100000.8
+   -- just change the argument at that point, or rewrite the tests
+   IF NOT ClassDB.isServerVersionBefore('100000.8') THEN
+      RETURN 'FAIL: Code 23';
+   END IF;
+
+   IF ClassDB.isServerVersionAfter('100000.8') THEN
+      RETURN 'FAIL: Code 24';
+   END IF;
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
