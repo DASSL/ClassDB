@@ -71,16 +71,21 @@ GRANT SELECT ON ClassDB.DDLActivity TO ClassDB_Instructor, ClassDB_DBManager;
 -- These statements are needed when upgrading ClassDB from 2.0 to 2.1
 -- These can be removed in a future version of ClassDB
 --ActivityType, SessionID, and ApplicationName are added to ConnectionActivity
-
 ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
    ADD COLUMN IF NOT EXISTS ActivityType CHAR(1) DEFAULT 'C'
                             CHECK(ActivityType IN ('C', 'D'));
 
+--Set a temporary default to add a value to existing rows (because of NOT NULL)
 ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
-   ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL;
+   ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL DEFAULT '00000000.00000000';
+
+--Drop the temporary default
+ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
+   ALTER COLUMN SessionID DROP DEFAULT;
 
 ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
    ADD COLUMN IF NOT EXISTS ApplicationName ClassDB.IDNameDomain;
+
 
 --Define a table to record connection activity of users
 -- no primary key is defined because there are no viable key attributes, and
