@@ -591,4 +591,52 @@ REVOKE ALL ON FUNCTION
 
 
 
+--Define a shortcut fn to test if the server's version precedes the given version
+CREATE OR REPLACE FUNCTION
+   ClassDB.isServerVersionBefore(version VARCHAR, testPart2 BOOLEAN DEFAULT TRUE)
+   RETURNS BOOLEAN AS
+$$
+   SELECT ClassDB.compareServerVersion($1, $2) > 0;
+$$ LANGUAGE sql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.isServerVersionBefore(VARCHAR, BOOLEAN) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.isServerVersionBefore(VARCHAR, BOOLEAN) FROM PUBLIC;
+
+
+
+--Define a shortcut fn to test if the server's version succeeds the given version
+CREATE OR REPLACE FUNCTION
+   ClassDB.isServerVersionAfter(version VARCHAR, testPart2 BOOLEAN DEFAULT TRUE)
+   RETURNS BOOLEAN AS
+$$
+   SELECT ClassDB.compareServerVersion($1, $2) < 0;
+$$ LANGUAGE sql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.isServerVersionAfter(VARCHAR, BOOLEAN) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.isServerVersionAfter(VARCHAR, BOOLEAN) FROM PUBLIC;
+
+
+
+--Define a shortcut fn to test if the server's version matches the given version
+CREATE OR REPLACE FUNCTION
+   ClassDB.isServerVersion(version VARCHAR, testPart2 BOOLEAN DEFAULT TRUE)
+   RETURNS BOOLEAN AS
+$$
+   SELECT ClassDB.compareServerVersion($1, $2) = 0;
+$$ LANGUAGE sql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.isServerVersion(VARCHAR, BOOLEAN) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.isServerVersion(VARCHAR, BOOLEAN) FROM PUBLIC;
+
+
+
 COMMIT;
