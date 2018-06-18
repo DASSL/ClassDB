@@ -208,13 +208,14 @@ BEGIN
    WITH LogInsertedCount AS
    (
       INSERT INTO ClassDB.ConnectionActivity
-         SELECT user_name, log_time AT TIME ZONE 'utc'
+         SELECT user_name, log_time AT TIME ZONE 'utc', CASE WHEN message LIKE 'connection authorized%' THEN 'C' ELSE 'D' END, session_id, application_name
          FROM pg_temp.ImportedLogData
          WHERE ClassDB.isUser(user_name) --Check the connection is from a ClassDB user
          AND (log_time AT TIME ZONE 'utc') > --Check that the entry is new
             COALESCE(lastConTimeStampUTC, to_timestamp(0))
-         AND message LIKE 'connection%' --Only pick connection-related entries
          AND database_name = CURRENT_DATABASE() --Only pick entries from current DB
+         AND (message LIKE 'connection authorized%'
+         OR   message LIKE 'disconnection%') --Only pick (dis)connection-related entries
       RETURNING ClassDB.changeTimeZone(AcceptedAtUTC)::DATE AS logDate
    )
    UPDATE pg_temp.ImportResult ir --Next, update the totals in the result table
