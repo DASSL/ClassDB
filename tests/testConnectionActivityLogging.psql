@@ -13,12 +13,16 @@
 
 --The following test script should be run as a superuser, otherwise tests will fail
 
---This script uses psql's \c command to change connections.
+--This script uses psql's \c meta-command to change connections.
 
 --The following tests are performed. An error code of ERROR X indicates that test x
 -- failed
---1) Test that connections from all ClassDB user types are recorded, and connections
--- from non-ClassDB users are not
+--1) Tests hat the result table from ClassDB.importConnectionLog() returns the correct
+--    number of new entries
+--2) Tests that no extra activity rows are added for ClassDB users
+--3) Tests that each ClassDB user's connection rows are added
+--4) Tests that no rows from non-ClassDB users are added
+
 
 \set ON_ERROR_STOP on
 
@@ -89,61 +93,6 @@ BEGIN
    GRANT SELECT ON ClassDB.testConnectionActivityLogging TO ClassDB_Instructor;
 
    INSERT INTO ClassDB.testConnectionActivityLogging VALUES (CURRENT_TIMESTAMP);
-
-
-   --Test functions. These are not temporary so they persist across connection
-   -- changes durting the testing
-
-   --Function to test ClassDB.importConnectionLog(). Imports the current log,
-   -- then checks of the numEntries return matches the expectation
-   CREATE OR REPLACE FUNCTION ClassDB.testImportConnectionLog()
-   RETURNS VOID AS
-   $testImport$
-   BEGIN
-      --Check that the correct number of new connections were imported
-      -- Only check current date, since all new connections should be from the current
-      -- log file
-      IF (SELECT numEntries
-          FROM ClassDB.importConnectionLog(CURRENT_DATE)) <> 4 THEN
-
-         RAISE INFO 'FAIL: Code 1';
-      ELSE
-         RAISE INFO 'PASS: ClassDB.importConnectionLog()';
-      END IF;
-   END;
-   $testImport$ LANGUAGE plpgsql;
-
-   --Test for connection entries in ClassDB.ConnectionActivity, using the saved
-   -- test start timestamp to filter out old entries
-   CREATE OR REPLACE FUNCTION ClassDB.testConnectionLogging()
-   RETURNS VOID AS
-   $testCon$
-   BEGIN
-      --Check that the activity table contains the new connections
-      -- Use the stored test start time to filter out old connections
-      IF (SELECT COUNT(*)
-          FROM  ClassDB.ConnectionActivity
-          WHERE ClassDB.changeTimeZone(acceptedAtUTC)
-            >= ClassDB.changeTimeZone((SELECT testStartTime FROM ClassDB.testConnectionActivityLogging))
-          AND   userName IN ('constu01', 'constu02', 'condbm01', 'conins01'))
-         <> 4 THEN
-
-         RAISE INFO 'FAIL: Code 2';
-      ELSE
-         RAISE INFO 'PASS: Connection Logging';
-      END IF;
-   END;
-   $testCon$ LANGUAGE plpgsql;
-
-
-   --Stub for the disconnection logging
-   CREATE OR REPLACE FUNCTION ClassDB.testDisconnectionLogging()
-   RETURNS VOID AS
-   $disBody$
-   BEGIN
-      RAISE INFO 'NOT IMPLEMENTED: Disconnection Logging';
-   END;
-   $disBody$ LANGUAGE plpgsql;
 END;
 $$;
 
@@ -173,9 +122,90 @@ BEGIN TRANSACTION;
 DO
 $$
 BEGIN
-   PERFORM ClassDB.testImportConnectionLog();
-   PERFORM ClassDB.testConnectionLogging();
-   PERFORM ClassDB.testDisconnectionLogging();
+   --Perform the import procedure, and check that the result table contains the correct
+   -- number of new entries.
+   -- Only check current date, since all new connections should be from the current
+   -- log file
+   IF (SELECT numEntries
+       FROM ClassDB.importConnectionLog(CURRENT_DATE)) <> 4 THEN
+
+      RAISE INFO 'FAIL: Code 1';
+   ELSE
+      RAISE INFO 'PASS: ClassDB.importConnectionLog()';
+   END IF;
+
+
+   --Check that the activity does not contain extra connections from the test users.
+   -- Use the stored test start time to filter out old connections
+   --GROUP BY UserName and use HAVING COUNT(*) to check how many new connection
+   -- rows have been added for each test user. If COUNT(*) > 1, then
+   -- too many connection rows were added for that user.
+   IF EXISTS (SELECT UserName
+              FROM  ClassDB.ConnectionActivity
+              WHERE userName IN ('constu01', 'constu02', 'condbm01', 'conins01')
+              AND   ClassDB.changeTimeZone(acceptedAtUTC)
+                    >= (SELECT testStartTime
+                        FROM ClassDB.testConnectionActivityLogging)
+              GROUP BY UserName
+              HAVING COUNT(*) > 1) THEN
+
+      RAISE INFO 'FAIL: Code 2';
+   ELSE
+      RAISE INFO 'PASS: Connection Logging 1';
+   END IF;
+
+
+   --Check that each ClassDB test user has new associated activity rows added
+   -- to the activity table. This test will fail one or more users are missing
+   -- associated rows.
+   --Use the stored test start time to filter out old connections.
+   IF NOT (EXISTS (SELECT UserName
+                  FROM ClassDB.ConnectionActivity
+                  WHERE UserName = 'constu01'
+                  AND   ClassDB.changeTimeZone(acceptedAtUTC)
+                        >= (SELECT testStartTime
+                            FROM ClassDB.testConnectionActivityLogging))
+      AND EXISTS (SELECT UserName
+                  FROM ClassDB.ConnectionActivity
+                  WHERE UserName = 'constu02'
+                  AND   ClassDB.changeTimeZone(acceptedAtUTC)
+                        >= (SELECT testStartTime
+                            FROM ClassDB.testConnectionActivityLogging))
+      AND EXISTS (SELECT UserName
+                  FROM ClassDB.ConnectionActivity
+                  WHERE UserName = 'conins01'
+                  AND   ClassDB.changeTimeZone(acceptedAtUTC)
+                        >= (SELECT testStartTime
+                            FROM ClassDB.testConnectionActivityLogging))
+      AND EXISTS (SELECT UserName
+                  FROM ClassDB.ConnectionActivity
+                  WHERE UserName = 'condbm01'
+                  AND   ClassDB.changeTimeZone(acceptedAtUTC)
+                        >= (SELECT testStartTime
+                            FROM ClassDB.testConnectionActivityLogging))) THEN
+                            
+      RAISE INFO 'FAIL: Code 3';
+   ELSE
+      RAISE INFO 'PASS: Connection Logging 2';
+   END IF;
+
+
+   --Check that the non-ClassDB user does not have any associated activity rows
+   -- added.
+   --Use the stored test start time to filter out old connections
+   IF EXISTS (SELECT UserName
+              FROM ClassDB.ConnectionActivity
+              WHERE UserName = 'unown01'
+              AND   ClassDB.changeTimeZone(acceptedAtUTC)
+                    >= (SELECT testStartTime
+                        FROM ClassDB.testConnectionActivityLogging)) THEN
+
+      RAISE INFO 'FAIL: Code 4';
+   ELSE
+      RAISE INFO 'PASS: Connection Logging 3';
+   END IF;
+
+
 END;
 $$;
 
@@ -190,10 +220,7 @@ ROLLBACK;
 DO
 $$
 BEGIN
-   --Drop the test objects
-   DROP FUNCTION ClassDB.testImportConnectionLog();
-   DROP FUNCTION ClassDB.testConnectionLogging();
-   DROP FUNCTION ClassDB.testDisconnectionLogging();
+   --Drop the test table
    DROP TABLE ClassDB.testConnectionActivityLogging;
 
    --Drop users & related objects

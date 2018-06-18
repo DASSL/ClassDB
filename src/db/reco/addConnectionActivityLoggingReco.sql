@@ -16,7 +16,7 @@
 -- server and after running addUserMgmtCore.sql for the current database
 
 --This script adds the connection logging portion of the ClassDB user monitoring
--- system.  It provides the ClassDB.importConnectionLog () function to import
+-- system.  It provides the ClassDB.importConnectionLog() function to import
 -- the Postgres connection logs and record student connection data.
 -- Additionally, this file provides helper functions to check the status of
 -- logging settings on the server
