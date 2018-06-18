@@ -192,7 +192,11 @@ BEGIN
    END IF;
 
    --test function to return server's version number
-   IF ClassDB.getServerVersion() <> current_setting('server_version') THEN
+   --can't test equality because value from current_setting can have distro suffix
+   -- instead, test if value from current_setting starts with server version
+   IF POSITION(ClassDB.getServerVersion()
+      IN current_setting('server_version')) <> 1
+   THEN
       RETURN 'FAIL: Code 2';
    END IF;
 
