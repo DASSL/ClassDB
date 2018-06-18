@@ -37,6 +37,7 @@
 ALTER SYSTEM SET log_destination TO 'csvlog';
 ALTER SYSTEM SET log_filename TO 'postgresql-%m.%d.log';
 ALTER SYSTEM SET log_connections TO 'on';
+ALTER SYSTEM SET log_disconnectons TO 'on';
 ALTER SYSTEM SET logging_collector TO 'on';
 
 --Changing logging_collector from 'off' to 'on' requires a server restart,
