@@ -497,7 +497,7 @@ ALTER FUNCTION ClassDB.getServerVersion() OWNER TO ClassDB;
 --Define a function to compare any two Postgres server version numbers
 --Compatible with Postgres versioning policy
 -- https://www.postgresql.org/support/versioning
---Optionally tests the second part in a version number, e.g.: '6' in '9.6'
+--Optionally ignores the second part in a version number, e.g.: '6' in '9.6'
 --Always ignores third part of a version number, e.g., ignores the 3 in "9.6.3"
 --Return value:
 -- simply returns the integer difference between corresponding parts of version#
@@ -506,7 +506,7 @@ ALTER FUNCTION ClassDB.getServerVersion() OWNER TO ClassDB;
 -- zero if the two versions are the same
 CREATE OR REPLACE FUNCTION
    ClassDB.compareServerVersion(version1 VARCHAR, version2 VARCHAR,
-                                testPart2 BOOLEAN DEFAULT FALSE
+                                testPart2 BOOLEAN DEFAULT TRUE
                                )
    RETURNS INTEGER AS
 $$
@@ -523,7 +523,7 @@ BEGIN
    END IF;
 
    $2 = TRIM($2);
-   IF ($1 = '') THEN
+   IF ($2 = '') THEN
       RAISE EXCEPTION 'invalid argument: version2 is empty';
    END IF;
 
@@ -532,7 +532,7 @@ BEGIN
    $1 = TRIM(split_part($1, '(', 1));
    $2 = TRIM(split_part($2, '(', 1));
 
-   --adjust version numbers such that they always have two parts
+   --adjust version numbers to always have two parts so later code is easier
    -- e.g., change '10' to '10.0'
    IF (POSITION('.' IN $1) = 0) THEN
       $1 = $1 || '.0';
@@ -576,7 +576,7 @@ REVOKE ALL ON FUNCTION
 --See version of this fn that compares any two server version numbers for details
 CREATE OR REPLACE FUNCTION
    ClassDB.compareServerVersion(version1 VARCHAR,
-                                testPart2 BOOLEAN DEFAULT FALSE
+                                testPart2 BOOLEAN DEFAULT TRUE
                                )
    RETURNS INTEGER AS
 $$
@@ -588,5 +588,7 @@ ALTER FUNCTION ClassDB.compareServerVersion(VARCHAR, BOOLEAN) OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION
    ClassDB.compareServerVersion(VARCHAR, BOOLEAN) FROM PUBLIC;
+
+
 
 COMMIT;
