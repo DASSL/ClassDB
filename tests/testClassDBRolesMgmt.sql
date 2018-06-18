@@ -740,7 +740,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION pg_temp.revokeTeamTest() RETURNS TEXT AS
 $$
 BEGIN
-   --Create basic DB manager, then revoke
+   --Create team with name, then revoke
    PERFORM ClassDB.createTeam('team0_revokeTeam', 'Test team 0');
    PERFORM ClassDB.revokeTeam('team0_revokeTeam');
    
@@ -1127,7 +1127,7 @@ BEGIN
    RESET client_min_messages;
    
    --Check for correct existence of roles
-   IF    NOT ClassDB.isServerRoleDefined('team0_dropTeam')
+   IF NOT ClassDB.isServerRoleDefined('team0_dropTeam')
       OR ClassDB.isServerRoleDefined('team1_dropTeam')
       OR ClassDB.isServerRoleDefined('team2_dropTeam')
       OR ClassDB.isServerRoleDefined('team3_dropTeam')
@@ -1137,7 +1137,7 @@ BEGIN
    END IF;
 
    --Check for existence of schemas
-   IF    NOT pg_temp.isSchemaDefined('team0_dropTeam')
+   IF NOT pg_temp.isSchemaDefined('team0_dropTeam')
       OR NOT pg_temp.isSchemaDefined('team1_dropTeam')
       OR pg_temp.isSchemaDefined('team2_dropTeam')
       OR pg_temp.isSchemaDefined('team3_dropTeam')
