@@ -208,7 +208,9 @@ BEGIN
    WITH LogInsertedCount AS
    (
       INSERT INTO ClassDB.ConnectionActivity
-         SELECT user_name, log_time AT TIME ZONE 'utc', CASE WHEN message LIKE 'connection authorized%' THEN 'C' ELSE 'D' END, session_id, application_name
+         SELECT user_name, log_time AT TIME ZONE 'utc',
+            CASE WHEN message LIKE 'connection authorized%' THEN 'C' ELSE 'D' END,
+            session_id, application_name
          FROM pg_temp.ImportedLogData
          WHERE ClassDB.isUser(user_name) --Check the connection is from a ClassDB user
          AND (log_time AT TIME ZONE 'utc') > --Check that the entry is new
