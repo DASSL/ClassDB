@@ -19,8 +19,8 @@
 -- failed
 --1) Tests hat the result table from ClassDB.importConnectionLog() returns the correct
 --    number of new entries
---2) Tests that no extra activity rows are added for ClassDB users
---3) Tests that each ClassDB user's connection rows are added
+--2) Tests that no extra connection activity rows are added for ClassDB users
+--3) Tests that each ClassDB user's connection activity rows are added
 --4) Tests that no rows from non-ClassDB users are added
 
 
