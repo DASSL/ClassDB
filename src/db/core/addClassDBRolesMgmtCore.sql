@@ -544,4 +544,161 @@ GRANT EXECUTE ON FUNCTION
 
 
 
+--Define function to register a team and perform corresponding configuration
+--Calls ClassDB.createRole with corresponding parameters
+--Grants appropriate privileges to newly established role and schema
+CREATE OR REPLACE FUNCTION
+   ClassDB.createTeam(teamName ClassDB.IDNameDomain,
+                      fullName ClassDB.RoleBase.FullName%Type DEFAULT NULL,
+                      schemaName ClassDB.IDNameDomain DEFAULT NULL,
+                      extraInfo ClassDB.RoleBase.ExtraInfo%Type DEFAULT NULL,
+                      okIfRoleExists BOOLEAN DEFAULT TRUE,
+                      okIfSchemaExists BOOLEAN DEFAULT TRUE)
+   RETURNS VOID AS
+$$
+BEGIN
+   --record ClassDB role
+   PERFORM ClassDB.createRole($1, $2, TRUE, $3, $4, $5, $6);
+   
+   --get name of role's schema (possibly not the original value of schemaName)
+   $3 = ClassDB.getSchemaName($1);
+   
+   --grant server-level team group role to new team
+   PERFORM ClassDB.grantRole('ClassDB_Team', $1);
+   
+   --grant instructors privileges to the team's schema
+   EXECUTE FORMAT('GRANT USAGE ON SCHEMA %s TO ClassDB_Instructor', $3);
+   EXECUTE FORMAT('GRANT SELECT ON ALL TABLES IN SCHEMA %s TO' 
+                  ' ClassDB_Instructor', $3);
+   EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
+                  ' GRANT SELECT ON TABLES TO ClassDB_Instructor', $1, $3);
+END;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
+
+
+--Change function ownership and set permissions
+ALTER FUNCTION
+   ClassDB.createTeam(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
+                      ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
+                      BOOLEAN, BOOLEAN)
+   OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.createTeam(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
+                      ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
+                      BOOLEAN, BOOLEAN)
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION
+   ClassDB.createTeam(ClassDB.IDNameDomain, ClassDB.RoleBase.FullName%Type,
+                      ClassDB.IDNameDomain, ClassDB.RoleBase.ExtraInfo%Type,
+                      BOOLEAN, BOOLEAN)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+
+--Define function to unregister a team and undo team configurations
+CREATE OR REPLACE FUNCTION
+   ClassDB.revokeTeam(teamName Classdb.IDNameDomain)
+   RETURNS VOID AS
+$$
+BEGIN
+   --revoke team ClassDB role
+   PERFORM ClassDB.revokeClassDBRole($1, 'ClassDB_Team');
+   
+   --revoke privileges on the role's schema from instructors
+   IF ClassDB.isServerRoleDefined($1) THEN
+      EXECUTE FORMAT('REVOKE USAGE ON SCHEMA %s FROM ClassDB_Instructor',
+                     ClassDB.getSchemaName($1));
+      EXECUTE FORMAT('REVOKE SELECT ON ALL TABLES IN SCHEMA %s FROM'
+                     ' ClassDB_Instructor', ClassDB.getSchemaName($1));
+      EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s REVOKE'
+                     ' SELECT ON TABLES FROM ClassDB_Instructor', $1,
+                     ClassDB.getSchemaName($1));
+   END IF;
+END;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
+
+
+--Change function ownership and set permissions
+ALTER FUNCTION ClassDB.revokeTeam(ClassDB.IDNameDomain) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION ClassDB.revokeTeam(ClassDB.IDNameDomain) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION ClassDB.revokeTeam(ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+
+--Define a function to drop a team
+CREATE OR REPLACE FUNCTION 
+   ClassDB.dropTeam(teamName ClassDB.IDNameDomain,
+                    dropFromServer BOOLEAN DEFAULT FALSE,
+                    okIfRemainsClassDBRoleMember BOOLEAN DEFAULT TRUE,
+                    objectsDisposition VARCHAR DEFAULT 'assign',
+                    newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL)
+   RETURNS VOID AS
+$$
+BEGIN
+   --revoke team role (also asserts that teamName is a known team)
+   PERFORM ClassDB.revokeTeam($1);
+   
+   --drop team
+   PERFORM ClassDB.dropRole($1, $2, $3, $4, $5);
+END;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
+
+
+--Change function ownership and set permissions
+ALTER FUNCTION
+   ClassDB.dropTeam(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
+                    ClassDB.IDNameDomain)
+   OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.dropTeam(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
+                    ClassDB.IDNameDomain)
+   FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION
+   ClassDB.dropTeam(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN, VARCHAR,
+                    ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+--Define function to drop all known teams
+CREATE OR REPLACE FUNCTION
+   ClassDB.dropAllTeams(dropFromServer BOOLEAN DEFAULT FALSE,
+                        okIfRemainsClassDBRoleMember BOOLEAN DEFAULT TRUE,
+                        objectsDisposition VARCHAR DEFAULT 'assign',
+                        newObjectsOwnerName ClassDB.IDNameDomain DEFAULT NULL)
+   RETURNS VOID AS
+$$
+BEGIN
+   PERFORM ClassDB.dropTeam(R.RoleName, $1, $2, $3, $4)
+   FROM ClassDB.RoleBase R
+   WHERE ClassDB.isTeam(RoleName);
+END;
+$$ LANGUAGE plpgsql
+   SECURITY DEFINER;
+
+
+--Change function ownership and set permissions
+ALTER FUNCTION
+   ClassDB.dropAllTeams(BOOLEAN, BOOLEAN, VARCHAR,
+                       ClassDB.IDNameDomain) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.dropAllTeams(BOOLEAN, BOOLEAN, VARCHAR,
+                        ClassDB.IDNameDomain) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION
+   ClassDB.dropAllTeams(BOOLEAN, BOOLEAN, VARCHAR,
+                        ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+
 COMMIT;
