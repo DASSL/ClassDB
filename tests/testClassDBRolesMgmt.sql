@@ -1229,6 +1229,225 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION pg_temp.addToTeamTest() RETURNS TEXT AS
+$$
+BEGIN
+   --Creates first set of student users and a team
+   PERFORM ClassDB.createStudent('stu0_addToTeam', 'Student 0');
+   PERFORM ClassDB.createStudent('stu1_addToTeam', 'Student 1');
+   PERFORM ClassDB.createTeam('team0_addToTeam');
+   
+   --Add first student, check membership, add second student, check memberships
+   PERFORM ClassDB.addToTeam('stu0_addToTeam', 'team0_addToTeam');
+   
+   IF NOT ClassDB.isMember('stu0_addToTeam', 'team0_addToTeam')
+   THEN
+      RETURN 'FAIL: Code 1';
+   END IF;
+   
+   PERFORM ClassDB.addToTeam('stu1_addToTeam', 'team0_addToTeam');
+   
+   IF NOT(ClassDB.isMember('stu0_addToTeam', 'team0_addToTeam')
+      AND ClassDB.isMember('stu1_addToTeam', 'team0_addToTeam'))
+   THEN
+      RETURN 'FAIL: Code 2';
+   END IF;
+   
+   --Add second student again and check memberships
+   PERFORM ClassDB.addToTeam('stu1_addToTeam', 'team0_addToTeam');
+   
+   IF NOT(ClassDB.isMember('stu0_addToTeam', 'team0_addToTeam')
+      AND ClassDB.isMember('stu1_addToTeam', 'team0_addToTeam'))
+   THEN
+      RETURN 'FAIL: Code 3';
+   END IF;
+   
+   --Create new student and team, add old student and new student, verify
+   -- proper membership status of both students
+   PERFORM ClassDB.createStudent('stu2_addToTeam', 'Student 2');
+   PERFORM ClassDB.createTeam('team1_addToTeam', 'Team 1');
+   
+   PERFORM ClassDB.addToTeam('stu1_addToTeam', 'team1_addToTeam');
+   PERFORM ClassDB.addToTeam('stu2_addToTeam', 'team1_addToTeam');
+   
+   IF NOT(ClassDB.isMember('stu1_addToTeam', 'team0_addToTeam')
+      AND ClassDB.isMember('stu1_addToTeam', 'team1_addToTeam')
+      AND ClassDB.isMember('stu2_addToTeam', 'team1_addToTeam')
+      AND NOT ClassDB.isMember('stu2_addToTeam', 'team0_addToTeam'))
+   THEN
+      RETURN 'FAIL: Code 4';
+   END IF;
+   
+   --Create instructor to test read access on schema
+   PERFORM ClassDB.createInstructor('ins0_addToTeam', 'Instructor 0');
+   
+   --Uses Postgres System Information functions to check access levels
+   -- note: create implies usage
+   --Privileges test suite verifies actual access
+   IF NOT(pg_catalog.has_schema_privilege(ClassDB.foldPgID('stu0_addToTeam'),
+            ClassDB.foldPgID('team0_addToTeam'), 'create')
+      AND pg_catalog.has_schema_privilege(ClassDB.foldPgID('stu1_addToTeam'),
+            ClassDB.foldPgID('team0_addToTeam'), 'create')
+      AND pg_catalog.has_schema_privilege(ClassDB.foldPgID('stu1_addToTeam'),
+            ClassDB.foldPgID('team1_addToTeam'), 'create')
+      AND pg_catalog.has_schema_privilege(ClassDB.foldPgID('stu2_addToTeam'),
+            ClassDB.foldPgID('team1_addToTeam'), 'create')
+      AND NOT pg_catalog.has_schema_privilege(ClassDB.foldPgID('stu2_addToTeam'),
+            ClassDB.foldPgID('team0_addToTeam'), 'usage')
+      AND pg_catalog.has_schema_privilege(ClassDB.foldPgID('ins0_addToTeam'),
+            ClassDB.foldPgID('team0_addToTeam'), 'usage')
+      AND NOT pg_catalog.has_schema_privilege(ClassDB.foldPgID('ins0_addToTeam'),
+            ClassDB.foldPgID('team0_addToTeam'), 'create'))
+   THEN
+      RETURN 'FAIL: Code 5';
+   END IF;
+   
+   --Create table in team schema and verify that other members and instructor
+   -- have appropriate access. Note: insert implies select
+   SET SESSION AUTHORIZATION stu0_addToTeam;
+   CREATE TABLE team0_addToTeam.TestTable(TestCol VARCHAR);
+   RESET SESSION AUTHORIZATION;
+   
+   IF NOT(pg_catalog.has_table_privilege(ClassDB.foldPgID('stu0_addToTeam'),
+            ClassDB.foldPgID('team0_addToTeam.TestTable'), 'insert')
+      AND pg_catalog.has_table_privilege(ClassDB.foldPgID('stu1_addToTeam'),
+            ClassDB.foldPgID('team0_addToTeam.TestTable'), 'insert')
+      AND NOT pg_catalog.has_table_privilege(ClassDB.foldPgID('stu2_addToTeam'),
+            ClassDB.foldPgID('team0_addToTeam.TestTable'), 'select')
+      AND pg_catalog.has_table_privilege(ClassDB.foldPgID('ins0_addToTeam'),
+            ClassDB.foldPgID('team0_addToTeam.TestTable'), 'select')
+      AND NOT pg_catalog.has_table_privilege(ClassDB.foldPgID('ins0_addToTeam'),
+            ClassDB.foldPgID('team0_addToTeam.TestTable'), 'insert'))
+   THEN
+      RETURN 'FAIL: Code 6';
+   END IF;
+   
+   RETURN 'PASS';
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION pg_temp.removeFromTeamTest() RETURNS TEXT AS
+$$
+BEGIN
+   --Create students, instructor, and teams
+   PERFORM ClassDB.createStudent('stu0_removeFromTeam', 'Student 0');
+   PERFORM ClassDB.createStudent('stu1_removeFromTeam', 'Student 1');
+   PERFORM ClassDB.createInstructor('ins0_removeFromTeam', 'Instructor 0');
+   PERFORM ClassDB.createTeam('team0_removeFromTeam');
+   PERFORM ClassDB.createTeam('team1_removeFromTeam');
+   
+   --Add members
+   PERFORM ClassDB.addToTeam('stu0_removeFromTeam', 'team0_removeFromTeam');
+   PERFORM ClassDB.addToTeam('stu1_removeFromTeam', 'team0_removeFromTeam');
+   PERFORM ClassDB.addToTeam('stu1_removeFromTeam', 'team1_removeFromTeam');
+   
+   --Create object as student 1 in team 0
+   SET SESSION AUTHORIZATION stu1_removeFromTeam;
+   CREATE TABLE team0_removeFromTeam.TestTable(TestCol VARCHAR);
+   RESET SESSION AUTHORIZATION;
+   
+   --Remove student 1 from team 0
+   PERFORM ClassDB.removeFromTeam('stu1_removeFromTeam', 'team0_removeFromTeam');
+   
+   --Check membership
+   IF NOT(ClassDB.isMember('stu0_removeFromTeam', 'team0_removefromTeam')
+      AND NOT ClassDB.isMember('stu1_removeFromTeam', 'team0_removeFromTeam')
+      AND ClassDB.isMember('stu1_removeFromTeam', 'team1_removeFromTeam'))
+   THEN
+      RETURN 'FAIL: Code 1';
+   END IF;
+   
+   --Check access to team schemas
+   IF NOT(pg_catalog.has_schema_privilege(ClassDB.foldPgID('stu0_removeFromTeam'),
+            ClassDB.foldPgID('team0_removeFromTeam'), 'create')
+      AND NOT pg_catalog.has_schema_privilege(ClassDB.foldPgID('stu1_removeFromTeam'),
+            ClassDB.foldPgID('team0_removeFromTeam'), 'usage')
+      AND pg_catalog.has_schema_privilege(ClassDB.foldPgID('stu1_removeFromTeam'),
+            ClassDB.foldPgID('team1_removeFromTeam'), 'create'))
+   THEN
+      RETURN 'FAIL: Code 2';
+   END IF;
+   
+   --Student 0 should still have write access to table, student 1 should not
+   -- have read or write access (enforced at the schema level), instructor
+   -- should maintain read access
+   IF NOT((pg_catalog.has_table_privilege(ClassDB.foldPgID('stu0_removeFromTeam'),
+            ClassDB.foldPgID('team0_removeFromTeam.TestTable'), 'insert'))
+      AND (NOT pg_catalog.has_schema_privilege(ClassDB.foldPgID('stu1_removeFromTeam'),
+            ClassDB.foldPgID('team0_removeFromTeam'), 'usage'))
+      AND (pg_catalog.has_table_privilege(ClassDB.foldPgID('ins0_removeFromTeam'),
+            ClassDB.foldPgID('team0_removeFromTeam.TestTable'), 'select')))
+   THEN
+      RETURN 'FAIL: Code 3';
+   END IF;
+   
+   --Remove from team again (should not result in exception)
+   SET LOCAL client_min_messages TO WARNING;
+   PERFORM ClassDB.removeFromTeam('stu1_removeFromTeam', 'team0_removeFromTeam');
+   RESET client_min_messages;
+   
+   --Add student back to team, should regain read and write access
+   PERFORM ClassDB.addToTeam('stu0_removeFromTeam', 'team0_removeFromTeam');
+   
+   IF NOT(pg_catalog.has_table_privilege(ClassDB.foldPgID('stu0_removeFromTeam'),
+            ClassDB.foldPgID('team0_removeFromTeam.TestTable'), 'insert')
+      AND pg_catalog.has_table_privilege(ClassDB.foldPgID('stu1_removeFromTeam'),
+            ClassDB.foldPgID('team0_removeFromTeam.TestTable'), 'insert')
+      AND pg_catalog.has_table_privilege(ClassDB.foldPgID('ins0_removeFromTeam'),
+            ClassDB.foldPgID('team0_removeFromTeam.TestTable'), 'select'))
+   THEN
+      RETURN 'FAIL: Code 4';
+   END IF;
+   
+   RETURN 'PASS';
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION pg_temp.removeAllFromTeamTest() RETURNS TEXT AS
+$$
+BEGIN
+   --Create two students and two teams
+   PERFORM ClassDB.createStudent('stu0_removeAllFromTeam', 'Student 0');
+   PERFORM ClassDB.createStudent('stu1_removeAllFromTeam', 'Student 1');
+   PERFORM ClassDB.createTeam('team0_removeAllFromTeam', 'Team 0');
+   PERFORM ClassDB.createTeam('team1_removeAllFromTeam', 'Team 1');
+   
+   --Add student 0 to team 0 and student 1 to team 0 and team 1
+   PERFORM ClassDB.addToTeam('stu0_removeAllFromTeam', 'team0_removeAllFromTeam');
+   PERFORM ClassDB.addToTeam('stu1_removeAllFromTeam', 'team0_removeAllFromTeam');
+   PERFORM ClassDB.addToTeam('stu1_removeAllFromTeam', 'team1_removeAllFromTeam');
+   
+   --Remove all from team 0 and check membership
+   PERFORM ClassDB.removeAllFromTeam('team0_removeAllFromTeam');
+   
+   IF NOT(NOT ClassDB.isMember('stu0_removeAllFromTeam', 'team0_removeAllFromTeam')
+      AND NOT ClassDB.isMember('stu1_removeAllFromTeam', 'team0_removeAllFromTeam')
+      AND ClassDB.isMember('stu1_removeAllFromTeam', 'team1_removeAllFromTeam'))
+   THEN
+      RETURN 'FAIL: Code 1';
+   END IF;
+   
+   --Ensure team was not removed
+   IF NOT ClassDB.isTeam('team0_removeAllFromTeam')
+   THEN
+      RETURN 'FAIL: Code 2';
+   END IF;
+   
+   --Add back student 0 to team 0 and verify
+   PERFORM ClassDB.addToTeam('stu0_removeAllFromTeam', 'team0_removeAllFromTeam');
+
+   IF NOT ClassDB.isMember('stu0_removeAllFromTeam', 'team0_removeAllFromTeam')
+   THEN
+      RETURN 'FAIL: Code 3';
+   END IF;
+   
+   RETURN 'PASS';
+END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION pg_temp.prepareClassDBTest() RETURNS VOID AS
 $$
 BEGIN
@@ -1246,6 +1465,9 @@ BEGIN
    RAISE INFO '%   dropTeamTest()', pg_temp.dropTeamTest();
    RAISE INFO '%   dropAllStudentsTest()', pg_temp.dropAllStudentsTest();
    RAISE INFO '%   dropAllTeamsTest()', pg_temp.dropAllTeamsTest();
+   RAISE INFO '%   addToTeamTest()', pg_temp.addToTeamTest();
+   RAISE INFO '%   removeFromTeamTest()', pg_temp.removeFromTeamTest();
+   RAISE INFO '%   removeAllFromTeamTest()', pg_temp.removeAllFromTeamTest();
 END;
 $$  LANGUAGE plpgsql;
 
