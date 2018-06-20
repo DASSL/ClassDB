@@ -39,8 +39,8 @@ $$;
 SET LOCAL client_min_messages TO WARNING;
 
 
---UPGRADE FROM 2.0 to 2.x
--- These statements are needed when upgrading ClassDB from 2.0 to 2.x, and can
+--UPGRADE FROM 2.0 to 2.1
+-- These statements are needed when upgrading ClassDB from 2.0 to 2.1, and can
 -- be removed in a future version
 DROP TABLE IF EXISTS ClassDB.PostgresLog; --Now a temp table in importConnectionLog
 DROP FUNCTION IF EXISTS ClassDB.importConnectionLog(DATE); --Return type changed
