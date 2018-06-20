@@ -63,6 +63,7 @@ BEGIN
       DROP USER unown01;
    END IF;
 
+
    --Create ClassDB users to test connection log importing
    PERFORM ClassDB.createStudent('constu01', 'con test student 01');
    PERFORM ClassDB.createStudent('constu02', 'con test student 02');
@@ -72,6 +73,7 @@ BEGIN
    --Create a non-ClassDB user to ensure their connections are not imported
    CREATE USER unown01 ENCRYPTED PASSWORD 'unown01';
    EXECUTE FORMAT('GRANT CONNECT ON DATABASE %I TO unown01', CURRENT_DATABASE());
+
 
    --Fill up the log with any existing connections
    PERFORM ClassDB.importConnectionLog();
@@ -94,6 +96,7 @@ END;
 $$;
 
 
+
 --Switch to different users to create connection activity
 -- the '-' tells psql to connect to the current database with the supplied
 -- user name
@@ -113,6 +116,8 @@ $$;
 \setenv PGPASSWORD conins01
 \c - conins01
 
+
+
 --Run the tests as instructor, to test effective permissions on relevant objects
 BEGIN TRANSACTION;
 
@@ -124,7 +129,7 @@ BEGIN
    -- Only check current date, since all new connections should be from the current
    -- log file
    IF (SELECT numEntries
-       FROM ClassDB.importConnectionLog(CURRENT_DATE)) <> 4 THEN
+       FROM ClassDB.importConnectionLog()) <> 4 THEN
 
       RAISE INFO 'FAIL: Code 1';
    ELSE
@@ -154,8 +159,10 @@ BEGIN
 
    --Check that each ClassDB test user has new associated activity rows added
    -- to the activity table. This test will fail one or more users are missing
-   -- associated rows. Use regexp_split_to_table to generate a temp. table containing
-   -- the test user names
+   -- associated rows.
+   --Use regexp_split_to_table to generate a temp. table containing
+   -- the test user names. The do the LEFT OUTER JOIN, and filter for rows that
+   -- do not exist in ClassDB.ConnectionActivity (WHERE C.UserName) IS NULL
    --Use the stored test start time to filter out old connections.
    IF EXISTS
    (
@@ -201,10 +208,12 @@ $$;
 ROLLBACK;
 
 
+
 --Prompt to relogin to the original executing user
 --Clear PGPASSWORD so user can enter their password
 \setenv PGPASSWORD
 \c - :POSTGRES_USER
+
 
 DO
 $$
