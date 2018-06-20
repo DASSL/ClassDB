@@ -75,8 +75,9 @@ LEFT OUTER JOIN
 (
   SELECT UserName,
   COUNT(*) AS ConnectionCount, --# of connections by user
-  MAX(AcceptedAtUTC) AS LastConnectionAtUTC --time of user's last connection
+  MAX(ActivityATUTC) AS LastConnectionAtUTC --time of user's last connection
   FROM ClassDB.ConnectionActivity
+  WHERE ActivityType = 'C'
   GROUP BY UserName
 ) AS C ON C.UserName = RoleName
 WHERE NOT IsTeam

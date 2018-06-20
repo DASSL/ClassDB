@@ -461,6 +461,26 @@ ALTER FUNCTION
 
 
 
+--Returns TRUE if columnName in schemaName.tableName exists
+CREATE OR REPLACE FUNCTION ClassDB.isColumnDefined(schemaName ClassDB.IDNameDomain,
+   tableName ClassDB.IDNameDomain, columnName ClassDB.IDNameDomain)
+   RETURNS BOOLEAN AS
+$$
+BEGIN
+    RETURN EXISTS (SELECT *
+                   FROM INFORMATION_SCHEMA.COLUMNS
+                   WHERE table_schema = ClassDB.foldPgID(schemaName)
+                   AND   table_name   = ClassDB.foldPgID(tableName)
+                   AND   column_Name  = ClassDB.foldPgID(columnName));
+END
+$$ LANGUAGE plpgsql
+   STABLE;
+
+ALTER FUNCTION ClassDB.isColumnDefined(ClassDB.IDNameDomain,
+   ClassDB.IDNameDomain, ClassDB.IDNameDomain)
+   OWNER TO ClassDB;
+
+
 --Define a function to retrieve specific capabilities a user has
 -- use this function to get status of different capabilities in one call
 

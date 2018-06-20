@@ -70,6 +70,19 @@ GRANT SELECT ON ClassDB.DDLActivity TO ClassDB_Instructor, ClassDB_DBManager;
 --UPGRADE FROM 2.0 TO 2.1
 -- These statements are needed when upgrading ClassDB from 2.0 to 2.1
 -- These can be removed in a future version of ClassDB
+--Rename AcceptedAtUTC o better reflect that disconnections are now captured
+-- No IF EXISTS for RENAME COLUMN, so we use a helper to check if the column needs
+-- to be renamed
+DO
+$$
+BEGIN
+   IF ClassDB.isColumnDefined('ClassDB', 'ConnectionActivity', 'AcceptedAtUTC') THEN
+      ALTER TABLE ClassDB.ConnectionActivity
+         RENAME COLUMN AcceptedAtUTC TO ActivityAtUTC;
+   END IF;
+END;
+$$;
+
 --ActivityType, SessionID, and ApplicationName are added to ConnectionActivity
 ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
    ADD COLUMN IF NOT EXISTS ActivityType CHAR(1) DEFAULT 'C'
@@ -79,7 +92,7 @@ ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
 ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
    ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL DEFAULT '00000000.00000000';
 
---Drop the temporary default
+--Drop the temporary default. DROP DEFAULT is idempotent
 ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
    ALTER COLUMN SessionID DROP DEFAULT;
 
