@@ -31,20 +31,17 @@
 
 SET SESSION client_min_messages TO WARNING;
 
---Tests for superuser privilege on current_user
+
+
 DO
 $$
 BEGIN
+   --Tests for superuser privilege on current_user
    IF NOT classdb.isSuperUser() THEN
       RAISE EXCEPTION 'Insufficient privileges: script must be run as a superuser';
    END IF;
-END
-$$;
 
 
-DO
-$$
-BEGIN
    --Remove test users, if they still exist
    --Need to gaurd these because they fail if the users do not exist
    IF ClassDB.isStudent('constu01') THEN
