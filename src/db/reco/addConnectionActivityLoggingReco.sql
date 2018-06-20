@@ -167,7 +167,7 @@ BEGIN
    --Get the timestamp (at UTC) of the latest connection activity entry. Then
    -- convert the timestamp to local time to get a 'best-guess' of the last log
    -- file data that was imported
-   lastConTimestampUTC = (SELECT MAX(AcceptedAtUTC)
+   lastConTimestampUTC = (SELECT MAX(ActivityAtUTC)
                           FROM ClassDB.ConnectionActivity);
 
    lastConDateLocal = date(ClassDB.ChangeTimeZone(lastConTimeStampUTC));
@@ -218,7 +218,7 @@ BEGIN
          AND database_name = CURRENT_DATABASE() --Only pick entries from current DB
          AND (message LIKE 'connection authorized%'
          OR   message LIKE 'disconnection%') --Only pick (dis)connection-related entries
-      RETURNING ClassDB.changeTimeZone(AcceptedAtUTC)::DATE AS logDate
+      RETURNING ClassDB.changeTimeZone(ActivityAtUTC)::DATE AS logDate
    )
    UPDATE pg_temp.ImportResult ir --Next, update the totals in the result table
    SET numEntries = COALESCE((SELECT COUNT(*)
