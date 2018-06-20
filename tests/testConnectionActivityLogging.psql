@@ -47,21 +47,21 @@ $$
 BEGIN
    --Remove test users, if they still exist
    --Need to gaurd these because they fail if the users do not exist
-   IF(EXISTS (SELECT TRUE FROM ClassDB.USER WHERE userName = 'constu01')) THEN
+   IF ClassDB.isStudent('constu01') THEN
       PERFORM ClassDB.dropStudent('constu01', TRUE, TRUE, 'drop_c');
    END IF;
-   IF(EXISTS (SELECT TRUE FROM ClassDB.USER WHERE userName = 'constu02')) THEN
+   IF ClassDB.isStudent('constu02') THEN
       PERFORM ClassDB.dropStudent('constu02', TRUE, TRUE, 'drop_c');
    END IF;
-   IF(EXISTS (SELECT TRUE FROM ClassDB.USER WHERE userName = 'condbm01')) THEN
+   IF ClassDB.isDBManager('condbm01') THEN
       PERFORM ClassDB.dropDBManager('condbm01', TRUE, TRUE, 'drop_c');
    END IF;
-   IF(EXISTS (SELECT TRUE FROM ClassDB.USER WHERE userName = 'conins01')) THEN
+   IF ClassDB.isInstructor('conins01') THEN
       PERFORM ClassDB.dropInstructor('conins01', TRUE, TRUE, 'drop_c');
    END IF;
 
    --Need to check if users exists to use DROP OWNED BY
-   IF(EXISTS (SELECT TRUE FROM pg_catalog.pg_roles WHERE rolname = 'unown01')) THEN
+   IF ClassDB.isServerRoleDefined('unown01') THEN
       DROP OWNED BY unown01; --Drops connect permissions granted to unown01
       DROP USER unown01;
    END IF;
