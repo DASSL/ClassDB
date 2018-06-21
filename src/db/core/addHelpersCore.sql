@@ -345,7 +345,6 @@ ALTER FUNCTION ClassDB.grantRole(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
 
-
 --Define a function to list all objects owned by a role. This query uses
 -- pg_class which lists all objects Postgres considers relations (tables, views,
 -- and types) and UNIONs with pg_proc include functions
@@ -393,7 +392,6 @@ GRANT EXECUTE ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain)
       TO ClassDB_Instructor, ClassDB_DBManager;
 
 
-
 --Define a function to list all 'orphan' objects owned by ClassDB_Instructor and
 -- ClassDB_DBManager. This will list all objects that were owned by a dropped instructor
 -- or dbmanager outside of their schema, which were then reassigned. By default, it
@@ -437,8 +435,121 @@ ALTER FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain) OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain)
-      TO ClassDB_Instructor, ClassDB_DBManager;
+   TO ClassDB_Instructor, ClassDB_DBManager;
 
+
+--Define a function to reassign ownership of an object. The executing user must
+-- have appropriate privileges to run statements that alter the object's 
+-- ownership. This includes privileges for the object, schema, and new owner
+--objectType must be one of 8 types that match the relation types from 
+-- pg_catalog.pg_class.relkind or the 9 from ClassDB.listOwnedObjects.kind.
+-- Foreign tables are not currently supported
+--Note that TOAST tables and indexes cannot, nor do they need to, be manually
+-- reassigned; they are automatically handled via the ownership of their
+-- corresponding table
+--Descendant tables of reassigned tables do not have their ownership changed
+--objectName must be an object in the current db, schema qualified if necessary
+--newOwner must be a valid server role
+--okIfNotExists determines whether exceptions are raised if the object does not
+-- exist (if true, notices are raised instead)
+CREATE OR REPLACE FUNCTION
+   ClassDB.reassignObjectOwnership(objectType VARCHAR(20),
+                                   objectName VARCHAR(63),
+                                   newOwner ClassDB.IDNameDomain
+                                    DEFAULT CURRENT_USER,
+                                   okIfNotExists BOOLEAN DEFAULT FALSE
+                                  )
+   RETURNS VOID AS
+$$
+BEGIN
+   
+   --stop if objectType matches TOAST table
+   $1 = LOWER(TRIM($1));
+   IF $1 = 't' OR $1 = 'toast' THEN
+      RAISE WARNING 'ownership of a TOAST tables is managed through ownership' 
+                    ' of its user table';
+      RETURN;
+   END IF;
+   
+   --stop if objectType matches Index
+   IF $1 = 'i' OR $1 = 'index' THEN
+      RAISE WARNING 'ownership of an index is managed though ownership of its'
+                    ' underlying table';
+      RETURN;
+   END IF;
+
+   --stop if objectType matches Foreign table (not tested)
+   IF $1 = 'f' OR $1 = 'foreign table' THEN
+      RAISE EXCEPTION 'transferring ownership of foreign tables is not currently'
+                       ' supported'
+            USING DETAIL  = 'foreign table name: "%"; requested new owner: "%"',
+                              $2, $3
+            USING HINT = 'manually transfer ownership using ALTER FOREIGN TABLE';
+   END IF;
+   
+   --match value of objectType to objects types that can be reassigned
+   IF $1 = 'r' OR $1 = 'table' THEN $1 = 'TABLE';
+   ELSEIF $1 = 's' OR $4 = 'sequence' THEN $1 = 'SEQUENCE';
+   ELSEIF $1 = 'v' OR $1 = 'view' THEN $1 = 'VIEW';
+   ELSEIF $1 = 'm' OR $1 = 'materialized view' THEN $1 = 'MATERIALIZED VIEW';
+   ELSEIF $1 = 'c' OR $1 = 'type' THEN $1 = 'TYPE';
+   ELSEIF $1 = 'f' OR $1 = 'foreign table' THEN $1 = 'FOREIGN TABLE';
+   ELSEIF $1 = 'function' THEN $1 = 'FUNCTION';
+   ELSE
+      --invalid type provided
+      RAISE EXCEPTION 'objectType "%" is not a valid object type for'
+                      ' ownership reassignment', $1;
+   END IF;
+   
+   --execute command to reassign ownership. A separate statement is used for
+   -- tables to avoid reassigning descendant tables
+   IF $1 = 'TABLE' THEN
+      IF $4 THEN
+         EXECUTE FORMAT('ALTER TABLE IF EXISTS ONLY %s OWNER TO %s', $2, $3);
+      ELSE
+         EXECUTE FORMAT('ALTER TABLE ONLY %s OWNER TO %s', $2, $3);
+      END IF;
+   ELSEIF $4 THEN
+      EXECUTE FORMAT('ALTER %s IF EXISTS %s OWNER TO %s', $1, $2, $3);
+   ELSE
+      EXECUTE FORMAT('ALTER %s %s OWNER TO $s', $1, $2, $3);
+   END IF;
+END;
+$$ LANGUAGE plpgsql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.reassignObjectOwnership(VARCHAR, VARCHAR,
+                                               ClassDB.IDNameDomain, BOOLEAN)
+   OWNER TO ClassDB;
+
+
+--Define a function to reassign ownership of objects within a specific schema
+-- that are owned by a specific role
+--schemaName must be an existing schema in the current database
+--oldOwner and newOwner must be existing server roles
+--Executes with the privileges of the executing user, meaning that the current
+-- security context must allow transferring the owned objects in question
+CREATE OR REPLACE FUNCTION
+   ClassDB.reassignOwnedInSchema(schemaName ClassDB.IDNameDomain,
+                                 oldOwner ClassDB.IDNameDomain,
+                                 newOwner ClassDB.IDNameDomain
+                                  DEFAULT CURRENT_USER
+                                )
+   RETURNS VOID AS
+$$
+BEGIN
+   --reassign ownership of each owned object in the specified schema
+   SELECT ClassDB.reassignObjectOwnership(lob.kind, $1 || '.' || lob.object, $3)
+   FROM ClassDB.listOwnedObjects($2) lob
+   WHERE lob.schema = ClassDB.foldPgID($1) AND lob.kind NOT IN('Index', 'TOAST');
+END;
+$$ LANGUAGE plpgsql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION
+   ClassDB.reassignOwnedInSchema(ClassDB.IDNameDomain, ClassDB.IDNameDomain,
+                                 ClassDB.IDNameDomain)
+   OWNER TO ClassDB;
 
 
 --Changes a timestamp in fromTimeZone to toTimeZone
@@ -458,7 +569,7 @@ $$ LANGUAGE sql
 ALTER FUNCTION
    ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
    OWNER TO ClassDB;
-
+ 
 
 
 --Define a function to retrieve specific capabilities a user has

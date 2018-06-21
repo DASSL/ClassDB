@@ -211,6 +211,187 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+--Define a temporary function to test two functions related to object
+--reassignment: ClassDB.reassignObjectOwnership and ClassDB.reassignOwnedInSchema
+CREATE OR REPLACE FUNCTION pg_temp.testOwnershipReassignment() RETURNS TEXT AS
+$$
+BEGIN
+   RETURN 'NOT IMPLEMENTED';
+
+--------------------------------------------------------------------------------
+--Test expected fundamental behavior of DB and ClassDB.reassignObjectOwnership
+   
+   --create two users for testing
+   CREATE USER user0_testOwnership;
+   CREATE USER user1_testOwnership;
+
+   --create schema for use by user 1
+   CREATE SCHEMA user1_testOwnership AUTHORIZATION user1_testOwnership;
+
+   --grant privileges on public schema to both users for testing purposes
+   GRANT CREATE ON SCHEMA public TO user0_testOwnership, user1_testOwnership;
+
+   --create table in public schema as user 0
+   SET SESSION AUTHORIZATION user0_testOwnership;
+   CREATE TABLE public.publicTestTable(col1 VARCHAR);
+   RESET SESSION AUTHORIZATION;
+
+   --create table in private schema as user 1
+   SET SESSION AUTHORIZATION user1_testOwnership;
+   CREATE TABLE user1_testOwnership.privateTestTable(col1 VARCHAR);
+   RESET SESSION AUTHORIZATION;
+
+   --verify that user 0 can insert into public table and is owner, while user 1
+   -- cannot read public table
+   IF NOT(pg_catalog.has_table_privilege(ClassDB.foldPgID('user0_testOwnership'),
+               ClassDB.foldPgID('public.publicTestTable'), 'insert')
+      AND EXISTS(
+                  SELECT * FROM pg_catalog.pg_tables
+                  WHERE schemaName = 'public' AND tableName = 'publictesttable'
+                        AND tableOwner = 'user0_testownership'
+                )
+      AND NOT pg_catalog.has_table_privilege(ClassDB.foldPgID('user1_testOwnership'),
+               ClassDB.foldPgID('public.publicTestTable'), 'select'))
+   THEN
+      RETURN 'FAIL: Code 1';
+   END IF;
+
+   --verify that user 1 can can read and is owner of private table, and user 0
+   -- cannot read private table and cannot access schema
+   IF NOT(pg_catalog.has_table_privilege(ClassDB.foldPgID('user1_testOwnership'),
+             ClassDB.foldPgID('user1_testOwnership.privateTestTable'), 'insert')
+      AND EXISTS(
+                  SELECT * FROM pg_catalog.pg_tables
+                  WHERE schemaName = 'user1_testownership'
+                        AND tableName = 'privatetesttable'
+                        AND tableOwner = 'user1_testownership'
+                )
+      AND NOT pg_catalog.has_table_privilege(ClassDB.foldPgID('user0_testOwnership'),
+                 ClassDB.foldPgId('user1_testOwnership.privateTestTable'), 'select')
+      AND NOT pg_catalog.has_schema_privilege(ClassDB.foldPgID('user0_testOwnership'),
+                 ClassDB.foldPgID('user1_testOwnership'), 'usage'))
+   THEN
+      RETURN 'FAIL: Code 2';
+   END IF;
+
+   --create third user to perform the reassignment. Both roles are granted to
+   -- this user since this is a requirement for reassigning ownership
+   CREATE USER user2_testOwnership;
+   GRANT user0_testOwnership, user1_testOwnership TO user2_testOwnership;
+
+   --reassign public object from user 0 to user 1
+   SET SESSION AUTHORIZATION user2_testOwnership;
+   PERFORM ClassDB.reassignObjectOwnership('Table', 'public.publicTestTable',
+                                           'user1_testOwnership');
+   RESET SESSION AUTHORIZATION;
+
+   --verify object reassignment
+   IF NOT(pg_catalog.has_table_privilege(ClassDB.foldPgID('user1_testOwnership'),
+               ClassDB.foldPgID('public.publicTestTable'), 'insert')
+      AND EXISTS(
+                  SELECT * FROM pg_catalog.pg_tables
+                  WHERE schemaName = 'public' AND tableName = 'publictesttable'
+                        AND tableOwner = 'user1_testownership'
+                )
+      AND NOT pg_catalog.has_table_privilege(ClassDB.foldPgID('user0_testOwnership'),
+               ClassDB.foldPgID('public.publicTestTable'), 'select'))
+   THEN
+      RETURN 'FAIL: Code 3';
+   END IF;
+
+   --reassign private object from user 1 to user 0, should be possible, despite
+   -- user 0 still not having access due to schema-level restrictions
+   SET SESSION AUTHORIZATION user2_testOwnership;
+   PERFORM ClassDB.reassignObjectOwnership('Table',
+                                           'user1_testOwnership.privateTestTable',
+                                           'user0_testOwnership');
+   RESET SESSION AUTHORIZATION;
+
+   --verify object reassignment
+   IF NOT(pg_catalog.has_table_privilege(ClassDB.foldPgID('user0_testOwnership'),
+               ClassDB.foldPgID('user1_testOwnership.privateTestTable'), 'insert')
+      AND EXISTS(
+                  SELECT * FROM pg_catalog.pg_tables
+                  WHERE schemaName = 'user1_testOwnership'
+                        AND tableName = 'privatetesttable'
+                        AND tableOwner = 'user0_testownership'
+                )
+      AND NOT pg_catalog.has_table_privilege(ClassDB.foldPgID('user1_testOwnership'),
+               ClassDB.foldPgID('user1_testOwnership.privateTestTable'), 'select')
+      AND NOT pg_catalog.has_table_privilege(ClassDB.foldPgID('user0_testOwnership'),
+               ClassDB.foldPgID('public.publicTestTable'), 'select'))
+   THEN
+      RETURN 'FAIL: Code 4';
+   END IF;
+
+   --cleanup before next set of tests
+   DROP TABLE public.publicTestTable;
+   DROP TABLE user1_testOwnership.privateTestTable;
+
+--------------------------------------------------------------------------------
+--Test fundamental behavior of ClassDB.reassignOwnedInSchema. Also tests
+-- reassigning ownership of all valid types in ClassDB.reassignObjectOwnership
+
+   --create shared schema, granting access to user 0 and user 1
+   CREATE SCHEMA shared_testOwnership;
+   GRANT CREATE ON shared_testOwnership
+      TO user0_testOwnership, user1_testOwnership;
+
+   --create test object of each type as user 1 in shared and public schema
+   --NOTE: Foreign tables are not tested
+   SET SESSION AUTHORIZATION user1_testOwnership;
+
+   CREATE TABLE shared_testOwnership.sharedTestTable(col1 VARCHAR);
+   CREATE INDEX sharedTestIndex ON shared_testOwnership.sharedTestTable (col1);
+   CREATE SEQUENCE shared_testOwnership.sharedTestSequence;
+   CREATE VIEW shared_testOwnership.sharedTestView AS
+      (SELECT * FROM shared_testOwnership.sharedTestTable);
+   CREATE MATERIALIZED VIEW shared_testOwnership.sharedTestMatView AS
+      (SELECT * FROM shared_testOwnership.sharedTestTable);
+   CREATE TYPE shared_testOwnership.sharedTestType AS ENUM ('testValue');
+   CREATE FUNCTION shared_testOwnership.sharedTestFunction
+      RETURNS VOID AS '' LANGUAGE SQL;
+
+   CREATE TABLE public.publicTestTable(col1 VARCHAR);
+   CREATE INDEX publicTestIndex ON public.publicTestTable (col1);
+   CREATE SEQUENCE public.publicTestSequence;
+   CREATE VIEW public.publicTestView AS
+      (SELECT * FROM public.publicTestTable);
+   CREATE MATERIALIZED VIEW public.publicTestMatView AS
+      (SELECT * FROM public.publicTestTable);
+   CREATE TYPE public.publicTestType AS ENUM ('testValue');
+   CREATE FUNCTION public.publicTestFunction
+      RETURNS VOID AS '' LANGUAGE SQL;
+
+   RESET SESSION AUTHORIZATION;
+
+   --reassign objects owned by user 1 in shared schema to user 0, objects that
+   -- were in public schema should remain owned by user 1
+   PERFORM ClassDB.reassignOwnedInSchema('shared_testOwnership',
+      'user1_testOwnership', 'user0_testOwnership');
+
+   --verify that user 0 now owns the objects
+   IF NOT (# = SELECT COUNT(*) FROM pg_catalog.pg_class 
+           WHERE relName IN (ClassDB.foldPgID('sharedTestTable'),
+                             ClassDB.foldPgID('sharedTestIndex'),
+                             ClassDB.foldPgID('sharedTestSequence'),
+                             ClassDB.foldPgID('sharedTestView'),
+                             ClassDB.foldPgID('sharedTestMatView'),
+                             ClassDB.foldPgID('sharedTestTable'),
+                             ClassDB.foldPgID('sharedTestType
+                              
+            
+
+   --test all object types
+   --test in shared schema
+   --test different capitalizations and valid inputs
+   --test assigning to default role
+   --test assigning to group role
+   --test okIfExists
+   RETURN 'PASS';
+END;
+$$ LANGUGAE plpgsql;
+
 --Define a driver function to test helper functions
 CREATE OR REPLACE FUNCTION pg_temp.testHelperFunctions() RETURNS VOID AS
 $$
@@ -248,10 +429,13 @@ BEGIN
    DROP USER testUser1_Login;
    DROP USER testUser2_NoLogin;
 
-   --test functions not tested so far
+   --test certain miscellaneous functions
    RAISE INFO '%   Miscellany',
       pg_temp.testMiscellany();
 
+   --test ownership reassignment
+   RAISE INFO '%   OwnershipReassignment',
+      pg_temp.testOwnershipReassignment();
 END;
 $$  LANGUAGE plpgsql;
 

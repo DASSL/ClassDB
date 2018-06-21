@@ -824,7 +824,7 @@ BEGIN
       --Transfer ownership of team objects that were owned by the member being
       -- removed. This avoid issues with future DROP/REASSIGN OWNED BY that
       -- target the removed member (such as when a user is dropped from ClassDB)
-      
+      --PERFORM ClassDB.reassignOwnedInSchema(ClassDB.getSchemaName($2), $1, $2);
       
       --revoke team from student
       EXECUTE FORMAT('REVOKE %s FROM %s', $2, $1);
