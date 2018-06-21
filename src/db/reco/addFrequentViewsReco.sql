@@ -43,7 +43,7 @@ $$;
 -- These statements are needed when upgrading ClassDB from 2.0 to 2.1
 -- These can be removed in a future version of ClassDB
 
---Remove functions which have had their return types changed, and their dependents
+--Remove functions which have had their return types changed and their dependents
 -- We avoid using DROP...CASACDE in case users have created custom objects based on
 -- ClassDB objects
 DROP VIEW IF EXISTS public.MyActivity;
@@ -318,10 +318,9 @@ ALTER VIEW public.MyDDLActivity OWNER TO ClassDB;
 GRANT SELECT ON public.MyDDLActivity TO PUBLIC;
 
 
---
 
---This function returns all connection activity for a specified user. Passing
--- NULL returns data for all users
+--This function returns all connection activity for a specified user. This includes
+-- all connections and disconnections. Passing NULL returns data for all users
 CREATE OR REPLACE FUNCTION ClassDB.getUserConnectionActivity(
    userName ClassDB.IDNameDomain DEFAULT NULL)
 RETURNS TABLE
@@ -380,9 +379,10 @@ GRANT SELECT ON public.MyConnectionActivity TO PUBLIC;
 
 --This function returns all activity for a specified user. Passing NULL provides
 -- data for all users. This function returns both connection and DDL activity.
--- The ActivityType column specifies this, either 'Connection' or 'DDL'. For
--- connection activity rows, the DDLOperation and DDLObject columns are not
--- applicable, will be NULL
+-- The ActivityType column specifies this, either 'Connection', 'Disconnection',
+-- or 'DDL'. For connection activity rows, the DDLOperation and DDLObject columns
+-- are not applicable, will be NULL. Likewise, SessionID and ApplicationID are
+-- not applicable to DDL activity.
 CREATE OR REPLACE FUNCTION ClassDB.getUserActivity(userName ClassDB.IDNameDomain
    DEFAULT NULL)
 RETURNS TABLE
