@@ -441,17 +441,16 @@ GRANT EXECUTE ON FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain)
 --Define a function to reassign ownership of an object. The executing user must
 -- have appropriate privileges to run statements that alter the object's 
 -- ownership. This includes privileges for the object, schema, and new owner
---objectType must be one of 8 types that match the relation types from 
--- pg_catalog.pg_class.relkind or the 9 from ClassDB.listOwnedObjects.kind.
--- Foreign tables are not currently supported
---Note that TOAST tables and indexes cannot, nor do they need to, be manually
--- reassigned; they are automatically handled via the ownership of their
+--objectType must be one of the types that are identified by
+-- ClassDB.listOwnedObjects() NOTE: Foreign tables are not currently supported
+--Note that reassignment of TOAST tables and indexes is not necessary, nor
+-- possible. They are automatically handled via the ownership of their
 -- corresponding table
 --Descendant tables of reassigned tables do not have their ownership changed
 --objectName must be an object in the current db, schema qualified if necessary
 --newOwner must be a valid server role
 --okIfNotExists determines whether exceptions are raised if the object does not
--- exist (if true, notices are raised instead)
+-- exist (if true, notices are raised if the object does not exist)
 CREATE OR REPLACE FUNCTION
    ClassDB.reassignObjectOwnership(objectType VARCHAR(20),
                                    objectName VARCHAR(63),
@@ -465,21 +464,21 @@ BEGIN
    
    --stop if objectType matches TOAST table
    $1 = LOWER(TRIM($1));
-   IF $1 = 't' OR $1 = 'toast' THEN
+   IF $1 = 'toast' THEN
       RAISE WARNING 'ownership of a TOAST tables is managed through ownership' 
                     ' of its user table';
       RETURN;
    END IF;
    
    --stop if objectType matches Index
-   IF $1 = 'i' OR $1 = 'index' THEN
+   IF $1 = 'index' THEN
       RAISE WARNING 'ownership of an index is managed though ownership of its'
                     ' underlying table';
       RETURN;
    END IF;
 
    --stop if objectType matches Foreign table (not tested)
-   IF $1 = 'f' OR $1 = 'foreign table' THEN
+   IF $1 = 'foreign table' THEN
       RAISE EXCEPTION 'transferring ownership of foreign tables is not currently'
                        ' supported'
             USING DETAIL  = 'foreign table name: "%"; requested new owner: "%"',
@@ -488,12 +487,11 @@ BEGIN
    END IF;
    
    --match value of objectType to objects types that can be reassigned
-   IF $1 = 'r' OR $1 = 'table' THEN $1 = 'TABLE';
-   ELSEIF $1 = 's' OR $4 = 'sequence' THEN $1 = 'SEQUENCE';
-   ELSEIF $1 = 'v' OR $1 = 'view' THEN $1 = 'VIEW';
-   ELSEIF $1 = 'm' OR $1 = 'materialized view' THEN $1 = 'MATERIALIZED VIEW';
-   ELSEIF $1 = 'c' OR $1 = 'type' THEN $1 = 'TYPE';
-   ELSEIF $1 = 'f' OR $1 = 'foreign table' THEN $1 = 'FOREIGN TABLE';
+   IF $1 = 'table' THEN $1 = 'TABLE';
+   ELSEIF $1 = 'sequence' THEN $1 = 'SEQUENCE';
+   ELSEIF $1 = 'view' THEN $1 = 'VIEW';
+   ELSEIF OR $1 = 'materialized view' THEN $1 = 'MATERIALIZED VIEW';
+   ELSEIF OR $1 = 'type' THEN $1 = 'TYPE';
    ELSEIF $1 = 'function' THEN $1 = 'FUNCTION';
    ELSE
       --invalid type provided
