@@ -87,12 +87,12 @@ BEGIN
       INSERT INTO ClassDB.DDLActivity
       VALUES ('s1', CURRENT_TIMESTAMP, 'test_DDL_op', 'test_DDL_object');
 
-      RAISE INFO '%   DDLActivity reject non-user insert', 'PASS';
+      RAISE INFO '%   DDLActivity accept user insert', 'PASS';
    EXCEPTION
       WHEN raise_exception THEN
-         RAISE INFO '%   DDLActivity reject non-user insert', 'FAIL; Code 4';
+         RAISE INFO '%   DDLActivity accept user insert', 'FAIL; Code 4';
       WHEN OTHERS THEN
-         RAISE INFO '%   DDLActivity reject non-user insert', 'FAIL; Code 4'
+         RAISE INFO '%   DDLActivity accept user insert', 'FAIL; Code 4'
                     USING DETAIL = SQLERRM;
    END;
 
@@ -101,38 +101,38 @@ BEGIN
    BEGIN
       INSERT INTO ClassDB.ConnectionActivity VALUES ('s1', CURRENT_TIMESTAMP);
 
-      RAISE INFO '%   ConnectionActivity reject non-user insert', 'PASS';
+      RAISE INFO '%   ConnectionActivity accept user insert', 'PASS';
    EXCEPTION
       WHEN raise_exception THEN
-         RAISE INFO '%   ConnectionActivity reject non-user insert',
-                    'FAIL; Code 4';
+         RAISE INFO '%   ConnectionActivity accept user insert',
+                    'FAIL; Code 5';
       WHEN OTHERS THEN
-         RAISE INFO '%   ConnectionActivity reject non-user insert',
-                    'FAIL; Code 4'
+         RAISE INFO '%   ConnectionActivity accept user insert',
+                    'FAIL; Code 5'
                     USING DETAIL = SQLERRM;
    END;
 
    --table DDLActivity should not be updatable
    BEGIN
       UPDATE ClassDB.DDLActivity SET StatementStartedAtUTC = CURRENT_TIMESTAMP;
-      RAISE INFO '%   DDLActivity reject update', 'FAIL; Code 5';
+      RAISE INFO '%   DDLActivity reject update', 'FAIL; Code 6';
    EXCEPTION
       WHEN raise_exception THEN
          RAISE INFO '%   DDLActivity reject update', 'PASS';
       WHEN OTHERS THEN
-         RAISE INFO '%   DDLActivity reject update', 'FAIL; Code 5'
+         RAISE INFO '%   DDLActivity reject update', 'FAIL; Code 6'
                     USING DETAIL = SQLERRM;
    END;
 
    --table ConnectionActivity should not be updatable
    BEGIN
       UPDATE ClassDB.ConnectionActivity SET AcceptedAtUTC = CURRENT_TIMESTAMP;
-      RAISE INFO '%   ConnectionActivity reject update', 'FAIL; Code 6';
+      RAISE INFO '%   ConnectionActivity reject update', 'FAIL; Code 7';
    EXCEPTION
       WHEN raise_exception THEN
          RAISE INFO '%   ConnectionActivity reject update', 'PASS';
       WHEN OTHERS THEN
-         RAISE INFO '%   ConnectionActivity reject update', 'FAIL; Code 6'
+         RAISE INFO '%   ConnectionActivity reject update', 'FAIL; Code 7'
                     USING DETAIL = SQLERRM;
    END;
 
