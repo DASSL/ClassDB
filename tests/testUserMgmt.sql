@@ -112,9 +112,10 @@ BEGIN
                     USING DETAIL = SQLERRM;
    END;
 
+
    --table DDLActivity should not be updatable
    BEGIN
-      UPDATE ClassDB.DDLActivity SET StatementStartedAtUTC = CURRENT_TIMESTAMP;
+      UPDATE ClassDB.DDLActivity SET UserName = CURRENT_USER;
       RAISE INFO '%   DDLActivity reject update', 'FAIL; Code 6';
    EXCEPTION
       WHEN raise_exception THEN
@@ -124,9 +125,10 @@ BEGIN
                     USING DETAIL = SQLERRM;
    END;
 
+
    --table ConnectionActivity should not be updatable
    BEGIN
-      UPDATE ClassDB.ConnectionActivity SET AcceptedAtUTC = CURRENT_TIMESTAMP;
+      UPDATE ClassDB.ConnectionActivity SET UserName = CURRENT_USER;
       RAISE INFO '%   ConnectionActivity reject update', 'FAIL; Code 7';
    EXCEPTION
       WHEN raise_exception THEN
