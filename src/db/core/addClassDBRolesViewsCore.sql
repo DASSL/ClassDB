@@ -131,5 +131,45 @@ ALTER VIEW ClassDB.DBManager OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.DBManager FROM PUBLIC;
 GRANT SELECT ON ClassDB.DBManager TO ClassDB_Instructor, ClassDB_DBManager;
 
+--Define a view to return Team members and thier respective team
+-- creates a derived table containing all teams for a self-join
+CREATE OR REPLACE VIEW ClassDB.TeamMember AS
+  SELECT R.TeamName, RoleName AS MemberName
+FROM ClassDB.RoleBase
+INNER JOIN
+(
+  SELECT RoleName AS TeamName
+  FROM ClassDB.RoleBase
+  WHERE IsTeam
+) AS R ON ClassDB.isMember(Rolename, R.TeamName)
+WHERE TeamName IS NOT NULL AND NOT isTeam
+ORDER BY TeamName;
+
+
+ALTER VIEW ClassDB.TeamMember OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.User FROM PUBLIC;
+GRANT SELECT ON ClassDB.TeamMember TO ClassDB_Instructor, ClassDB_DBManager;
+
+--Define a view to return known teams with thier RoleName, FullName, SchemaName,
+-- ExtraInfo and Member count
+-- creates derived a table w/ team-specific aggregate MemberCount over the view
+-- ClassDB.TeamMember
+CREATE OR REPLACE VIEW ClassDB.Team AS
+  SELECT RoleName AS TeamName,
+  FullName, SchemaName, ExtraInfo, MemberCount
+FROM ClassDB.RoleBase
+INNER JOIN
+(
+  SELECT TeamName, count(*) AS MemberCount
+  FROM ClassDB.TeamMember
+  GROUP BY TeamName
+) AS T2 ON T2.TeamName = RoleName
+Where isTeam;
+
+
+ALTER VIEW ClassDB.Team OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.Team FROM PUBLIC;
+GRANT SELECT ON ClassDB.Team TO ClassDB_Instructor, ClassDB_DBManager;
+
 
 COMMIT;
