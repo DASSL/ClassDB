@@ -13,9 +13,7 @@
 
 --This script should be run as a superuser
 
---This script tests the functionality in addUserMgmt.sql
--- only nominal tests are covered presently
--- need to plan a test for cases that should cause exceptions
+--This script tests the functionality in addUserMgmtCore.sql
 
 
 START TRANSACTION;
@@ -35,43 +33,108 @@ DO
 $$
 BEGIN
 
-   --make sure the activity tables are empty
-   RAISE INFO '%   EXISTS(ClassDB.DDLActivity)',
-      CASE EXISTS(SELECT * FROM ClassDB.DDLActivity)
-         WHEN TRUE THEN 'FAIL: Code 1'
-         ELSE 'PASS'
-      END;
+   --triggers should be defined
+   IF EXISTS (SELECT trigger_name FROM INFORMATION_SCHEMA.triggers
+              WHERE trigger_schema = 'classdb'
+                    AND trigger_name IN('rejectnonuserddlactivityinsert',
+             			                   'rejectnonuserconnectionactivityinsert',
+                                        'rejectddlactivityupdate',
+                                        'rejectconnectionactivityupdate'
+                                       )
+             )
+   THEN
+      RAISE INFO '%   triggers', 'PASS';
+   ELSE
+      RAISE INFO '%   triggers', 'FAIL: Code 1';
+   END IF;
 
-   RAISE INFO '%   EXISTS(ClassDB.ConnectionActivity)',
-      CASE EXISTS(SELECT * FROM ClassDB.ConnectionActivity)
-         WHEN TRUE THEN 'FAIL: Code 2'
-         ELSE 'PASS'
-      END;
 
-   --create a new user: activities can only be inserted for known users
-   PERFORM ClassDB.createRole('u1', 'u1 name', FALSE);
+   --table DDLActivity should reject rows for non-Classdb users
+   BEGIN
+      INSERT INTO ClassDB.DDLActivity
+      VALUES ('nosuchuser', CURRENT_TIMESTAMP, 'test_DDL_op', 'test_DDL_object');
 
-   --directly insert a row into DDLActivity
-   INSERT INTO ClassDB.DDLActivity
-   VALUES ('u1', CURRENT_TIMESTAMP, 'DROP TABLE', 'pg_temp.sample');
+      RAISE INFO '%   DDLActivity reject non-user insert', 'FAIL; Code 2';
+   EXCEPTION
+      WHEN raise_exception THEN
+         RAISE INFO '%   DDLActivity reject non-user insert', 'PASS';
+      WHEN OTHERS THEN
+         RAISE INFO '%   DDLActivity reject non-user insert', 'FAIL; Code 2'
+                    USING DETAIL = SQLERRM;
+   END;
 
-   --DDLActivity should have one row
-   RAISE INFO '%   COUNT(ClassDB.DDLActivity)',
-      CASE (SELECT COUNT(*) FROM ClassDB.DDLActivity)
-         WHEN 1 THEN 'PASS'
-         ELSE 'FAIL: Code 3'
-      END;
 
-   --directly insert a row into ConnectionActivity
-   INSERT INTO ClassDB.ConnectionActivity
-   VALUES ('u1', CURRENT_TIMESTAMP);
+   --table ConnectionActivity should reject rows for non-Classdb users
+   BEGIN
+      INSERT INTO ClassDB.ConnectionActivity
+      VALUES ('nosuchuser', CURRENT_TIMESTAMP);
 
-   --ConnectionActivity should have one row
-   RAISE INFO '%   COUNT(ClassDB.ConnectionActivity)',
-      CASE (SELECT COUNT(*) FROM ClassDB.ConnectionActivity)
-         WHEN 1 THEN 'PASS'
-         ELSE 'FAIL: Code 3'
-      END;
+      RAISE INFO '%   ConnectionActivity reject non-user insert', 'FAIL; Code 3';
+   EXCEPTION
+      WHEN raise_exception THEN
+         RAISE INFO '%   ConnectionActivity reject non-user insert', 'PASS';
+      WHEN OTHERS THEN
+         RAISE INFO '%   ConnectionActivity reject non-user insert',
+                    'FAIL; Code 3'
+                    USING DETAIL = SQLERRM;
+   END;
+
+
+   --table DDLActivity should permit rows for known ClassDB users
+   PERFORM ClassDB.createStudent('s1', 's1 name');
+
+   BEGIN
+      INSERT INTO ClassDB.DDLActivity
+      VALUES ('s1', CURRENT_TIMESTAMP, 'test_DDL_op', 'test_DDL_object');
+
+      RAISE INFO '%   DDLActivity reject non-user insert', 'PASS';
+   EXCEPTION
+      WHEN raise_exception THEN
+         RAISE INFO '%   DDLActivity reject non-user insert', 'FAIL; Code 4';
+      WHEN OTHERS THEN
+         RAISE INFO '%   DDLActivity reject non-user insert', 'FAIL; Code 4'
+                    USING DETAIL = SQLERRM;
+   END;
+
+
+   --table ConnectionActivity should permit rows for known ClassDB users
+   BEGIN
+      INSERT INTO ClassDB.ConnectionActivity VALUES ('s1', CURRENT_TIMESTAMP);
+
+      RAISE INFO '%   ConnectionActivity reject non-user insert', 'PASS';
+   EXCEPTION
+      WHEN raise_exception THEN
+         RAISE INFO '%   ConnectionActivity reject non-user insert',
+                    'FAIL; Code 4';
+      WHEN OTHERS THEN
+         RAISE INFO '%   ConnectionActivity reject non-user insert',
+                    'FAIL; Code 4'
+                    USING DETAIL = SQLERRM;
+   END;
+
+   --table DDLActivity should not be updatable
+   BEGIN
+      UPDATE ClassDB.DDLActivity SET StatementStartedAtUTC = CURRENT_TIMESTAMP;
+      RAISE INFO '%   DDLActivity reject update', 'FAIL; Code 5';
+   EXCEPTION
+      WHEN raise_exception THEN
+         RAISE INFO '%   DDLActivity reject update', 'PASS';
+      WHEN OTHERS THEN
+         RAISE INFO '%   DDLActivity reject update', 'FAIL; Code 5'
+                    USING DETAIL = SQLERRM;
+   END;
+
+   --table ConnectionActivity should not be updatable
+   BEGIN
+      UPDATE ClassDB.ConnectionActivity SET AcceptedAtUTC = CURRENT_TIMESTAMP;
+      RAISE INFO '%   ConnectionActivity reject update', 'FAIL; Code 6';
+   EXCEPTION
+      WHEN raise_exception THEN
+         RAISE INFO '%   ConnectionActivity reject update', 'PASS';
+      WHEN OTHERS THEN
+         RAISE INFO '%   ConnectionActivity reject update', 'FAIL; Code 6'
+                    USING DETAIL = SQLERRM;
+   END;
 
 END
 $$;
