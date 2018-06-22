@@ -779,4 +779,33 @@ ALTER FUNCTION ClassDB.isColumnDefined(ClassDB.IDNameDomain,
    ClassDB.IDNameDomain, ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
+
+
+--Define a function that returns the SessionID of the calling user
+--Postgres provides no function to obtain SessionID, however the creation of SessionID
+-- is described in the documentation for log_line_prefix:
+--https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html
+--SessionID is made up of the hex encoding of the epoch time of the connection
+-- start timestamp and hex encoding of the connection PID concatenated with a
+-- '.' in between
+CREATE OR REPLACE FUNCTION ClassDB.getSessionID()
+   RETURNS VARCHAR(17) AS
+$$
+   SELECT to_hex(trunc(EXTRACT(EPOCH FROM backend_start))::integer) || '.' ||
+          to_hex(pid)
+   FROM pg_stat_activity
+   WHERE pid = pg_backend_pid();
+$$ LANGUAGE sql
+   STABLE
+   SECURITY DEFINER; --This function is executed with superuser permissions because
+                     -- only superusers have full access to pg_stat_activity.
+                     -- Executing as a regular user results in unexpected
+                     -- return of NULL in some contexts 
+
+REVOKE ALL ON FUNCTION ClassDB.getSessionID() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ClassDB.getSessionID()
+   TO ClassDB_Instructor, ClassDB_DBManager, ClassDB;
+
+
+
 COMMIT;

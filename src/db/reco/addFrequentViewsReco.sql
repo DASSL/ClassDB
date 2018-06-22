@@ -60,6 +60,10 @@ DROP VIEW IF EXISTS public.MyConnectionActivity;
 DROP FUNCTION IF EXISTS public.getMyConnectionActivity();
 DROP FUNCTION IF EXISTS ClassDB.getUserConnectionActivity(ClassDB.IDNameDomain);
 
+DROP VIEW IF EXISTS public.MyDDLActivity;
+DROP FUNCTION IF EXISTS public.getMyDDLActivity();
+DROP FUNCTION IF EXISTS ClassDB.getUserDDLActivity(ClassDB.IDNameDomain);
+
 
 
 --This view returns all tables and views owned by student users
@@ -268,12 +272,12 @@ CREATE OR REPLACE FUNCTION ClassDB.getUserDDLActivity(
    userName ClassDB.IDNameDomain DEFAULT NULL)
 RETURNS TABLE
 (
-   UserName ClassDB.IDNameDomain, StatementStartedAt TIMESTAMP,
+   UserName ClassDB.IDNameDomain, StatementStartedAt TIMESTAMP, SessionID VARCHAR(17),
    DDLOperation VARCHAR, DDLObject VARCHAR
 ) AS
 $$
    SELECT UserName, ClassDB.changeTimeZone(StatementStartedAtUTC) StatementStartedAt,
-          DDLOperation, DDLObject
+          SessionID, DDLOperation, DDLObject
    FROM ClassDB.DDLActivity
    WHERE UserName LIKE COALESCE(ClassDB.foldPgID($1), '%')
    ORDER BY UserName, StatementStartedAt DESC;
@@ -294,10 +298,11 @@ GRANT EXECUTE ON FUNCTION ClassDB.getUserDDLActivity(ClassDB.IDNameDomain)
 CREATE OR REPLACE FUNCTION public.getMyDDLActivity()
 RETURNS TABLE
 (
-   StatementStartedAt TIMESTAMP, DDLOperation VARCHAR, DDLObject VARCHAR
+   StatementStartedAt TIMESTAMP, SessionID VARCHAR(17), DDLOperation VARCHAR,
+   DDLObject VARCHAR
 ) AS
 $$
-   SELECT StatementStartedAt, DDLOperation, DDLObject
+   SELECT StatementStartedAt, SessionID, DDLOperation, DDLObject
    FROM ClassDB.getUserDDLActivity(SESSION_USER::ClassDB.IDNameDomain);
 $$ LANGUAGE sql
    STABLE
@@ -310,7 +315,7 @@ ALTER FUNCTION public.getMyDDLActivity() OWNER TO ClassDB;
 --This view wraps getMyDDLActivity() for easier student access
 CREATE OR REPLACE VIEW public.MyDDLActivity AS
 (
-   SELECT StatementStartedAt, DDLOperation, DDLObject
+   SELECT StatementStartedAt, SessionID, DDLOperation, DDLObject
    FROM public.getMyDDLActivity()
 );
 
@@ -395,7 +400,7 @@ RETURNS TABLE
 ) AS
 $$
    --Postgres requires casting NULL to IDNameDomain, it will not do this coercion
-   SELECT UserName, StatementStartedAt AS ActivityAt, 'DDL Query', NULL,
+   SELECT UserName, StatementStartedAt AS ActivityAt, 'DDL Query', SessionID,
           NULL::ClassDB.IDNameDomain, DDLOperation, DDLObject
    FROM ClassDB.getUserDDLActivity(COALESCE($1, '%'))
    UNION ALL
