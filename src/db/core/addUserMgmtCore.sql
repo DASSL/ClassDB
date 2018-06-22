@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS ClassDB.DDLActivity
    CHECK(TRIM(DDLOperation) <> ''),
   DDLObject VARCHAR NOT NULL --name of the object of the DDL operation
    CHECK(TRIM(DDLObject) <> ''),
-  SessionID VARCHAR(17) NOT NULL
+  SessionID VARCHAR(17) NOT NULL CHECK(TRIM(SessionID) <> '')
 );
 
 
@@ -86,7 +86,8 @@ BEGIN
       -- is added (which is an error). We use a temporary default to get around this.
       --Set a temporary default to add a value to existing rows
       ALTER TABLE IF EXISTS ClassDB.DDLActivity
-         ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL DEFAULT '00000000.00000000';
+         ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL DEFAULT '00000000.00000000'
+            CHECK(TRIM(SessionID) <> '');
 
       --Drop the temporary default. DROP DEFAULT is idempotent
       ALTER TABLE IF EXISTS ClassDB.DDLActivity
@@ -94,7 +95,7 @@ BEGIN
    ELSE
       --Otherwise simply add the new column
       ALTER TABLE IF EXISTS ClassDB.DDLActivity
-         ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL;
+         ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL CHECK(TRIM(SessionID) <> '');
    END IF;
 END;
 $$ LANGUAGE plpgsql;
@@ -109,7 +110,7 @@ BEGIN
    IF  NOT ClassDB.isColumnDefined('ClassDB', 'DDLActivity', 'SessionID')
    THEN
       PERFORM pg_temp.upgradeDDLActivity_20_21();
-    END IF;
+   END IF;
  END;
  $$;
 
