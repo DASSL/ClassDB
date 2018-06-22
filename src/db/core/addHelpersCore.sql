@@ -461,22 +461,22 @@ $$
 BEGIN
    
    --stop if objectType matches TOAST table
-   $1 = LOWER(TRIM($1));
-   IF $1 = 'toast' THEN
+   $1 = UPPER(TRIM($1));
+   IF $1 = 'TOAST' THEN
       RAISE WARNING 'ownership of a TOAST tables is managed through ownership' 
                     ' of its user table';
       RETURN;
    END IF;
    
    --stop if objectType matches Index
-   IF $1 = 'index' THEN
+   IF $1 = 'INDEX' THEN
       RAISE WARNING 'ownership of an index is managed though ownership of its'
                     ' underlying table';
       RETURN;
    END IF;
 
    --stop if objectType matches Foreign table (not tested)
-   IF $1 = 'foreign table' THEN
+   IF $1 = 'FOREIGN TABLE' THEN
       RAISE EXCEPTION 'transferring ownership of foreign tables is not currently'
                        ' supported'
             USING DETAIL = FORMAT('foreign table name: "%s" requested new owner:'
@@ -485,13 +485,9 @@ BEGIN
    END IF;
    
    --match value of objectType to objects types that can be reassigned
-   IF $1 = 'table' THEN $1 = 'TABLE';
-   ELSEIF $1 = 'sequence' THEN $1 = 'SEQUENCE';
-   ELSEIF $1 = 'view' THEN $1 = 'VIEW';
-   ELSEIF $1 = 'materialized view' THEN $1 = 'MATERIALIZED VIEW';
-   ELSEIF $1 = 'type' THEN $1 = 'TYPE';
-   ELSEIF $1 = 'function' THEN $1 = 'FUNCTION';
-   ELSE
+   IF $1 NOT IN ('TABLE', 'SEQUENCE', 'VIEW', 'MATERIALIZED VIEW', 'TYPE',
+                  'FUNCTION')
+   THEN
       --invalid type provided
       RAISE EXCEPTION 'objectType "%" is not a valid object type for'
                       ' ownership reassignment', $1;
