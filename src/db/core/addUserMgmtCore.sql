@@ -139,10 +139,6 @@ BEGIN
       --First DROP dependents
       -- We avoid using DROP CASCADE in case users have defined their own
       -- depenent objects
-      RAISE WARNING  'user views have been removed and must be recreated'
-      USING DETAIL = 'User views are dependent on ClassDB.ConnectionActivity and must be dropped',
-            HINT   = 'Please run addClassDBRolesViewsCore.sql to recreate them';
-
       DROP VIEW IF EXISTS ClassDB.Student;
       DROP VIEW IF EXISTS ClassDB.Instructor;
       DROP VIEW IF EXISTS ClassDB.DBManager;
