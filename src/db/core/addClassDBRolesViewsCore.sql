@@ -131,6 +131,7 @@ ALTER VIEW ClassDB.DBManager OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.DBManager FROM PUBLIC;
 GRANT SELECT ON ClassDB.DBManager TO ClassDB_Instructor, ClassDB_DBManager;
 
+
 --Define a view to return Team members and thier respective team
 -- creates a derived table containing all teams for a self-join
 CREATE OR REPLACE VIEW ClassDB.TeamMember AS
@@ -144,6 +145,7 @@ CREATE OR REPLACE VIEW ClassDB.TeamMember AS
 ALTER VIEW ClassDB.TeamMember OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.User FROM PUBLIC;
 GRANT SELECT ON ClassDB.TeamMember TO ClassDB_Instructor, ClassDB_DBManager;
+
 
 --Define a view to return known teams with thier RoleName, FullName, SchemaName,
 -- ExtraInfo and Member count
