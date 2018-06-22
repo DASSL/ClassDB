@@ -15,21 +15,28 @@ START TRANSACTION;
 
 --Execute appropriate ClassDB functions (these tests do not verify correctness
 -- of each function)
-SELECT ClassDB.createStudent('teststu', 'noname');
-SELECT ClassDB.resetPassword('teststu');
-SELECT ClassDB.listUserConnections('teststu');
-SELECT ClassDB.killUserConnections('teststu');
-SELECT ClassDB.dropStudent('teststu', TRUE, TRUE, 'drop_c');
-
+SELECT ClassDB.createStudent('teststu_pt', 'testname');
+SELECT ClassDB.resetPassword('teststu_pt');
+SELECT ClassDB.listUserConnections('teststu_pt');
+SELECT ClassDB.killUserConnections('teststu_pt');
+SELECT ClassDB.createTeam('testteam_pt');
+SELECT ClassDB.addToTeam('teststu_pt', 'testteam_pt');
+SELECT ClassDB.removeFromTeam('teststu_pt', 'testteam_pt');
+SELECT ClassDB.revokeTeam('testteam_pt');
+SELECT ClassDB.dropTeam('testteam_pt');
+SELECT ClassDB.revokeStudent('teststu_pt');
+SELECT ClassDB.dropStudent('teststu_pt', TRUE, TRUE, 'drop_c');
 --ClassDB.dropAllStudents is not being tested here because it would drop the
 -- test students that will later be used to connect to the DB
 --SELECT ClassDB.dropAllStudents(TRUE, TRUE, 'drop_c');
 
-SELECT ClassDB.createInstructor('testins', 'noname');
-SELECT ClassDB.dropInstructor('testins', TRUE, TRUE, 'drop_c');
+SELECT ClassDB.createInstructor('testins_pt', 'testname');
+SELECT ClassDB.revokeInstructor('testins_pt');
+SELECT ClassDB.dropInstructor('testins_pt', TRUE, TRUE, 'drop_c');
 
-SELECT ClassDB.createDBManager('testman', 'noname');
-SELECT ClassDB.dropDBManager('testman', TRUE, TRUE, 'drop_c');
+SELECT ClassDB.createDBManager('testman_pt', 'noname');
+SELECT ClassDB.revokeDBManager('testman_pt');
+SELECT ClassDB.dropDBManager('testman_pt', TRUE, TRUE, 'drop_c');
 
 SELECT ClassDB.importConnectionLog();
 

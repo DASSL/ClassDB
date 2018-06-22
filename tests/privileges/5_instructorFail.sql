@@ -138,4 +138,25 @@ DROP FUNCTION IF EXISTS classdb.revokeclassdbrole(ClassDB.IDNameDomain,
 DROP FUNCTION IF EXISTS classdb.revokedbmanager(ClassDB.IDNameDomain);
 DROP FUNCTION IF EXISTS classdb.revokeinstructor(ClassDB.IDNameDomain);
 DROP FUNCTION IF EXISTS classdb.revokestudent(ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.createteam(ClassDB.IDNameDomain,
+                                           ClassDB.RoleBase.FullName%Type,
+                                           ClassDB.IDNameDomain,
+                                           ClassDB.RoleBase.ExtraInfo%Type,
+                                           BOOLEAN, BOOLEAN);
+DROP FUNCTION IF EXISTS classdb.revoketeam(ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.dropteam(ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.dropallteams();
+DROP FUNCTION IF EXISTS classdb.isteammember(ClassDB.IDNameDomain,
+                                             ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.addtoteam(ClassDB.IDNameDomain,
+                                          ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.removefromteam(ClassDB.IDNameDomain,
+                                               ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.removeallfromteam(ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.reassignobjectownership(VARCHAR, VARCHAR,
+                                                        ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.reassignownedinschema(ClassDB.IDNameDomain,
+                                                      ClassDB.IDNameDomain,
+                                                      ClassDB.IDNameDomain);
+
  

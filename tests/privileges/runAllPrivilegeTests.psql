@@ -18,13 +18,15 @@
 --We want to allow errors to occur in order to allow all tests that should fail
 -- to be run, along with having the cleanup process complete
 \set ON_ERROR_STOP off
-
+--DEV: On error - run cleanup?
 
 --Remember the current user so we can switch back at the end
 -- Currently, this is assuming the starting superuser account is 'postgres'
 -- you must change this if you want to switch back to a different superuser account
 -- at the end of the script
 \set psqlCurrentUser postgres
+--DEV: Use USER
+--DEV: Use stored password
 
 
 \echo 'The following tests should complete without any errors'
