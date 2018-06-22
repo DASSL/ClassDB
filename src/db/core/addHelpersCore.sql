@@ -645,14 +645,15 @@ CREATE OR REPLACE FUNCTION ClassDB.isColumnDefined(schemaName ClassDB.IDNameDoma
    RETURNS BOOLEAN AS
 $$
 BEGIN
-    RETURN EXISTS (SELECT *
+    RETURN EXISTS (SELECT column_name
                    FROM INFORMATION_SCHEMA.COLUMNS
                    WHERE table_schema = ClassDB.foldPgID(schemaName)
                    AND   table_name   = ClassDB.foldPgID(tableName)
                    AND   column_Name  = ClassDB.foldPgID(columnName));
 END
 $$ LANGUAGE plpgsql
-   STABLE;
+   STABLE
+   RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.isColumnDefined(ClassDB.IDNameDomain,
    ClassDB.IDNameDomain, ClassDB.IDNameDomain)
