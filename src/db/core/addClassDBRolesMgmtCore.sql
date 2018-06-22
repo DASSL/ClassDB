@@ -703,6 +703,40 @@ GRANT EXECUTE ON FUNCTION
 
 
 
+--Define a function to determine whether a student is a member of a team
+--Asserts that studentName is a student and teamName is a team name
+CREATE OR REPLACE FUNCTION
+   ClassDB.isTeamMember(studentName ClassDB.IDNameDomain,
+                        teamName ClassDB.IDNameDomain)
+   RETURNS BOOLEAN AS
+$$
+BEGIN
+   IF NOT ClassDB.isStudent($1) THEN
+      RAISE EXCEPTION 'Role "%" is not a known student', $1;
+   END IF;
+   
+   IF NOT ClassDB.isTeam($2) THEN
+      RAISE EXCEPTION 'Role "%" is not a known team', $2;
+   END IF;
+   
+   RETURN ClassDB.isMember($1, $2);
+END;
+$$ LANGUAGE plpgsql;
+
+
+--Change function ownership and set permissions
+ALTER FUNCTION ClassDB.isTeamMember(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
+   OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.isTeamMember(ClassDB.IDNameDomain, ClassDB.IDNameDomain) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION
+   ClassDB.isTeamMember(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
+   TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+
 --Define a function to add a student to a team
 --Asserts that studentName is a known student and teamName is a known team
 --Grants team role to student and sets privileges, allowing for access to team's
@@ -800,7 +834,7 @@ BEGIN
    teamSchema = ClassDB.getSchemaName($2);
    
    --revoke privileges to role and unset default privileges
-   IF ClassDB.isMember($1, $2) THEN
+   IF ClassDB.isTeamMember($1, $2) THEN
       --remove default privileges that allowed all members to read/modify data 
       -- created by this student in the team's schema
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
@@ -839,7 +873,7 @@ BEGIN
       --revoke team from student
       EXECUTE FORMAT('REVOKE %s FROM %s', $2, $1);
    ELSE
-      RAISE NOTICE 'Student "%" is not a member of "%"', $1, $2;
+      RAISE NOTICE 'Student "%" is not a member of team "%"', $1, $2;
    END IF;
 END;
 $$ LANGUAGE plpgsql
@@ -883,5 +917,6 @@ REVOKE ALL ON FUNCTION ClassDB.removeAllFromTeam(ClassDB.IDNameDomain)
 
 GRANT EXECUTE ON FUNCTION ClassDB.removeAllFromTeam(ClassDB.IDNameDomain)
    TO ClassDB_Instructor, ClassDB_DBManager;
+
 
 COMMIT;

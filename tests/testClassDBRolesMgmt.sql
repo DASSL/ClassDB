@@ -1229,6 +1229,46 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION pg_temp.isTeamMemberTest() RETURNS TEXT AS
+$$
+BEGIN
+   --Create test students and test team
+   PERFORM ClassDB.createStudent('stu0_isTeamMember', 'Student 0');
+   PERFORM ClassDB.createStudent('stu1_isTeamMember', 'Student 1');
+   PERFORM ClassDB.createTeam('team0_isTeamMember');
+   
+   --Neither student should be team member
+   IF NOT(NOT ClassDB.isTeamMember('stu0_isTeamMember', 'team0_isTeamMember')
+      AND NOT ClassDB.isTeamMember('stu1_isTeamMember', 'team0_isTeamMember'))
+   THEN
+      RETURN 'FAIL: Code 1';
+   END IF;
+   
+   --Grant team privilege to student 0
+   GRANT team0_isTeamMember TO stu0_isTeamMember;
+   
+   --Only student one should end up as team member
+   IF NOT(ClassDB.isTeamMember('stu0_isTeamMember', 'team0_isTeamMember')
+      AND NOT ClassDB.isTeamMember('stu1_isTeamMember', 'team0_isTeamMember'))
+   THEN
+      RETURN 'FAIL: Code 2';
+   END IF;
+   
+   --Revoke team from student
+   REVOKE team0_isTeamMember FROM stu0_isTeamMember;
+   
+   --Neither student should be a team member
+   IF NOT(NOT ClassDB.isTeamMember('stu0_isTeamMember', 'team0_isTeamMember')
+      AND NOT ClassDB.isTeamMember('stu1_isTeamMember', 'team0_isTeamMember'))
+   THEN
+      RETURN 'FAIL: Code 3';
+   END IF;
+   
+   RETURN 'PASS';
+END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION pg_temp.addToTeamTest() RETURNS TEXT AS
 $$
 BEGIN
@@ -1240,15 +1280,15 @@ BEGIN
    --Add first student, check membership, add second student, check memberships
    PERFORM ClassDB.addToTeam('stu0_addToTeam', 'team0_addToTeam');
    
-   IF NOT ClassDB.isMember('stu0_addToTeam', 'team0_addToTeam')
+   IF NOT ClassDB.isTeamMember('stu0_addToTeam', 'team0_addToTeam')
    THEN
       RETURN 'FAIL: Code 1';
    END IF;
    
    PERFORM ClassDB.addToTeam('stu1_addToTeam', 'team0_addToTeam');
    
-   IF NOT(ClassDB.isMember('stu0_addToTeam', 'team0_addToTeam')
-      AND ClassDB.isMember('stu1_addToTeam', 'team0_addToTeam'))
+   IF NOT(ClassDB.isTeamMember('stu0_addToTeam', 'team0_addToTeam')
+      AND ClassDB.isTeamMember('stu1_addToTeam', 'team0_addToTeam'))
    THEN
       RETURN 'FAIL: Code 2';
    END IF;
@@ -1256,8 +1296,8 @@ BEGIN
    --Add second student again and check memberships
    PERFORM ClassDB.addToTeam('stu1_addToTeam', 'team0_addToTeam');
    
-   IF NOT(ClassDB.isMember('stu0_addToTeam', 'team0_addToTeam')
-      AND ClassDB.isMember('stu1_addToTeam', 'team0_addToTeam'))
+   IF NOT(ClassDB.isTeamMember('stu0_addToTeam', 'team0_addToTeam')
+      AND ClassDB.isTeamMember('stu1_addToTeam', 'team0_addToTeam'))
    THEN
       RETURN 'FAIL: Code 3';
    END IF;
@@ -1270,10 +1310,10 @@ BEGIN
    PERFORM ClassDB.addToTeam('stu1_addToTeam', 'team1_addToTeam');
    PERFORM ClassDB.addToTeam('stu2_addToTeam', 'team1_addToTeam');
    
-   IF NOT(ClassDB.isMember('stu1_addToTeam', 'team0_addToTeam')
-      AND ClassDB.isMember('stu1_addToTeam', 'team1_addToTeam')
-      AND ClassDB.isMember('stu2_addToTeam', 'team1_addToTeam')
-      AND NOT ClassDB.isMember('stu2_addToTeam', 'team0_addToTeam'))
+   IF NOT(ClassDB.isTeamMember('stu1_addToTeam', 'team0_addToTeam')
+      AND ClassDB.isTeamMember('stu1_addToTeam', 'team1_addToTeam')
+      AND ClassDB.isTeamMember('stu2_addToTeam', 'team1_addToTeam')
+      AND NOT ClassDB.isTeamMember('stu2_addToTeam', 'team0_addToTeam'))
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
@@ -1350,9 +1390,9 @@ BEGIN
    PERFORM ClassDB.removeFromTeam('stu1_removeFromTeam', 'team0_removeFromTeam');
    
    --Check membership
-   IF NOT(ClassDB.isMember('stu0_removeFromTeam', 'team0_removefromTeam')
-      AND NOT ClassDB.isMember('stu1_removeFromTeam', 'team0_removeFromTeam')
-      AND ClassDB.isMember('stu1_removeFromTeam', 'team1_removeFromTeam'))
+   IF NOT(ClassDB.isTeamMember('stu0_removeFromTeam', 'team0_removefromTeam')
+      AND NOT ClassDB.isTeamMember('stu1_removeFromTeam', 'team0_removeFromTeam')
+      AND ClassDB.isTeamMember('stu1_removeFromTeam', 'team1_removeFromTeam'))
    THEN
       RETURN 'FAIL: Code 1';
    END IF;
@@ -1445,9 +1485,9 @@ BEGIN
    --Remove all from team 0 and check membership
    PERFORM ClassDB.removeAllFromTeam('team0_removeAllFromTeam');
    
-   IF NOT(NOT ClassDB.isMember('stu0_removeAllFromTeam', 'team0_removeAllFromTeam')
-      AND NOT ClassDB.isMember('stu1_removeAllFromTeam', 'team0_removeAllFromTeam')
-      AND ClassDB.isMember('stu1_removeAllFromTeam', 'team1_removeAllFromTeam'))
+   IF NOT(NOT ClassDB.isTeamMember('stu0_removeAllFromTeam', 'team0_removeAllFromTeam')
+      AND NOT ClassDB.isTeamMember('stu1_removeAllFromTeam', 'team0_removeAllFromTeam')
+      AND ClassDB.isTeamMember('stu1_removeAllFromTeam', 'team1_removeAllFromTeam'))
    THEN
       RETURN 'FAIL: Code 1';
    END IF;
@@ -1488,6 +1528,7 @@ BEGIN
    RAISE INFO '%   dropTeamTest()', pg_temp.dropTeamTest();
    RAISE INFO '%   dropAllStudentsTest()', pg_temp.dropAllStudentsTest();
    RAISE INFO '%   dropAllTeamsTest()', pg_temp.dropAllTeamsTest();
+   RAISE INFO '%   isTeamMemberTest()', pg_temp.isTeamMemberTest();  
    RAISE INFO '%   addToTeamTest()', pg_temp.addToTeamTest();
    RAISE INFO '%   removeFromTeamTest()', pg_temp.removeFromTeamTest();
    RAISE INFO '%   removeAllFromTeamTest()', pg_temp.removeAllFromTeamTest();
