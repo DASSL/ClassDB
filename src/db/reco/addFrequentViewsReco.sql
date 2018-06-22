@@ -382,7 +382,7 @@ GRANT SELECT ON public.MyConnectionActivity TO PUBLIC;
 --This function returns all activity for a specified user. Passing NULL provides
 -- data for all users. This function returns both connection and DDL activity.
 -- The ActivityType column specifies this, either 'Connection', 'Disconnection',
--- or 'DDL'. For connection activity rows, the DDLOperation and DDLObject columns
+-- or 'DDL Query'. For connection activity rows, the DDLOperation and DDLObject columns
 -- are not applicable, will be NULL. Likewise, SessionID and ApplicationID are
 -- not applicable to DDL activity.
 CREATE OR REPLACE FUNCTION ClassDB.getUserActivity(userName ClassDB.IDNameDomain
