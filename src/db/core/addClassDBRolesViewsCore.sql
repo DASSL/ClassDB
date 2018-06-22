@@ -16,7 +16,7 @@
 --This script should be run in every database to which ClassDB is to be added
 -- it should be run after running addClassDBRolesMgmt.sql
 
---This script creates views for User, Student, Instructor, and DBManager
+--This script creates views for User, Student, Instructor, DBManager and Teams
 -- views add derived attributes to the base data in the associated tables
 
 
@@ -134,16 +134,11 @@ GRANT SELECT ON ClassDB.DBManager TO ClassDB_Instructor, ClassDB_DBManager;
 --Define a view to return Team members and thier respective team
 -- creates a derived table containing all teams for a self-join
 CREATE OR REPLACE VIEW ClassDB.TeamMember AS
-  SELECT R.TeamName, RoleName AS MemberName
-FROM ClassDB.RoleBase
-INNER JOIN
-(
-  SELECT RoleName AS TeamName
-  FROM ClassDB.RoleBase
-  WHERE IsTeam
-) AS R ON ClassDB.isMember(Rolename, R.TeamName)
-WHERE TeamName IS NOT NULL AND NOT isTeam
-ORDER BY TeamName;
+  SELECT Team.RoleName Team, Member.RoleName Member
+  FROM Classdb.RoleBase Member
+  JOIN ClassDB.RoleBase Team ON ClassDB.isMember(Member.RoleName, Team.RoleName)
+  WHERE NOT Member.IsTeam AND Team.IsTeam
+  ORDER BY Team;
 
 
 ALTER VIEW ClassDB.TeamMember OWNER TO ClassDB;
@@ -156,15 +151,15 @@ GRANT SELECT ON ClassDB.TeamMember TO ClassDB_Instructor, ClassDB_DBManager;
 -- ClassDB.TeamMember
 CREATE OR REPLACE VIEW ClassDB.Team AS
   SELECT RoleName AS TeamName,
-  FullName, SchemaName, ExtraInfo, MemberCount
-FROM ClassDB.RoleBase
-INNER JOIN
-(
-  SELECT TeamName, count(*) AS MemberCount
-  FROM ClassDB.TeamMember
-  GROUP BY TeamName
-) AS T2 ON T2.TeamName = RoleName
-Where isTeam;
+  FullName, SchemaName, ExtraInfo,
+  (
+    SELECT COUNT(*)
+    FROM ClassDB.TeamMember
+    WHERE Team = RoleName
+  ) AS MemberCount
+  FROM ClassDB.RoleBase
+  WHERE isTeam;
+
 
 
 ALTER VIEW ClassDB.Team OWNER TO ClassDB;
