@@ -67,57 +67,82 @@ REVOKE ALL PRIVILEGES ON ClassDB.DDLActivity FROM PUBLIC;
 GRANT SELECT ON ClassDB.DDLActivity TO ClassDB_Instructor, ClassDB_DBManager;
 
 
---UPGRADE FROM 2.0 TO 2.1
--- These statements are needed when upgrading ClassDB from 2.0 to 2.1
--- These can be removed in a future version of ClassDB
---Rename AcceptedAtUTC o better reflect that disconnections are now captured
--- No IF EXISTS for RENAME COLUMN, so we use a helper to check if the column needs
--- to be renamed
+
+--Define a table to record connection activity of users
+-- SessionID and ActivityType form a composite PK. SessionID is unique per session
+-- and each session has only one connection and one disconnection.
+-- UserName is not constrained to known users because connection activity may be
+-- maintained for users who are no longer known, but see trigger definitions
+--
+--We conditionally either ALTER and existing ClassDB.ConnectionActivity
+-- or CREATE a new one
 DO
 $$
 BEGIN
-   IF ClassDB.isColumnDefined('ClassDB', 'ConnectionActivity', 'AcceptedAtUTC') THEN
-      ALTER TABLE ClassDB.ConnectionActivity
-         RENAME COLUMN AcceptedAtUTC TO ActivityAtUTC;
+   --If ClassDB.ConnectionActivity is present and not empty, upgrade it rather
+   -- than recreate it and lose existing data
+   IF EXISTS (SELECT * FROM ClassDB.ConnectionActivity) THEN
+      --UPGRADE FROM 2.0 TO 2.1
+      -- The following table alterations are needed to upgrade ClassDB from 2.0 to 2.1
+      -- These can be removed in a future version of ClassDB
+      --Three columns are added, one is renamed
+      --A partial index is added instead of a PK because it relies on two new attributes
+      -- that will not have unique values for existing rows
+
+      --Rename AcceptedAtUTC to better reflect that disconnections are now captured
+      -- No IF EXISTS for RENAME COLUMN, so we use a helper to check if the column needs
+      -- to be renamed
+      IF ClassDB.isColumnDefined('ClassDB', 'ConnectionActivity', 'AcceptedAtUTC') THEN
+         ALTER TABLE ClassDB.ConnectionActivity
+            RENAME COLUMN AcceptedAtUTC TO ActivityAtUTC;
+      END IF;
+
+      --ActivityType, SessionID, and ApplicationName are added to ConnectionActivity
+      ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
+         ADD COLUMN IF NOT EXISTS ActivityType CHAR(1) NOT NULL DEFAULT 'C'
+                                  CHECK(ActivityType IN ('C', 'D'));
+
+      --SessionID enforced as not NULL because there is always a SessionID associated with
+      -- connection activity. However, if rows exists, they will be NULL when the column
+      -- is added (which is an error). We use a temporary default to get around this.
+      --Set a temporary default to add a value to existing rows
+      ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
+         ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL DEFAULT '00000000.00000000';
+
+      --Drop the temporary default. DROP DEFAULT is idempotent
+      ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
+         ALTER COLUMN SessionID DROP DEFAULT;
+
+      ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
+         ADD COLUMN IF NOT EXISTS ApplicationName ClassDB.IDNameDomain;
+
+      --We use a partial unique index instead of a PK because both columns used are
+      -- new, and will not have unique values for existing rows
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_SessionID_ActivityType
+      ON ClassDB.ConnectionActivity(SessionID, ActivityType)
+      WHERE SessionID <> '00000000.00000000'
+
+   ELSE
+      --If ConnectionActivity does not exist or is empty, just recreate it with
+      -- v2.1 features
+      DROP TABLE IF EXISTS ClassDB.ConnectionActivity;
+      CREATE TABLE ClassDB.ConnectionActivity
+      (
+        UserName ClassDB.IDNameDomain NOT NULL, --session user creating the connection
+        ActivityAtUTC TIMESTAMP NOT NULL, --time at which the server accepted connection
+        ActivityType CHAR(1) NOT NULL DEFAULT 'C' CHECK(ActivityType IN ('C', 'D')),
+        SessionID VARCHAR(17) NOT NULL,
+        ApplicationName ClassDB.IDNameDomain --We expect AppName to be NULL for all connections
+        PRIMARY KEY(SessionID, ActivityType) --Create a PK on the new table because
+                                             -- are no existing rows to cause issues
+      );
+
+      ALTER TABLE ClassDB.ConnectionActivity OWNER TO ClassDB;
+      REVOKE ALL PRIVILEGES ON ClassDB.ConnectionActivity FROM PUBLIC;
+      GRANT SELECT ON ClassDB.ConnectionActivity TO ClassDB_Instructor, ClassDB_DBManager;
    END IF;
 END;
 $$;
-
---ActivityType, SessionID, and ApplicationName are added to ConnectionActivity
-ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
-   ADD COLUMN IF NOT EXISTS ActivityType CHAR(1) DEFAULT 'C'
-                            CHECK(ActivityType IN ('C', 'D'));
-
---Set a temporary default to add a value to existing rows (because of NOT NULL)
-ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
-   ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL DEFAULT '00000000.00000000';
-
---Drop the temporary default. DROP DEFAULT is idempotent
-ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
-   ALTER COLUMN SessionID DROP DEFAULT;
-
-ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
-   ADD COLUMN IF NOT EXISTS ApplicationName ClassDB.IDNameDomain;
-
-
---Define a table to record connection activity of users
--- no primary key is defined because there are no viable key attributes, and
--- there is no benefit to having a primary key
--- UserName is not constrained to known users because connection activity may be
--- maintained for users who are no longer known, but see trigger definitions
-CREATE TABLE IF NOT EXISTS ClassDB.ConnectionActivity
-(
-  UserName ClassDB.IDNameDomain NOT NULL, --session user creating the connection
-  ActivityAtUTC TIMESTAMP NOT NULL, --time at which the server accepted connection
-  ActivityType CHAR(1) DEFAULT 'C'
-   CHECK(ActivityType IN ('C', 'D')),
-  SessionID VARCHAR(17) NOT NULL,
-  ApplicationName ClassDB.IDNameDomain
-);
-
-ALTER TABLE ClassDB.ConnectionActivity OWNER TO ClassDB;
-REVOKE ALL PRIVILEGES ON ClassDB.ConnectionActivity FROM PUBLIC;
-GRANT SELECT ON ClassDB.ConnectionActivity TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 
