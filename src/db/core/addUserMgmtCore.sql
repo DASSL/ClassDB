@@ -79,9 +79,10 @@ GRANT SELECT ON ClassDB.DDLActivity TO ClassDB_Instructor, ClassDB_DBManager;
 DO
 $$
 BEGIN
-   --If ClassDB.ConnectionActivity is present and not empty, upgrade it rather
+   --If ClassDB.ConnectionActivity is present, upgrade it rather
    -- than recreate it and lose existing data
-   IF EXISTS (SELECT * FROM ClassDB.ConnectionActivity) THEN
+   IF  ClassDB.isColumnDefined('ClassDB', 'ConnectionActivity', 'UserName')
+   THEN
       --UPGRADE FROM 2.0 TO 2.1
       -- The following table alterations are needed to upgrade ClassDB from 2.0 to 2.1
       -- These can be removed in a future version of ClassDB
@@ -92,7 +93,8 @@ BEGIN
       --Rename AcceptedAtUTC to better reflect that disconnections are now captured
       -- No IF EXISTS for RENAME COLUMN, so we use a helper to check if the column needs
       -- to be renamed
-      IF ClassDB.isColumnDefined('ClassDB', 'ConnectionActivity', 'AcceptedAtUTC') THEN
+      IF ClassDB.isColumnDefined('ClassDB', 'ConnectionActivity', 'AcceptedAtUTC')
+      THEN
          ALTER TABLE ClassDB.ConnectionActivity
             RENAME COLUMN AcceptedAtUTC TO ActivityAtUTC;
       END IF;
@@ -125,6 +127,13 @@ BEGIN
    ELSE
       --If ConnectionActivity does not exist or is empty, just recreate it with
       -- v2.1 features
+
+      --First drop dependant views
+      DROP VIEW IF EXISTS ClassDB.Student;
+      DROP VIEW IF EXISTS ClassDB.Instructor;
+      DROP VIEW IF EXISTS ClassDB.DBManager;
+      DROP VIEW IF EXISTS ClassDB.User;
+
       DROP TABLE IF EXISTS ClassDB.ConnectionActivity;
       CREATE TABLE ClassDB.ConnectionActivity
       (
