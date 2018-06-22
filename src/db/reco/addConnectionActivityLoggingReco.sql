@@ -100,7 +100,8 @@ CREATE OR REPLACE FUNCTION ClassDB.importConnectionLog(startDate DATE DEFAULT NU
    RETURNS TABLE
    (
       logDate DATE,
-      numEntries INTEGER,
+      numConnections INTEGER, --# of new connections
+      numDisconnections INTEGER, --# of new disconnections
       info VARCHAR
    ) AS
 $$
@@ -113,7 +114,7 @@ BEGIN
    --Get a string containing the setting names of any disabled log settings
    SELECT INTO disabledLogSettings string_agg(name, ', ')
    FROM pg_catalog.pg_settings
-   WHERE name IN ('logging_collector', 'log_connections')
+   WHERE name IN ('logging_collector', 'log_connections', 'log_disconnections')
    AND setting = 'off';
 
    --Warn the user if any server connection logging parameters are disabled
@@ -160,14 +161,15 @@ BEGIN
    CREATE TEMPORARY TABLE ImportResult
    (
       logDate DATE,
-      numEntries INTEGER,
+      numConnections INTEGER,
+      numDisconnections INTEGER,
       info VARCHAR
    );
 
    --Get the timestamp (at UTC) of the latest connection activity entry. Then
    -- convert the timestamp to local time to get a 'best-guess' of the last log
    -- file data that was imported
-   lastConTimestampUTC = (SELECT MAX(AcceptedAtUTC)
+   lastConTimestampUTC = (SELECT MAX(ActivityAtUTC)
                           FROM ClassDB.ConnectionActivity);
 
    lastConDateLocal = date(ClassDB.ChangeTimeZone(lastConTimeStampUTC));
@@ -186,17 +188,17 @@ BEGIN
       --Import entries from the day's server log into our log table
       BEGIN
          EXECUTE format('COPY pg_temp.ImportedLogData FROM ''%s'' WITH csv', logPath);
-         INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, NULL);
+         INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, 0, NULL);
       EXCEPTION
          WHEN undefined_file THEN
             --If an expected log file is missing, skip importing that log and
             -- try the next log file. Store the error in the result table
             RAISE WARNING 'log file for % not found, skipping.', lastConDateLocal;
-            INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
+            INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, 0, SQLERRM);
          WHEN OTHERS THEN
             RAISE WARNING 'importing log file for %s failed', lastConDateLocal
             USING DETAIL = SQLERRM;
-            INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
+            INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, 0, SQLERRM);
       END;
 
       lastConDateLocal := lastConDateLocal + 1; --Check the next day
@@ -208,20 +210,29 @@ BEGIN
    WITH LogInsertedCount AS
    (
       INSERT INTO ClassDB.ConnectionActivity
-         SELECT user_name, log_time AT TIME ZONE 'utc'
+         SELECT user_name, log_time AT TIME ZONE 'utc',
+            CASE WHEN message LIKE 'connection authorized%' THEN 'C' ELSE 'D' END,
+            session_id, application_name
          FROM pg_temp.ImportedLogData
          WHERE ClassDB.isUser(user_name) --Check the connection is from a ClassDB user
          AND (log_time AT TIME ZONE 'utc') > --Check that the entry is new
             COALESCE(lastConTimeStampUTC, to_timestamp(0))
-         AND message LIKE 'connection%' --Only pick connection-related entries
          AND database_name = CURRENT_DATABASE() --Only pick entries from current DB
-      RETURNING ClassDB.changeTimeZone(AcceptedAtUTC)::DATE AS logDate
+         AND (message LIKE 'connection authorized%'
+         OR   message LIKE 'disconnection%') --Only pick (dis)connection-related entries
+      RETURNING ClassDB.changeTimeZone(ActivityAtUTC)::DATE AS logDate, ActivityType
    )
    UPDATE pg_temp.ImportResult ir --Next, update the totals in the result table
-   SET numEntries = COALESCE((SELECT COUNT(*)
-                              FROM LogInsertedCount ic
-                              WHERE ic.logDate = ir.logDate
-                              GROUP BY ic.logDate), 0);
+   SET numConnections = COALESCE((SELECT COUNT(*)
+                                  FROM LogInsertedCount ic
+                                  WHERE ic.logDate = ir.logDate
+                                  AND ActivityType = 'C'
+                                  GROUP BY ic.logDate), 0),
+       numDisconnections = COALESCE((SELECT COUNT(*)
+                                      FROM LogInsertedCount ic
+                                      WHERE ic.logDate = ir.logDate
+                                      AND ActivityType = 'D'
+                                      GROUP BY ic.logDate), 0);
 
     --Set output of this query as the return table. Note that the function does
     -- not terminate here

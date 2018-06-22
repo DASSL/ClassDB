@@ -69,19 +69,122 @@ GRANT SELECT ON ClassDB.DDLActivity TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 --Define a table to record connection activity of users
--- no primary key is defined because there are no viable key attributes, and
--- there is no benefit to having a primary key
+-- SessionID and ActivityType form a composite PK. SessionID is unique per session
+-- and each session has only one connection and one disconnection.
 -- UserName is not constrained to known users because connection activity may be
 -- maintained for users who are no longer known, but see trigger definitions
+--Schema revisions from v2.0 to 2.1
+-- Renamed AcceptedAtUTC to ActivityAtUTC
+-- New columns ActivityType, SessionID, ApplicationName
+-- PK added  SessionID, ActivityType
+--Code to upgrade v2.0 schema/data to v2.1 follows the table definition
 CREATE TABLE IF NOT EXISTS ClassDB.ConnectionActivity
 (
-  UserName ClassDB.IDNameDomain NOT NULL, --session user creating the connection
-  AcceptedAtUTC TIMESTAMP NOT NULL --time at which the server accepted connection
+    UserName ClassDB.IDNameDomain NOT NULL, --session user who created the connection
+    ActivityAtUTC TIMESTAMP NOT NULL, --time at which server accepted connection
+    ActivityType CHAR(1) NOT NULL CHECK(ActivityType IN ('C', 'D')),
+    SessionID VARCHAR(17) NOT NULL CHECK(TRIM(SessionID) <> ''),
+    ApplicationName ClassDB.IDNameDomain, --will be NULL for connection rows
+    PRIMARY KEY (SessionID, ActivityType)
 );
 
 ALTER TABLE ClassDB.ConnectionActivity OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.ConnectionActivity FROM PUBLIC;
 GRANT SELECT ON ClassDB.ConnectionActivity TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+
+--Define a function to upgrade table ConnectionActivity from v2.0 to 2.1
+--Remove this function and its use (see after fn definition) when the upgrade
+-- path is removed
+CREATE OR REPLACE FUNCTION pg_temp.upgradeConnectionActivity_20_21()
+RETURNS VOID AS
+$$
+BEGIN
+   --Column AcceptedAtUTC is renamed to ActivityAtUTC in v2.1
+   IF ClassDB.isColumnDefined('ClassDB', 'ConnectionActivity', 'AcceptedAtUTC')
+   THEN
+      ALTER TABLE ClassDB.ConnectionActivity
+      RENAME COLUMN AcceptedAtUTC TO ActivityAtUTC;
+   END IF;
+
+   --Columns SessionID and ActivityType are new in v2.1 and they together form the PK
+   --Customize this part of the upgrade based on whether the table is empty so
+   -- as to get the best schema definition possible for the table
+   IF EXISTS (SELECT UserName FROM ClassDB.ConnectionActivity) THEN
+      --customize the schema for a non-empty table
+
+      --add ActivityType: initially set default value to 'C' because 2.0 had
+      -- only connection rows; then drop the default so future INSERTs have to
+      -- explicitly set a value
+      ALTER TABLE ClassDB.ConnectionActivity
+      ADD COLUMN IF NOT EXISTS ActivityType CHAR(1) NOT NULL DEFAULT 'C'
+                                            CHECK(ActivityType IN ('C', 'D'));
+
+      --DROP DEFAULT does not support IF EXISTS, but it is idempotent
+      ALTER TABLE ClassDB.ConnectionActivity
+      ALTER COLUMN ActivityType DROP DEFAULT;
+
+      --add SessionID: initially set default value to a dummy session id for
+      -- existing rows; then drop the default so future INSERTs have to
+      -- explicitly set a value
+      ALTER TABLE ClassDB.ConnectionActivity
+      ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL
+                                         DEFAULT '00000000.00000000'
+                                         CHECK(TRIM(SessionID) <> '');
+
+      ALTER TABLE ClassDB.ConnectionActivity
+      ALTER COLUMN SessionID DROP DEFAULT;
+
+      --create a unique partial index instead of a PK because the PK columns
+      -- won't have unique values in existing rows due to dummy session id added
+      -- for already existing rows
+      --this index forces the PK columns to have unique value in new rows
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_SessionID_ActivityType
+      ON ClassDB.ConnectionActivity(SessionID, ActivityType)
+      WHERE SessionID <> '00000000.00000000';
+
+   ELSE
+      --customize the schema for an empty table
+
+      ALTER TABLE ClassDB.ConnectionActivity
+      ADD COLUMN IF NOT EXISTS ActivityType CHAR(1) NOT NULL
+                                            CHECK(ActivityType IN ('C', 'D'));
+
+      ALTER TABLE ClassDB.ConnectionActivity
+      ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL
+                                         CHECK(TRIM(SessionID) <> '');
+
+      --create a unique index instead of a PK
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_SessionID_ActivityType
+      ON ClassDB.ConnectionActivity(SessionID, ActivityType);
+
+      --treat the unique index as the PK
+      ALTER TABLE ClassDB.ConnectionActivity
+      ADD PRIMARY KEY USING INDEX idx_SessionID_ActivityType;
+
+   END IF;
+
+   --Column ApplicationName is new in v2.1
+   ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
+   ADD COLUMN IF NOT EXISTS ApplicationName ClassDB.IDNameDomain;
+
+END;
+$$ LANGUAGE plpgsql;
+
+
+--Upgrade table ConnectionActivity from v2.0 to 2.1
+-- test presence of column SessionID to detect if the table is already in v2.1
+--Remove this block when the upgrade path is removed
+DO
+$$
+BEGIN
+   IF  NOT ClassDB.isColumnDefined('ClassDB', 'ConnectionActivity', 'SessionID')
+   THEN
+      PERFORM pg_temp.upgradeConnectionActivity_20_21();
+   END IF;
+END;
+$$;
 
 
 

@@ -19,9 +19,11 @@
 -- failed
 --1) Tests hat the result table from ClassDB.importConnectionLog() returns the correct
 --    number of new entries
---2) Tests that no extra activity rows are added for ClassDB users
---3) Tests that each ClassDB user's connection rows are added
---4) Tests that no rows from non-ClassDB users are added
+--2) Tests that no extra connection activity rows are added for ClassDB users
+--3) Tests that no extra disconnection activity rows are added for ClassDB users
+--4) Tests that each ClassDB user's connection activity rows are added
+--5) Tests that each ClassDB user's disconnection activity rows are added
+--6) Tests that no rows from non-ClassDB users are added
 
 
 \set ON_ERROR_STOP on
@@ -56,6 +58,9 @@ BEGIN
    IF ClassDB.isInstructor('conins01') THEN
       PERFORM ClassDB.dropInstructor('conins01', TRUE, TRUE, 'drop_c');
    END IF;
+   IF ClassDB.isInstructor('conins02') THEN
+      PERFORM ClassDB.dropInstructor('conins02', TRUE, TRUE, 'drop_c');
+   END IF;
 
    --Need to check if users exists to use DROP OWNED BY
    IF ClassDB.isServerRoleDefined('unown01') THEN
@@ -69,6 +74,7 @@ BEGIN
    PERFORM ClassDB.createStudent('constu02', 'con test student 02');
    PERFORM ClassDB.createDBManager('condbm01', 'con test db manager 01');
    PERFORM ClassDB.createInstructor('conins01', 'con test instructor 01');
+   PERFORM ClassDB.createInstructor('conins02', 'con test instructor 02');
 
    --Create a non-ClassDB user to ensure their connections are not imported
    CREATE USER unown01 ENCRYPTED PASSWORD 'unown01';
@@ -116,6 +122,14 @@ $$;
 \setenv PGPASSWORD conins01
 \c - conins01
 
+--conins02 remains logged in. This allows us to test that instructors can
+-- perform imports and read the connection activity table. Thus, we will
+-- not check for conins02 in the tests. The exception is test 1, which returns
+-- the number of new connection + disconnection rows with no ability to filter
+-- by user.
+\setenv PGPASSWORD conins02
+\c - conins02
+
 
 
 --Run the tests as instructor, to test effective permissions on relevant objects
@@ -128,9 +142,11 @@ BEGIN
    -- number of new entries.
    -- Only check current date, since all new connections should be from the current
    -- log file
-   IF (SELECT numEntries
-       FROM ClassDB.importConnectionLog()) <> 4 THEN
-
+   --We expect 5 connections and 4 disconnections (testins02 is still connected)
+   IF (SELECT CASE WHEN numConnections <> 5 THEN TRUE ELSE FALSE END
+       OR     CASE WHEN numDisconnections <> 4 THEN TRUE ELSE FALSE END
+       FROM ClassDB.importConnectionLog())
+   THEN
       RAISE INFO 'FAIL: Code 1';
    ELSE
       RAISE INFO 'PASS: ClassDB.importConnectionLog()';
@@ -144,8 +160,9 @@ BEGIN
    -- too many connection rows were added for that user.
    IF EXISTS (SELECT UserName
               FROM  ClassDB.ConnectionActivity
-              WHERE userName IN ('constu01', 'constu02', 'condbm01', 'conins01')
-              AND   ClassDB.changeTimeZone(acceptedAtUTC)
+              WHERE ActivityType = 'C'
+              AND   userName IN ('constu01', 'constu02', 'condbm01', 'conins01')
+              AND   ClassDB.changeTimeZone(ActivityAtUTC)
                     >= (SELECT testStartTime
                         FROM ClassDB.testConnectionActivityLogging)
               GROUP BY UserName
@@ -157,7 +174,28 @@ BEGIN
    END IF;
 
 
-   --Check that each ClassDB test user has new associated activity rows added
+   --Check that the activity does not contain extra disconnections from the test users.
+   -- Use the stored test start time to filter out old connections
+   --GROUP BY UserName and use HAVING COUNT(*) to check how many new disconnection
+   -- rows have been added for each test user. If COUNT(*) > 1, then
+   -- too many connection rows were added for that user.
+   IF EXISTS (SELECT UserName
+              FROM  ClassDB.ConnectionActivity
+              WHERE ActivityType = 'D'
+              AND   userName IN ('constu01', 'constu02', 'condbm01', 'conins01')
+              AND   ClassDB.changeTimeZone(ActivityAtUTC)
+                    >= (SELECT testStartTime
+                        FROM ClassDB.testConnectionActivityLogging)
+              GROUP BY UserName
+              HAVING COUNT(*) > 1) THEN
+
+      RAISE INFO 'FAIL: Code 3';
+   ELSE
+      RAISE INFO 'PASS: Disconnection Logging 1';
+   END IF;
+
+
+   --Check that each ClassDB test user has new associated connection rows added
    -- to the activity table. This test will fail one or more users are missing
    -- associated rows.
    --Use regexp_split_to_table to generate a temp. table containing
@@ -175,14 +213,45 @@ BEGIN
       FROM ClassDBUser U
       LEFT OUTER JOIN ClassDB.ConnectionActivity C ON U.UserName = C.UserName
       WHERE C.UserName IS NULL
-      AND ClassDB.changeTimeZone(acceptedAtUTC)
+      AND ActivityType = 'C'
+      AND ClassDB.changeTimeZone(ActivityAtUTC)
           >= (SELECT testStartTime
               FROM ClassDB.testConnectionActivityLogging)
    ) THEN
 
-      RAISE INFO 'FAIL: Code 3';
+      RAISE INFO 'FAIL: Code 4';
    ELSE
       RAISE INFO 'PASS: Connection Logging 2';
+   END IF;
+
+
+   --Check that each ClassDB test user has new associated disconnection rows added
+   -- to the activity table. This test will fail one or more users are missing
+   -- associated rows.
+   --Use regexp_split_to_table to generate a temp. table containing
+   -- the test user names. The do the LEFT OUTER JOIN, and filter for rows that
+   -- do not exist in ClassDB.ConnectionActivity (WHERE C.UserName) IS NULL
+   --Use the stored test start time to filter out old connections.
+   IF EXISTS
+   (
+      WITH ClassDBUser AS
+      (
+         SELECT *
+         FROM regexp_split_to_table('constu01 constu02 conins01 condbm01', E'\\s+') AS UserName
+      )
+      SELECT U.UserName
+      FROM ClassDBUser U
+      LEFT OUTER JOIN ClassDB.ConnectionActivity C ON U.UserName = C.UserName
+      WHERE C.UserName IS NULL
+      AND ActivityType = 'D'
+      AND ClassDB.changeTimeZone(ActivityAtUTC)
+          >= (SELECT testStartTime
+              FROM ClassDB.testConnectionActivityLogging)
+   ) THEN
+
+      RAISE INFO 'FAIL: Code 5';
+   ELSE
+      RAISE INFO 'PASS: Disconnection Logging 2';
    END IF;
 
 
@@ -192,16 +261,14 @@ BEGIN
    IF EXISTS (SELECT UserName
               FROM ClassDB.ConnectionActivity
               WHERE UserName = 'unown01'
-              AND   ClassDB.changeTimeZone(acceptedAtUTC)
+              AND   ClassDB.changeTimeZone(ActivityAtUTC)
                     >= (SELECT testStartTime
                         FROM ClassDB.testConnectionActivityLogging)) THEN
 
-      RAISE INFO 'FAIL: Code 4';
+      RAISE INFO 'FAIL: Code 6';
    ELSE
-      RAISE INFO 'PASS: Connection Logging 3';
+      RAISE INFO 'PASS: Exclude non-ClassDB Users';
    END IF;
-
-
 END;
 $$;
 
@@ -222,10 +289,11 @@ BEGIN
    DROP TABLE ClassDB.testConnectionActivityLogging;
 
    --Drop users & related objects
-   PERFORM ClassDB.dropStudent('constu01', true, true, 'drop_c');
-   PERFORM ClassDB.dropStudent('constu02', true, true, 'drop_c');
-   PERFORM ClassDB.dropDBManager('condbm01', true, true, 'drop_c');
-   PERFORM ClassDB.dropInstructor('conins01', true, true, 'drop_c');
+   PERFORM ClassDB.dropStudent('constu01', TRUE, TRUE, 'drop_c');
+   PERFORM ClassDB.dropStudent('constu02', TRUE, TRUE, 'drop_c');
+   PERFORM ClassDB.dropDBManager('condbm01', TRUE, TRUE, 'drop_c');
+   PERFORM ClassDB.dropInstructor('conins01', TRUE, TRUE, 'drop_c');
+   PERFORM ClassDB.dropInstructor('conins02', TRUE, TRUE, 'drop_c');
 
    DROP OWNED BY unown01;
    DROP USER unown01;
