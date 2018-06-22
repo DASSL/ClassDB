@@ -17,3 +17,4 @@ SELECT ClassDB.dropStudent('ptstu0', TRUE, TRUE, 'drop_c');
 SELECT ClassDB.dropStudent('ptstu1', TRUE, TRUE, 'drop_c');
 SELECT ClassDB.dropDBManager('ptdbm0', TRUE, TRUE, 'drop_c');
 SELECT ClassDB.dropDBManager('ptdbm1', TRUE, TRUE, 'drop_c');
+SELECT Classdb.dropTeam('ptteam0');

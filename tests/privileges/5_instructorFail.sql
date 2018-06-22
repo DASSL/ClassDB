@@ -64,6 +64,23 @@ SELECT ClassDB.dropRole('ptstu0');
 SELECT ClassDB.logDDLActivity();
 SELECT ClassDB.rejectOperation();
 
+--Not drop ClassDB tables and views
+DROP TABLE ClassDB.DDLActivity;
+DROP TABLE ClassDB.RoleBase;
+DROP VIEW public.MyActivity;
+DROP VIEW ClassDB.StudentActivityAnon;
+DROP VIEW ClassDB.StudentActivity;
+DROP VIEW public.MyConnectionActivity;
+DROP VIEW public.MyDDLActivity;
+DROP VIEW ClassDB.User;
+DROP VIEW ClassDB.Instructor;
+DROP VIEW ClassDB.Student;
+DROP VIEW ClassDB.DBManager;
+DROP VIEW ClassDB.StudentTable;
+DROP VIEW ClassDB.StudentTableCount;
+DROP VIEW ClassDB.StudentActivitySummary;
+DROP VIEW ClassDB.StudentActivitySummaryAnon;
+
 
 --Not drop ClassDB functions (also covers ALTER and REPLACE)
 DROP FUNCTION IF EXISTS classdb.cancreatedatabase(ClassDB.IDNameDomain);
@@ -158,5 +175,11 @@ DROP FUNCTION IF EXISTS classdb.reassignobjectownership(VARCHAR, VARCHAR,
 DROP FUNCTION IF EXISTS classdb.reassignownedinschema(ClassDB.IDNameDomain,
                                                       ClassDB.IDNameDomain,
                                                       ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.isconnectionloggingenabled();
+DROP FUNCTION IF EXISTS classdb.isloggingcollecorenabled();
+DROP FUNCTION IF EXISTS classdb.handledropschemaddlstart();
+DROP FUNCTION IF EXISTS classdb.disallowschemadrop();
+DROP FUNCTION IF EXISTS classdb.allowschemadrop();
+DROP FUNCTION IF EXISTS classdb.isschemadropallowed();
 
  

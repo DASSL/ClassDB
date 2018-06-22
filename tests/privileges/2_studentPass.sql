@@ -25,10 +25,11 @@ SELECT describe('test');
 DROP TABLE test;
 
 
---Test frequent views access
-SELECT * FROM MyActivitySummary;
-SELECT * FROM MyDDLActivity;
-SELECT * FROM MyConnectionActivity;
+--Read from public frequent views
+SELECT * FROM public.myActivitySummary;
+SELECT * FROM public.getMyDDLActivity;
+SELECT * FROM public.getMyConnectionActivity;
+SELECT * FROM public.myActivity;
 
 
 --CRUD on tables created by the student. This table should be placed in their own schema

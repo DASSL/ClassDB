@@ -71,6 +71,12 @@ SELECT * FROM ClassDB.DBManager;
 SELECT * FROM ClassDB.Student;
 SELECT * FROM ClassDB.Instructor;
 
+--Read from public frequent views
+SELECT * FROM public.myActivitySummary;
+SELECT * FROM public.getMyDDLActivity;
+SELECT * FROM public.getMyConnectionActivity;
+SELECT * FROM public.myActivity;
+
 
 --Update FullName and ExtraInfo in RoleBase table
 SELECT ClassDB.createStudent('updateInfoTest', 'Temp name', NULL, 'Temp info');

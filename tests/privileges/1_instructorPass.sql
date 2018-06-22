@@ -92,6 +92,25 @@ SELECT * FROM ClassDB.DBManager;
 SELECT * FROM ClassDB.Student;
 SELECT * FROM ClassDB.Instructor;
 
+--Read from team views
+SELECT * FROM ClassDB.TeamMember;
+SELECT * FROM ClassDB.Team;
+
+--Read from frequent views
+SELECT * FROM ClassDB.StudentTable;
+SELECT * FROM ClassDB.StudentTableCount;
+SELECT * FROM ClassDB.StudentActivitySummary;
+SELECT * FROM ClassDB.StudentActivitySummaryAnon;
+SELECT * FROM ClassDB.StudentActivty;
+SELECT * FROM ClassDB.StudentActivtyAnon;
+
+--Read from public frequent views
+SELECT * FROM public.myActivitySummary;
+SELECT * FROM public.getMyDDLActivity;
+SELECT * FROM public.getMyConnectionActivity;
+SELECT * FROM public.myActivity;
+
+
 
 --Update FullName and ExtraInfo in RoleBase table
 SELECT ClassDB.createStudent('updateInfoTest', 'Temp name', NULL, 'Temp info');
