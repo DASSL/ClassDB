@@ -75,7 +75,7 @@ LEFT OUTER JOIN
 (
   SELECT UserName,
   COUNT(*) AS ConnectionCount, --# of connections by user
-  MAX(ActivityATUTC) AS LastConnectionAtUTC --time of user's last connection
+  MAX(ActivityAtUTC) AS LastConnectionAtUTC --time of user's last connection
   FROM ClassDB.ConnectionActivity
   WHERE ActivityType = 'C'
   GROUP BY UserName
