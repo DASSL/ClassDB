@@ -37,6 +37,18 @@ END
 $$;
 
 
+
+--UPGRADE FROM 2.0 TO 2.1
+-- These statements are needed when upgrading ClassDB from 2.0 to 2.1
+-- These can be removed in a future version of ClassDB
+--NOT NULL on FullName is dropped
+-- Constraint definition updates to only enforce if isTeam is true
+ALTER TABLE IF EXISTS ClassDB.RoleBase ALTER COLUMN FullName DROP NOT NULL;
+ALTER TABLE IF EXISTS ClassDB.RoleBase
+   DROP CONSTRAINT IF EXISTS rolebase_fullname_check;
+ALTER TABLE IF EXISTS ClassDB.RoleBase ADD CONSTRAINT rolebase_fullname_check
+   CHECK(isTeam OR (TRIM(FullName) <> '' AND FullName IS NOT NULL));
+
 --Define a table of users and teams recorded (made known) for this DB
 -- each user/team has their own DBMS role
 -- a "user" is a DBMS role who can log in and represents a human user
@@ -45,11 +57,13 @@ $$;
 -- users and teams
 -- No primary key is defined because uniqueness depends on case folding
 --  instead, uniqueness is enforced using an index on an expression
+-- A non-NULL and non-empty FullName is enforced for users (but not for teams)
 CREATE TABLE IF NOT EXISTS ClassDB.RoleBase
 (
   RoleName ClassDB.IDNameDomain NOT NULL --server role name
    CHECK(TRIM(RoleName) <> '' AND NOT ClassDB.isClassDBRoleName(RoleName)),
-  FullName VARCHAR NOT NULL CHECK(TRIM(FullName) <> ''), --role's given name
+  FullName VARCHAR --role's given name
+   CHECK(isTeam OR (TRIM(FullName) <> '' AND FullName IS NOT NULL)),
   IsTeam BOOLEAN NOT NULL DEFAULT FALSE, --is the role a team or a user?
   SchemaName ClassDB.IDNameDomain NOT NULL --name of the role-specific schema
    CHECK(TRIM(SchemaName) <> ''),
@@ -199,8 +213,9 @@ DECLARE
 BEGIN
 
    --validate inputs:
-   -- neither roleName nor fullName may be empty or NULL
+   -- roleName may not be empty or NULL
    -- isTeam may not be NULL
+   -- fullName may not be empty or NULL if isTeam is false
    -- schemaName may not be empty
    -- stored and new values of isTeam and schemaName should match for known roles
 
@@ -209,13 +224,13 @@ BEGIN
       RAISE EXCEPTION 'Invalid argument: roleName is NULL or empty';
    END IF;
 
-   $2 = TRIM($2);
-   IF ($2 = '' OR $2 IS NULL) THEN
-      RAISE EXCEPTION 'Invalid argument: fullName is NULL or empty';
-   END IF;
-
    IF ($3 IS NULL) THEN
       RAISE EXCEPTION 'Invalid argument: isTeam is NULL';
+   END IF;
+
+   $2 = TRIM($2);
+   IF (NOT $3 AND ($2 = '' OR $2 IS NULL)) THEN
+      RAISE EXCEPTION 'Invalid argument: fullName is NULL or empty';
    END IF;
 
    $4 = TRIM($4);
@@ -342,10 +357,16 @@ REVOKE ALL ON FUNCTION
    FROM PUBLIC;
 
 
+--UPGRADE FROM 2.0 TO 2.1
+-- This following statement is needed when upgrading ClassDB from 2.0 to 2.1
+-- It can be removed in a future version of ClassDB
+--Parameter $1 name changes from userName to roleName
+DROP FUNCTION IF EXISTS ClassDB.revokeClassDBRole(ClassDB.IDNameDomain,
+                                                  ClassDB.IDNameDomain);
 
---Define a function to revoke a ClassDB role from a known user
+--Define a function to revoke a ClassDB role from a known ClassDB role
 CREATE OR REPLACE FUNCTION
-   ClassDB.revokeClassDBRole(userName ClassDB.IDNameDomain,
+   ClassDB.revokeClassDBRole(roleName ClassDB.IDNameDomain,
                              classdbRoleName ClassDB.IDNameDomain)
    RETURNS VOID AS
 $$
@@ -359,23 +380,23 @@ BEGIN
 
    --should be a server role
    IF NOT ClassDB.isServerRoleDefined($1) THEN
-      RAISE NOTICE 'User "%" is not defined in the server', $1;
+      RAISE NOTICE 'Role "%" is not defined in the server', $1;
       RETURN;
    END IF;
 
-   --should be a known user
-   IF NOT ClassDB.isUser($1) THEN
-      RAISE NOTICE 'User "%" is not known', $1;
+   --should be a known role
+   IF NOT ClassDB.isRoleKnown($1) THEN
+      RAISE NOTICE 'Role "%" is not known', $1;
       RETURN;
    END IF;
 
-   --user should already have the role to revoke
+   --role should already have the group role to revoke
    IF NOT ClassDB.isMember($1, $2) THEN
-      RAISE NOTICE 'User "%" is not a member of role "%"', $1, $2;
+      RAISE NOTICE 'Role "%" is not a member of ClassDB role "%"', $1, $2;
       RETURN;
    END IF;
 
-   --revoke the specified ClassDB role from the user
+   --revoke the specified ClassDB role from the role
    EXECUTE FORMAT('REVOKE %s FROM %s', $2, $1);
 
 END;
