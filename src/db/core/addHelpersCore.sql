@@ -450,14 +450,11 @@ GRANT EXECUTE ON FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain)
 --objectName must be an object in the current db, schema qualified if necessary
 -- IMPORTANT: objectNames for functions must have parameters
 --newOwner must be a valid server role
---okIfNotExists determines whether exceptions are raised if the object does not
--- exist (if true, notices are raised if the object does not exist)
 CREATE OR REPLACE FUNCTION
    ClassDB.reassignObjectOwnership(objectType VARCHAR(20),
                                    objectName VARCHAR,
                                    newOwner ClassDB.IDNameDomain
-                                    DEFAULT CURRENT_USER,
-                                   okIfNotExists BOOLEAN DEFAULT FALSE
+                                    DEFAULT CURRENT_USER
                                   )
    RETURNS VOID AS
 $$
@@ -503,13 +500,7 @@ BEGIN
    --execute command to reassign ownership. A separate statement is used for
    -- tables to avoid reassigning descendant tables
    IF $1 = 'TABLE' THEN
-      IF $4 THEN
-         EXECUTE FORMAT('ALTER TABLE IF EXISTS ONLY %s OWNER TO %s', $2, $3);
-      ELSE
-         EXECUTE FORMAT('ALTER TABLE ONLY %s OWNER TO %s', $2, $3);
-      END IF;
-   ELSEIF $4 THEN
-      EXECUTE FORMAT('ALTER %s IF EXISTS %s OWNER TO %s', $1, $2, $3);
+      EXECUTE FORMAT('ALTER TABLE ONLY %s OWNER TO %s', $2, $3);
    ELSE
       EXECUTE FORMAT('ALTER %s %s OWNER TO %s', $1, $2, $3);
    END IF;
@@ -518,7 +509,7 @@ $$ LANGUAGE plpgsql
    RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.reassignObjectOwnership(VARCHAR, VARCHAR,
-                                               ClassDB.IDNameDomain, BOOLEAN)
+                                               ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
 

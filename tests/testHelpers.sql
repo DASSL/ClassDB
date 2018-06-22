@@ -472,9 +472,8 @@ BEGIN
    
    RETURN 'PARTIAL PASS - not all functionalty tested';
 --------------------------------------------------------------------------------
---Test additional functionality, including default role (CURRENT_USER) and 
--- allowing of non-existent objects
 
+--Test additional functionality: default role (CURRENT_USER)
 
 --------------------------------------------------------------------------------
 --Misc. edge cases: different capitalizations, no objects in schema
