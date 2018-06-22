@@ -345,7 +345,6 @@ ALTER FUNCTION ClassDB.grantRole(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
 
-
 --Define a function to list all objects owned by a role. This query uses
 -- pg_class which lists all objects Postgres considers relations (tables, views,
 -- and types) and UNIONs with pg_proc include functions
@@ -363,7 +362,7 @@ $$
    CASE --Output the full name of each relation type from the char code
       WHEN c.relkind = 'r' THEN 'Table'
       WHEN c.relkind = 'i' THEN 'Index'
-      WHEN c.relkind = 's' THEN 'Sequence'
+      WHEN c.relkind = 'S' THEN 'Sequence'
       WHEN c.relkind = 'v' THEN 'View'
       WHEN c.relkind = 'm' THEN 'Materialized View'
       WHEN c.relkind = 'c' THEN 'Type'
@@ -391,7 +390,6 @@ REVOKE ALL ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain) FROM PUBLI
 
 GRANT EXECUTE ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain)
       TO ClassDB_Instructor, ClassDB_DBManager;
-
 
 
 --Define a function to list all 'orphan' objects owned by ClassDB_Instructor and
@@ -437,8 +435,130 @@ ALTER FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain) OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain)
-      TO ClassDB_Instructor, ClassDB_DBManager;
+   TO ClassDB_Instructor, ClassDB_DBManager;
 
+
+--Define a function to reassign ownership of an object. The executing user must
+-- have appropriate privileges to run statements that alter the object's 
+-- ownership. This includes privileges for the object, schema, and new owner
+--objectType must be one of the types that are identified by
+-- ClassDB.listOwnedObjects() NOTE: Foreign tables are not currently supported
+--Note that reassignment of TOAST tables and indexes is not necessary, nor
+-- possible. They are automatically handled via the ownership of their
+-- corresponding table
+--Descendant tables of reassigned tables do not have their ownership changed
+--objectName must be an object in the current db, schema qualified if necessary
+-- IMPORTANT: objectNames for functions must have parameters
+--newOwner must be a valid server role
+CREATE OR REPLACE FUNCTION
+   ClassDB.reassignObjectOwnership(objectType VARCHAR(20),
+                                   objectName VARCHAR,
+                                   newOwner ClassDB.IDNameDomain
+                                    DEFAULT CURRENT_USER
+                                  )
+   RETURNS VOID AS
+$$
+BEGIN
+   
+   --stop if objectType matches TOAST table
+   $1 = UPPER(TRIM($1));
+   IF $1 = 'TOAST' THEN
+      RAISE WARNING 'ownership of a TOAST tables is managed through ownership' 
+                    ' of its user table';
+      RETURN;
+   END IF;
+   
+   --stop if objectType matches Index
+   IF $1 = 'INDEX' THEN
+      RAISE WARNING 'ownership of an index is managed though ownership of its'
+                    ' underlying table';
+      RETURN;
+   END IF;
+
+   --stop if objectType matches Foreign table (not tested)
+   IF $1 = 'FOREIGN TABLE' THEN
+      RAISE EXCEPTION 'transferring ownership of foreign tables is not currently'
+                       ' supported'
+            USING DETAIL = FORMAT('foreign table name: "%s" requested new owner:'
+                                  ' "%s"', $2, $3),
+                  HINT = 'manually transfer ownership using ALTER FOREIGN TABLE';
+   END IF;
+   
+   --match value of objectType to objects types that can be reassigned
+   IF $1 NOT IN ('TABLE', 'SEQUENCE', 'VIEW', 'MATERIALIZED VIEW', 'TYPE',
+                  'FUNCTION')
+   THEN
+      --invalid type provided
+      RAISE EXCEPTION 'objectType "%" is not a valid object type for'
+                      ' ownership reassignment', $1;
+   END IF;
+   
+   --execute command to reassign ownership. A separate statement is used for
+   -- tables to avoid reassigning descendant tables
+   IF $1 = 'TABLE' THEN
+      EXECUTE FORMAT('ALTER TABLE ONLY %s OWNER TO %s', $2, $3);
+   ELSE
+      EXECUTE FORMAT('ALTER %s %s OWNER TO %s', $1, $2, $3);
+   END IF;
+END;
+$$ LANGUAGE plpgsql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.reassignObjectOwnership(VARCHAR, VARCHAR,
+                                               ClassDB.IDNameDomain)
+   OWNER TO ClassDB;
+
+
+--Define a function to reassign ownership of objects within a specific schema
+-- that are owned by a specific role
+--schemaName must be an existing schema in the current database
+--oldOwner and newOwner must be existing server roles
+--Executes with the privileges of the executing user, meaning that the current
+-- security context must allow transferring the owned objects in question
+CREATE OR REPLACE FUNCTION
+   ClassDB.reassignOwnedInSchema(schemaName ClassDB.IDNameDomain,
+                                 oldOwner ClassDB.IDNameDomain,
+                                 newOwner ClassDB.IDNameDomain
+                                  DEFAULT CURRENT_USER
+                                )
+   RETURNS VOID AS
+$$
+BEGIN
+   --reassign ownership of each owned relation in the specified schema. Indexes
+   -- and TOASTs do not need to be reassigned
+   PERFORM ClassDB.reassignObjectOwnership(lob.kind, $1 || '.' || lob.object, $3)
+   FROM ClassDB.listOwnedObjects($2) lob
+   WHERE lob.schema = ClassDB.foldPgID($1)
+         AND lob.kind NOT IN('Index', 'TOAST', 'Function');
+   
+   --reassign function ownership: signatures are obtained via OID aliases, and
+   -- are automatically schema qualified when needed. See: 
+   -- https://www.postgresql.org/docs/9.3/static/datatype-oid.html
+   --Encapsulation with PERFORM needed in order to use CTE
+   PERFORM * FROM 
+   (
+   WITH functionNames AS (
+      SELECT DISTINCT lob.object AS object
+      FROM ClassDB.listOwnedObjects($2) lob
+      WHERE lob.schema = ClassDB.foldPgID($1) AND lob.kind = 'Function'
+   )
+   SELECT ClassDB.reassignObjectOwnership('Function',
+             p.oid::regProcedure::VARCHAR, $3)
+   FROM functionNames f LEFT JOIN pg_catalog.pg_proc p ON
+      f.object = p.proName AND p.proNamespace = (
+         SELECT oid 
+         FROM pg_catalog.pg_namespace
+         WHERE nspName = ClassDB.foldPgID($1)
+                                                )
+   ) AS subquery;
+END;
+$$ LANGUAGE plpgsql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION
+   ClassDB.reassignOwnedInSchema(ClassDB.IDNameDomain, ClassDB.IDNameDomain,
+                                 ClassDB.IDNameDomain)
+   OWNER TO ClassDB;
 
 
 --Changes a timestamp in fromTimeZone to toTimeZone
@@ -458,7 +578,7 @@ $$ LANGUAGE sql
 ALTER FUNCTION
    ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
    OWNER TO ClassDB;
-
+ 
 
 
 --Define a function to get the value of any server setting
