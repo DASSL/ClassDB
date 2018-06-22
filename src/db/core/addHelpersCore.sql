@@ -662,6 +662,12 @@ ALTER FUNCTION ClassDB.isColumnDefined(ClassDB.IDNameDomain,
 
 
 --Define a function that returns the SessionID of the calling user
+--Postgres provides no function to obtain SessionID, however the creation of SessionID
+-- is described in the documentation for log_line_prefix:
+--https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html
+--SessionID is made up of the hex encoding of the epoch time of the connection
+-- start timestamp and hex encoding of the connection PID concatenated with a
+-- '.' in between
 CREATE OR REPLACE FUNCTION ClassDB.getSessionID()
    RETURNS VARCHAR(17) AS
 $$
