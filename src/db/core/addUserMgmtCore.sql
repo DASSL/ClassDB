@@ -120,7 +120,7 @@ BEGIN
       -- new, and will not have unique values for existing rows
       CREATE UNIQUE INDEX IF NOT EXISTS idx_SessionID_ActivityType
       ON ClassDB.ConnectionActivity(SessionID, ActivityType)
-      WHERE SessionID <> '00000000.00000000'
+      WHERE SessionID <> '00000000.00000000';
 
    ELSE
       --If ConnectionActivity does not exist or is empty, just recreate it with
@@ -132,9 +132,9 @@ BEGIN
         ActivityAtUTC TIMESTAMP NOT NULL, --time at which the server accepted connection
         ActivityType CHAR(1) NOT NULL DEFAULT 'C' CHECK(ActivityType IN ('C', 'D')),
         SessionID VARCHAR(17) NOT NULL,
-        ApplicationName ClassDB.IDNameDomain --We expect AppName to be NULL for all connections
-        PRIMARY KEY(SessionID, ActivityType) --Create a PK on the new table because
-                                             -- are no existing rows to cause issues
+        ApplicationName ClassDB.IDNameDomain, --We expect AppName to be NULL for all connections
+        PRIMARY KEY(SessionID, ActivityType)  --Create a PK on the new table because
+                                              -- are no existing rows to cause issues
       );
 
       ALTER TABLE ClassDB.ConnectionActivity OWNER TO ClassDB;
