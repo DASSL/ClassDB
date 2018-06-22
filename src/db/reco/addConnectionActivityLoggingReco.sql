@@ -113,7 +113,7 @@ BEGIN
    --Get a string containing the setting names of any disabled log settings
    SELECT INTO disabledLogSettings string_agg(name, ', ')
    FROM pg_catalog.pg_settings
-   WHERE name IN ('logging_collector', 'log_connections')
+   WHERE name IN ('logging_collector', 'log_connections', 'log_disconnections')
    AND setting = 'off';
 
    --Warn the user if any server connection logging parameters are disabled
