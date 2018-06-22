@@ -137,6 +137,8 @@ BEGIN
       --If ConnectionActivity does not exist or is empty, drop it so it can
       -- be recreated with the latest updates
       --First DROP dependents
+      -- We avoid using DROP CASCADE in case users have defined their own
+      -- depenent objects
       DROP VIEW IF EXISTS ClassDB.Student;
       DROP VIEW IF EXISTS ClassDB.Instructor;
       DROP VIEW IF EXISTS ClassDB.DBManager;
