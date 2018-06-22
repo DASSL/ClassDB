@@ -1,6 +1,6 @@
 --addUserMgmtCore.sql - ClassDB
 
---Sean Murthy
+--Sean Murthy, Steven Rollo
 --Data Science & Systems Lab (DASSL)
 --https://dassl.github.io/
 
@@ -45,22 +45,9 @@ $$;
 -- UserName is not constrained to known users because DDL activity may be
 -- maintained for users who are no longer known, but see trigger definitions
 -- DDLOperation and DDLObject are unsized so they can contain arbitrary strings
-
-
---UPGRADE FROM 2.0 TO 2.1
--- The following table alterations are needed to upgrade ClassDB from 2.0 to 2.1
--- These can be removed in a future version of ClassDB
---SessionID enforced as not NULL because there is always a SessionID associated with
--- DDL activity. However, if rows exists, they will be NULL when the column
--- is added (which is an error). We use a temporary default to get around this.
---Set a temporary default to add a value to existing rows
-ALTER TABLE IF EXISTS ClassDB.DDLActivity
-   ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL DEFAULT '00000000.00000000';
-
---Drop the temporary default. DROP DEFAULT is idempotent
-ALTER TABLE IF EXISTS ClassDB.DDLActivity
-   ALTER COLUMN SessionID DROP DEFAULT;
-
+--Schema revisions from v2.0 to v2.1
+-- Added column SessionID to store the session ID of the user performing each DDL op.
+--Code to upgrade v2.0 schema/data to v2.1 follows table definition
 CREATE TABLE IF NOT EXISTS ClassDB.DDLActivity
 (
   UserName ClassDB.IDNameDomain NOT NULL, --session user performing the operation
@@ -84,6 +71,47 @@ ALTER TABLE ClassDB.DDLActivity OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.DDLActivity FROM PUBLIC;
 GRANT SELECT ON ClassDB.DDLActivity TO ClassDB_Instructor, ClassDB_DBManager;
 
+
+--Define a function to upgrade table DDLActivity from v2.0 to v.21
+-- Remove this function and its use (see after function definition) when upgrade
+-- path is removed
+CREATE OR REPLACE FUNCTION pg_temp.upgradeDDLActivity_20_21()
+RETURNS VOID AS
+$$
+BEGIN
+   --If there is data in ClassDB.DDLActivity, we need to account for it
+   IF EXISTS (SELECT * FROM ClassDB.DDLActivity) THEN
+      --SessionID enforced as not NULL because there is always a SessionID associated with
+      -- DDL activity. However, if rows exists, they will be NULL when the column
+      -- is added (which is an error). We use a temporary default to get around this.
+      --Set a temporary default to add a value to existing rows
+      ALTER TABLE IF EXISTS ClassDB.DDLActivity
+         ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL DEFAULT '00000000.00000000';
+
+      --Drop the temporary default. DROP DEFAULT is idempotent
+      ALTER TABLE IF EXISTS ClassDB.DDLActivity
+         ALTER COLUMN SessionID DROP DEFAULT;
+   ELSE
+      --Otherwise simply add the new column
+      ALTER TABLE IF EXISTS ClassDB.DDLActivity
+         ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL;
+   END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+
+--Upgrade table DDLActivity from v2.0 to 2.1
+-- test presence of column SessionID to detect if the table is already in v2.1
+--Remove this block when the upgrade path is removed
+DO
+$$
+BEGIN
+   IF  NOT ClassDB.isColumnDefined('ClassDB', 'DDLActivity', 'SessionID')
+   THEN
+      PERFORM pg_temp.upgradeDDLActivity_20_21();
+    END IF;
+ END;
+ $$;
 
 
 --Define a table to record connection activity of users
