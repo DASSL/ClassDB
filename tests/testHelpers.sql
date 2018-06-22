@@ -218,6 +218,7 @@ $$
 DECLARE
    user0OID oid; --internal OID of user 0
    user1OID oid; --internal OID of user 1
+   user2OID oid; --internal OID of user 2
    sharedSchemaOID oid; --internal OID of shared schema
    publicSchemaOID oid; --internal OID of public schema
 BEGIN
@@ -340,6 +341,18 @@ BEGIN
    CREATE SCHEMA shared_testOwnership;
    GRANT CREATE, USAGE ON SCHEMA shared_testOwnership
       TO user0_testOwnership, user1_testOwnership;
+      
+   --get OIDs for easier identification of object owners and schema in later tests
+   user0OID = (SELECT oid FROM pg_catalog.pg_roles
+               WHERE rolname = ClassDB.foldPgID('user0_testOwnership'));
+   user1OID = (SELECT oid FROM pg_catalog.pg_roles
+               WHERE rolname = ClassDB.foldPgID('user1_testOwnership'));
+   user2OID = (SELECT oid FROM pg_catalog.pg_roles
+               WHERE rolname = ClassDB.foldPgID('user2_testOwnership'));
+   sharedSchemaOID = (SELECT oid FROM pg_catalog.pg_namespace
+                      WHERE nspName = ClassDB.foldPgID('shared_testOwnership'));
+   publicSchemaOID = (SELECT oid FROM pg_catalog.pg_namespace
+                      WHERE nspName = 'public');
 
    --create test object of each type as user 1 in shared and public schema
    --NOTE: Foreign tables are not tested
@@ -353,7 +366,7 @@ BEGIN
    CREATE MATERIALIZED VIEW shared_testOwnership.sharedTestMatView AS
       (SELECT * FROM shared_testOwnership.sharedTestTable);
    CREATE TYPE shared_testOwnership.sharedTestType AS (testType VARCHAR);
-   CREATE FUNCTION shared_testOwnership.sharedTestFunction()
+   CREATE FUNCTION shared_testOwnership.sharedTestFunction(f1 VARCHAR)
       RETURNS VOID AS '' LANGUAGE SQL;
 
    CREATE TABLE public.publicTestTable(col1 VARCHAR);
@@ -364,20 +377,10 @@ BEGIN
    CREATE MATERIALIZED VIEW public.publicTestMatView AS
       (SELECT * FROM public.publicTestTable);
    CREATE TYPE public.publicTestType AS (testType VARCHAR);
-   CREATE FUNCTION public.publicTestFunction()
+   CREATE FUNCTION public.publicTestFunction(f1 VARCHAR)
       RETURNS VOID AS '' LANGUAGE SQL;
 
    RESET SESSION AUTHORIZATION;
-   
-   --get OIDs for easier identification of object owners and schema
-   user0OID = (SELECT oid FROM pg_catalog.pg_roles
-               WHERE rolname = ClassDB.foldPgID('user0_testOwnership'));
-   user1OID = (SELECT oid FROM pg_catalog.pg_roles
-               WHERE rolname = ClassDB.foldPgID('user1_testOwnership'));
-   sharedSchemaOID = (SELECT oid FROM pg_catalog.pg_namespace
-                      WHERE nspName = ClassDB.foldPgID('shared_testOwnership'));
-   publicSchemaOID = (SELECT oid FROM pg_catalog.pg_namespace
-                      WHERE nspName = 'public');
    
    --verify user 1 owns the 7 objects in shared schema
    IF NOT(6 = (SELECT COUNT(*) FROM pg_catalog.pg_class --6 objects in pg_class
@@ -421,16 +424,6 @@ BEGIN
    -- were in public schema should remain owned by user 1
    PERFORM ClassDB.reassignOwnedInSchema('shared_testOwnership',
       'user1_testOwnership', 'user0_testOwnership');
-      
-   RAISE INFO 'BLAH: %', (SELECT COUNT(*) FROM pg_catalog.pg_class --6 objects in pg_class
-               WHERE relName IN (ClassDB.foldPgID('sharedTestTable'),
-                                 ClassDB.foldPgID('sharedTestIndex'),
-                                 ClassDB.foldPgID('sharedTestSequence'),
-                                 ClassDB.foldPgID('sharedTestView'),
-                                 ClassDB.foldPgID('sharedTestMatView'),
-                                 ClassDB.foldPgID('sharedTestType'))
-                AND relOwner = user0OID AND relNamespace = sharedSchemaOID
-               );
 
    --verify that user 0 now owns the 7 objects in the shared schema
    IF NOT((FALSE OR 6 = (SELECT COUNT(*) FROM pg_catalog.pg_class --6 objects in pg_class
@@ -470,17 +463,86 @@ BEGIN
       RETURN 'FAIL: Code 8';
    END IF;
    
-   RETURN 'PARTIAL PASS - not all functionalty tested';
+   
 --------------------------------------------------------------------------------
-
 --Test additional functionality: default role (CURRENT_USER)
+   
+   --reassign objects in public schema to default newOwner (CURRENT_USER)
+   SET SESSION AUTHORIZATION user2_testOwnership;
+   PERFORM ClassDB.reassignOwnedInSchema('public', 'user1_testOwnership');
+   RESET SESSION AUTHORIZATION;
+   
+   --verify that user 2 now owns objects in public schema
+   IF NOT(6 = (SELECT COUNT(*) FROM pg_catalog.pg_class
+               WHERE relName IN (ClassDB.foldPgID('publicTestTable'),
+                                 ClassDB.foldPgID('publicTestIndex'),
+                                 ClassDB.foldPgID('publicTestSequence'),
+                                 ClassDB.foldPgID('publicTestView'),
+                                 ClassDB.foldPgID('publicTestMatView'),
+                                 ClassDB.foldPgID('publicTestType'))
+                AND relOwner = user2OID AND relNamespace = publicSchemaOID
+               )
+      AND EXISTS(SELECT COUNT(*) FROM pg_catalog.pg_proc
+                  WHERE proName = ClassDB.foldPgID('publicTestFunction')
+                  AND proOwner = user2OID
+                  AND proNamespace = publicSchemaOID)
+         )
+   THEN
+      RETURN 'FAIL: Code 9';
+   END IF;
 
 --------------------------------------------------------------------------------
---Misc. edge cases: different capitalizations, no objects in schema
+--Misc. edge cases: different capitalizations, no objects in schema,
+-- descendant tables not modified
 
+   --test different capitalizations and whitespace
+   PERFORM ClassDB.reassignObjectOwnership('  taBLE ', 'public.publicTestTable',
+      'user0_testOwnership');
+   PERFORM ClassDB.reassignObjectOwnership('  SEQUence', 'public.publicTestSequence',
+      'user0_testOwnership');
+   PERFORM ClassDB.reassignObjectOwnership('vIeW ', 'public.publicTestView',
+      'user0_testOwnership');
+   PERFORM ClassDB.reassignObjectOwnership('mAterIalizeD View',
+      'public.publicTestMatView', 'user0_testOwnership');
+   PERFORM ClassDB.reassignObjectOwnership(' Type               ',
+      'public.publicTestType', 'user0_testOwnership');
+   PERFORM ClassDB.reassignObjectOwnership('FUNCTION', 
+      'public.publicTestFunction(VARCHAR)', 'user0_testOwnership');
+      
+   --reassign in schema with no objects
+   CREATE SCHEMA emptySchema_testOwnership;
+   PERFORM ClassDB.reassignOwnedInSchema('emptySchema_testOwnership',
+      'user0_testOwnership', 'user1_testOwnership');
+   
+   --test that descendant tables are not modified
+   SET SESSION AUTHORIZATION user0_testOwnership;
+   CREATE TABLE public.publicBaseTable(col1 VARCHAR);
+   CREATE TABLE public.publicDescTable(col2 VARCHAR)
+      INHERITS (public.publicBaseTable);
+   RESET SESSION AUTHORIZATION;
+   
+   PERFORM ClassDB.reassignObjectOwnership('Table', 'public.publicBaseTable', 
+      'user1_testOwnership');
+      
+   --verify ownership
+   IF NOT(EXISTS(SELECT * FROM pg_catalog.pg_tables
+                 WHERE tableName = 'publicbasetable' AND schemaname = 'public'
+                       AND tableOwner = 'user1_testownership'
+                )
+      AND EXISTS(SELECT * FROM pg_catalog.pg_tables
+                 WHERE tableName = 'publicdesctable' AND schemaname = 'public'
+                       AND tableowner = 'user0_testownership'
+                )
+         )
+   THEN
+      RETURN 'FAIL: Code 10';
+   END IF;
 
+   RETURN 'PASS - only nominal functionalty tested';
 --------------------------------------------------------------------------------
 --Expected rejections/exceptions
+
+   --dropping non existent object with default okIfNotExists
 
 
    RETURN 'PASS';
