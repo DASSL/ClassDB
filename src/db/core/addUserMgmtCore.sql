@@ -45,6 +45,22 @@ $$;
 -- UserName is not constrained to known users because DDL activity may be
 -- maintained for users who are no longer known, but see trigger definitions
 -- DDLOperation and DDLObject are unsized so they can contain arbitrary strings
+
+
+--UPGRADE FROM 2.0 TO 2.1
+-- The following table alterations are needed to upgrade ClassDB from 2.0 to 2.1
+-- These can be removed in a future version of ClassDB
+--SessionID enforced as not NULL because there is always a SessionID associated with
+-- DDL activity. However, if rows exists, they will be NULL when the column
+-- is added (which is an error). We use a temporary default to get around this.
+--Set a temporary default to add a value to existing rows
+ALTER TABLE IF EXISTS ClassDB.DDLActivity
+   ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL DEFAULT '00000000.00000000';
+
+--Drop the temporary default. DROP DEFAULT is idempotent
+ALTER TABLE IF EXISTS ClassDB.DDLActivity
+   ALTER COLUMN SessionID DROP DEFAULT;
+
 CREATE TABLE IF NOT EXISTS ClassDB.DDLActivity
 (
   UserName ClassDB.IDNameDomain NOT NULL, --session user performing the operation
@@ -52,8 +68,10 @@ CREATE TABLE IF NOT EXISTS ClassDB.DDLActivity
   DDLOperation VARCHAR NOT NULL --the actual DDL op, e.g., "DROP TABLE"
    CHECK(TRIM(DDLOperation) <> ''),
   DDLObject VARCHAR NOT NULL --name of the object of the DDL operation
-   CHECK(TRIM(DDLObject) <> '')
+   CHECK(TRIM(DDLObject) <> ''),
+  SessionID VARCHAR(17) NOT NULL
 );
+
 
 --Set table permissions
 -- make ClassDB the owner so it can perform any operation on it
