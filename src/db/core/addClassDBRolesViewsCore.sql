@@ -16,7 +16,7 @@
 --This script should be run in every database to which ClassDB is to be added
 -- it should be run after running addClassDBRolesMgmt.sql
 
---This script creates views for User, Student, Instructor, and DBManager
+--This script creates views for User, Student, Instructor, DBManager and Teams
 -- views add derived attributes to the base data in the associated tables
 
 
@@ -75,8 +75,9 @@ LEFT OUTER JOIN
 (
   SELECT UserName,
   COUNT(*) AS ConnectionCount, --# of connections by user
-  MAX(AcceptedAtUTC) AS LastConnectionAtUTC --time of user's last connection
+  MAX(ActivityAtUTC) AS LastConnectionAtUTC --time of user's last connection
   FROM ClassDB.ConnectionActivity
+  WHERE ActivityType = 'C'
   GROUP BY UserName
 ) AS C ON C.UserName = RoleName
 WHERE NOT IsTeam
@@ -130,6 +131,43 @@ CREATE OR REPLACE VIEW ClassDB.DBManager AS
 ALTER VIEW ClassDB.DBManager OWNER TO ClassDB;
 REVOKE ALL PRIVILEGES ON ClassDB.DBManager FROM PUBLIC;
 GRANT SELECT ON ClassDB.DBManager TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+--Define a view to return Team members and thier respective team
+-- creates a derived table containing all teams for a self-join
+CREATE OR REPLACE VIEW ClassDB.TeamMember AS
+  SELECT Team.RoleName Team, Member.RoleName Member
+  FROM ClassDB.RoleBase Member
+  JOIN ClassDB.RoleBase Team ON ClassDB.isMember(Member.RoleName, Team.RoleName)
+  WHERE NOT Member.IsTeam AND Team.IsTeam
+  ORDER BY Team;
+
+
+ALTER VIEW ClassDB.TeamMember OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.User FROM PUBLIC;
+GRANT SELECT ON ClassDB.TeamMember TO ClassDB_Instructor, ClassDB_DBManager;
+
+
+--Define a view to return known teams with thier RoleName, FullName, SchemaName,
+-- ExtraInfo and Member count
+-- uses a scalar-value sub-query to computer the MemberCount using the view
+-- ClassDB.TeamMember
+CREATE OR REPLACE VIEW ClassDB.Team AS
+  SELECT RoleName AS TeamName,
+  FullName, SchemaName, ExtraInfo,
+  (
+    SELECT COUNT(*)
+    FROM ClassDB.TeamMember
+    WHERE Team = RoleName
+  ) AS MemberCount
+  FROM ClassDB.RoleBase
+  WHERE isTeam;
+
+
+
+ALTER VIEW ClassDB.Team OWNER TO ClassDB;
+REVOKE ALL PRIVILEGES ON ClassDB.Team FROM PUBLIC;
+GRANT SELECT ON ClassDB.Team TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 COMMIT;
