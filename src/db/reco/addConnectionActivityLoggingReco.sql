@@ -100,7 +100,8 @@ CREATE OR REPLACE FUNCTION ClassDB.importConnectionLog(startDate DATE DEFAULT NU
    RETURNS TABLE
    (
       logDate DATE,
-      numEntries INTEGER,
+      numConnections INTEGER,
+      numDisconnections INTEGER,
       info VARCHAR
    ) AS
 $$
@@ -160,7 +161,8 @@ BEGIN
    CREATE TEMPORARY TABLE ImportResult
    (
       logDate DATE,
-      numEntries INTEGER,
+      numConnections INTEGER,
+      numDisconnections INTEGER,
       info VARCHAR
    );
 
@@ -186,17 +188,17 @@ BEGIN
       --Import entries from the day's server log into our log table
       BEGIN
          EXECUTE format('COPY pg_temp.ImportedLogData FROM ''%s'' WITH csv', logPath);
-         INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, NULL);
+         INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, 0, NULL);
       EXCEPTION
          WHEN undefined_file THEN
             --If an expected log file is missing, skip importing that log and
             -- try the next log file. Store the error in the result table
             RAISE WARNING 'log file for % not found, skipping.', lastConDateLocal;
-            INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
+            INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, 0, SQLERRM);
          WHEN OTHERS THEN
             RAISE WARNING 'importing log file for %s failed', lastConDateLocal
             USING DETAIL = SQLERRM;
-            INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, SQLERRM);
+            INSERT INTO pg_temp.ImportResult VALUES (lastConDateLocal, 0, 0, SQLERRM);
       END;
 
       lastConDateLocal := lastConDateLocal + 1; --Check the next day
@@ -218,13 +220,19 @@ BEGIN
          AND database_name = CURRENT_DATABASE() --Only pick entries from current DB
          AND (message LIKE 'connection authorized%'
          OR   message LIKE 'disconnection%') --Only pick (dis)connection-related entries
-      RETURNING ClassDB.changeTimeZone(ActivityAtUTC)::DATE AS logDate
+      RETURNING ClassDB.changeTimeZone(ActivityAtUTC)::DATE AS logDate, ActivityType
    )
    UPDATE pg_temp.ImportResult ir --Next, update the totals in the result table
-   SET numEntries = COALESCE((SELECT COUNT(*)
-                              FROM LogInsertedCount ic
-                              WHERE ic.logDate = ir.logDate
-                              GROUP BY ic.logDate), 0);
+   SET numConnections = COALESCE((SELECT COUNT(*)
+                                  FROM LogInsertedCount ic
+                                  WHERE ic.logDate = ir.logDate
+                                  AND ActivityType = 'C'
+                                  GROUP BY ic.logDate), 0),
+       numDisconnections = COALESCE((SELECT COUNT(*)
+                                      FROM LogInsertedCount ic
+                                      WHERE ic.logDate = ir.logDate
+                                      AND ActivityType = 'D'
+                                      GROUP BY ic.logDate), 0);
 
     --Set output of this query as the return table. Note that the function does
     -- not terminate here
