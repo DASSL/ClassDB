@@ -711,6 +711,8 @@ CREATE OR REPLACE FUNCTION ClassDB.addToTeam(studentName ClassDB.IDNameDomain,
                                              teamName ClassDB.IDNameDomain)
    RETURNS VOID AS
 $$
+DECLARE
+   teamSchema ClassDB.IDNameDomain; --name of shared team schema
 BEGIN
    --assert that studentName is a known student
    IF NOT ClassDB.isStudent($1) THEN
@@ -725,33 +727,36 @@ BEGIN
    --grant team to student
    PERFORM ClassDB.grantRole($2, $1);
    
+   --get name of team's schema
+   teamSchema = ClassDB.getSchemaName($2);
+   
    --change default privileges to allow all members to read/modify data
    EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                   ' GRANT ALL PRIVILEGES ON TABLES TO %s',
-                     $1, ClassDB.getSchemaName($2), $2);
+                     $1, teamSchema, $2);
    EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                   ' GRANT ALL PRIVILEGES ON SEQUENCES TO %s',
-                     $1, ClassDB.getSchemaName($2), $2);
+                     $1, teamSchema, $2);
    EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                   ' GRANT ALL PRIVILEGES ON FUNCTIONS TO %s',
-                     $1, ClassDB.getSchemaName($2), $2);
+                     $1, teamSchema, $2);
    EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                   ' GRANT ALL PRIVILEGES ON TYPES TO %s',
-                     $1, ClassDB.getSchemaName($2), $2);
+                     $1, teamSchema, $2);
                      
    --change default privileges to allow instructors to read data
    EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                   ' GRANT SELECT ON TABLES TO ClassDB_Instructor',
-                     $1, ClassDB.getSchemaName($2));
+                     $1, teamSchema);
    EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                   ' GRANT USAGE ON SEQUENCES TO ClassDB_Instructor',
-                     $1, ClassDB.getSchemaName($2));
+                     $1, teamSchema);
    EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                   ' GRANT EXECUTE ON FUNCTIONS TO ClassDB_Instructor',
-                     $1, ClassDB.getSchemaName($2));
+                     $1, teamSchema);
    EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                   ' GRANT USAGE ON TYPES TO ClassDB_Instructor',
-                     $1, ClassDB.getSchemaName($2));
+                     $1, teamSchema);
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
@@ -778,6 +783,8 @@ CREATE OR REPLACE FUNCTION
                           teamName ClassDB.IDNameDomain) 
    RETURNS VOID AS
 $$
+DECLARE
+   teamSchema ClassDB.IDNameDomain; --name of shared team schema
 BEGIN
    --assert that studentName is a known student
    IF NOT ClassDB.isStudent($1) THEN
@@ -789,42 +796,45 @@ BEGIN
       RAISE EXCEPTION 'Role "%" is not a known team', $2;
    END IF;
    
+   --get name of team's schema
+   teamSchema = ClassDB.getSchemaName($2);
+   
    --revoke privileges to role and unset default privileges
    IF ClassDB.isMember($1, $2) THEN
       --remove default privileges that allowed all members to read/modify data 
       -- created by this student in the team's schema
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                      ' REVOKE ALL PRIVILEGES ON TABLES FROM %s',
-                        $1, ClassDB.getSchemaName($2), $2);
+                        $1, teamSchema, $2);
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                      ' REVOKE ALL PRIVILEGES ON SEQUENCES FROM %s',
-                        $1, ClassDB.getSchemaName($2), $2);
+                        $1, teamSchema, $2);
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                      ' REVOKE ALL PRIVILEGES ON FUNCTIONS FROM %s',
-                        $1, ClassDB.getSchemaName($2), $2);
+                        $1, teamSchema, $2);
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                      ' REVOKE ALL PRIVILEGES ON TYPES FROM %s',
-                        $1, ClassDB.getSchemaName($2), $2);
+                        $1, teamSchema, $2);
       
       --remove default privileges that allowed instructors to read data created 
       -- by this student in the team's schema
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                      ' REVOKE SELECT ON TABLES FROM ClassDB_Instructor',
-                        $1, ClassDB.getSchemaName($2));
+                        $1, teamSchema);
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                      ' REVOKE USAGE ON SEQUENCES FROM ClassDB_Instructor',
-                        $1, ClassDB.getSchemaName($2));
+                        $1, teamSchema);
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                      ' REVOKE EXECUTE ON FUNCTIONS FROM ClassDB_Instructor',
-                        $1, ClassDB.getSchemaName($2));
+                        $1, teamSchema);
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                      ' REVOKE USAGE ON TYPES FROM ClassDB_Instructor',
-                        $1, ClassDB.getSchemaName($2));
+                        $1, teamSchema);
       
       --Transfer ownership of team objects that were owned by the member being
       -- removed. This avoid issues with future DROP/REASSIGN OWNED BY that
       -- target the removed member (such as when a user is dropped from ClassDB)
-      PERFORM ClassDB.reassignOwnedInSchema(ClassDB.getSchemaName($2), $1, $2);
+      PERFORM ClassDB.reassignOwnedInSchema(teamSchema, $1, $2);
       
       --revoke team from student
       EXECUTE FORMAT('REVOKE %s FROM %s', $2, $1);
