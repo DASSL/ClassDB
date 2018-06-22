@@ -37,7 +37,7 @@ BEGIN
    IF EXISTS (SELECT trigger_name FROM INFORMATION_SCHEMA.triggers
               WHERE trigger_schema = 'classdb'
                     AND trigger_name IN('rejectnonuserddlactivityinsert',
-             			                   'rejectnonuserconnectionactivityinsert',
+                                        'rejectnonuserconnectionactivityinsert',
                                         'rejectddlactivityupdate',
                                         'rejectconnectionactivityupdate'
                                        )
