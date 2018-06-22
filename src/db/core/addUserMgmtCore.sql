@@ -127,14 +127,6 @@ BEGIN
    ELSE
       --If ConnectionActivity does not exist or is empty, just recreate it with
       -- v2.1 features
-
-      --First drop dependant views
-      DROP VIEW IF EXISTS ClassDB.Student;
-      DROP VIEW IF EXISTS ClassDB.Instructor;
-      DROP VIEW IF EXISTS ClassDB.DBManager;
-      DROP VIEW IF EXISTS ClassDB.User;
-
-      DROP TABLE IF EXISTS ClassDB.ConnectionActivity;
       CREATE TABLE ClassDB.ConnectionActivity
       (
         UserName ClassDB.IDNameDomain NOT NULL, --session user creating the connection
