@@ -676,9 +676,13 @@ $$
    FROM pg_stat_activity
    WHERE pid = pg_backend_pid();
 $$ LANGUAGE sql
-   STABLE;
+   STABLE
+   SECURITY DEFINER;
 
-ALTER FUNCTION ClassDB.getSessionID() OWNER TO ClassDB;
+REVOKE ALL ON FUNCTION ClassDB.getSessionID() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ClassDB.getSessionID()
+   TO ClassDB_Instructor, ClassDB_DBManager, ClassDB;
+
 
 
 COMMIT;
