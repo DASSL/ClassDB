@@ -325,11 +325,13 @@ CREATE OR REPLACE FUNCTION ClassDB.getUserConnectionActivity(
    userName ClassDB.IDNameDomain DEFAULT NULL)
 RETURNS TABLE
 (
-   UserName ClassDB.IDNameDomain, ActivityAt TIMESTAMP, ActivityType CHAR(1),
+   UserName ClassDB.IDNameDomain, ActivityAt TIMESTAMP, ActivityType VARCHAR,
    SessionID VARCHAR(17), ApplicationName ClassDB.IDNameDomain
 ) AS
 $$
-   SELECT UserName, ClassDB.changeTimeZone(ActivityAtUTC) ActivityAt, ActivityType,
+   SELECT UserName, ClassDB.changeTimeZone(ActivityAtUTC) ActivityAt,
+          CASE WHEN ActivityType = 'C' THEN 'Connection'
+          ELSE 'Disconnection' END ActivityType,
           SessionID, ApplicationName
    FROM ClassDB.ConnectionActivity
    WHERE UserName LIKE COALESCE(ClassDB.foldPgID($1), '%')
@@ -351,7 +353,7 @@ GRANT EXECUTE ON FUNCTION ClassDB.getUserConnectionActivity(ClassDB.IDNameDomain
 CREATE OR REPLACE FUNCTION public.getMyConnectionActivity()
 RETURNS TABLE
 (
-   ActivityAt TIMESTAMP, ActivityType CHAR(1), SessionID VARCHAR(17),
+   ActivityAt TIMESTAMP, ActivityType VARCHAR, SessionID VARCHAR(17),
    ApplicationName ClassDB.IDNameDomain
 ) AS
 $$
@@ -387,23 +389,18 @@ CREATE OR REPLACE FUNCTION ClassDB.getUserActivity(userName ClassDB.IDNameDomain
    DEFAULT NULL)
 RETURNS TABLE
 (
-   UserName ClassDB.IDNameDomain, ActivityAt TIMESTAMP, ActivityType VARCHAR(10),
+   UserName ClassDB.IDNameDomain, ActivityAt TIMESTAMP, ActivityType VARCHAR,
    SessionID VARCHAR(17), ApplicationName ClassDB.IDNameDomain, DDLOperation VARCHAR,
    DDLObject VARCHAR
 ) AS
 $$
    --Postgres requires casting NULL to IDNameDomain, it will not do this coercion
-   SELECT UserName, StatementStartedAt AS ActivityAt, 'DDL', NULL,
+   SELECT UserName, StatementStartedAt AS ActivityAt, 'DDL Query', NULL,
           NULL::ClassDB.IDNameDomain, DDLOperation, DDLObject
    FROM ClassDB.getUserDDLActivity(COALESCE($1, '%'))
    UNION ALL
-   SELECT UserName, ActivityAt, 'Connection', SessionID, ApplicationName, NULL, NULL
+   SELECT UserName, ActivityAt, ActivityType, SessionID, ApplicationName, NULL, NULL
    FROM ClassDB.getUserConnectionActivity(COALESCE($1, '%'))
-   WHERE ActivityType = 'C'
-   UNION ALL
-   SELECT UserName, ActivityAt, 'Disconnection', SessionID, ApplicationName, NULL, NULL
-   FROM ClassDB.getUserConnectionActivity(COALESCE($1, '%'))
-   WHERE ActivityType = 'D'
    ORDER BY UserName, ActivityAt DESC;
 $$ LANGUAGE sql
    STABLE
@@ -422,7 +419,7 @@ CREATE OR REPLACE FUNCTION ClassDB.getStudentActivity(userName ClassDB.IDNameDom
    DEFAULT NULL)
 RETURNS TABLE
 (
-   UserName ClassDB.IDNameDomain, ActivityAt TIMESTAMP, ActivityType VARCHAR(10),
+   UserName ClassDB.IDNameDomain, ActivityAt TIMESTAMP, ActivityType VARCHAR,
    SessionID VARCHAR(17), ApplicationName ClassDB.IDNameDomain, DDLOperation VARCHAR,
    DDLObject VARCHAR
 ) AS
@@ -460,7 +457,7 @@ CREATE OR REPLACE FUNCTION ClassDB.getStudentActivityAnon(
    userName ClassDB.IDNameDomain DEFAULT NULL)
 RETURNS TABLE
 (
-   ActivityAt TIMESTAMP, ActivityType VARCHAR(10), SessionID VARCHAR(17),
+   ActivityAt TIMESTAMP, ActivityType VARCHAR, SessionID VARCHAR(17),
    ApplicationName ClassDB.IDNameDomain, DDLOperation VARCHAR, DDLObject VARCHAR
 ) AS
 $$
@@ -497,7 +494,7 @@ GRANT SELECT ON ClassDB.StudentActivityAnon TO ClassDB_Instructor;
 CREATE OR REPLACE FUNCTION public.getMyActivity()
 RETURNS TABLE
 (
-   ActivityAt TIMESTAMP, ActivityType VARCHAR(10), SessionID VARCHAR(17),
+   ActivityAt TIMESTAMP, ActivityType VARCHAR, SessionID VARCHAR(17),
    ApplicationName ClassDB.IDNameDomain, DDLOperation VARCHAR, DDLObject VARCHAR
 ) AS
 $$
