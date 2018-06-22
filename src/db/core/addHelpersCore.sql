@@ -672,6 +672,7 @@ $$
 $$ LANGUAGE sql
    STABLE;
 
+ALTER FUNCTION ClassDB.getSessionID() OWNER TO ClassDB;
 
 
 COMMIT;
