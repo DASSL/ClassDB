@@ -100,8 +100,8 @@ CREATE OR REPLACE FUNCTION ClassDB.importConnectionLog(startDate DATE DEFAULT NU
    RETURNS TABLE
    (
       logDate DATE,
-      numConnections INTEGER, --# of new connections
-      numDisconnections INTEGER, --# of new disconnections
+      numConnections INTEGER, --Returns the # of new connections/disconnections
+      numDisconnections INTEGER,
       info VARCHAR
    ) AS
 $$
