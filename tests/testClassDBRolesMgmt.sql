@@ -1282,7 +1282,6 @@ BEGIN
    PERFORM ClassDB.createInstructor('ins0_addToTeam', 'Instructor 0');
    
    --Uses Postgres System Information functions to check access levels
-   -- note: create implies usage
    --Privileges test suite verifies actual access
    IF NOT(pg_catalog.has_schema_privilege(ClassDB.foldPgID('stu0_addToTeam'),
             ClassDB.foldPgID('team0_addToTeam'), 'create')
@@ -1382,13 +1381,24 @@ BEGIN
       RETURN 'FAIL: Code 3';
    END IF;
    
+   --Ownership of table should have been reassigned to team
+   IF NOT(EXISTS(SELECT * FROM pg_catalog.pg_tables
+                 WHERE tableName = 'testtable'
+                 AND schemaName = 'team0_removefromteam'
+                 AND tableOwner = 'team0_removefromteam'
+                )
+         )
+   THEN
+      RETURN 'FAIL: Code 4';
+   END IF;
+   
    --Remove from team again (should not result in exception)
    SET LOCAL client_min_messages TO WARNING;
    PERFORM ClassDB.removeFromTeam('stu1_removeFromTeam', 'team0_removeFromTeam');
    RESET client_min_messages;
    
    --Add student back to team, should regain read and write access
-   PERFORM ClassDB.addToTeam('stu0_removeFromTeam', 'team0_removeFromTeam');
+   PERFORM ClassDB.addToTeam('stu1_removeFromTeam', 'team0_removeFromTeam');
    
    IF NOT(pg_catalog.has_table_privilege(ClassDB.foldPgID('stu0_removeFromTeam'),
             ClassDB.foldPgID('team0_removeFromTeam.TestTable'), 'insert')
@@ -1397,7 +1407,20 @@ BEGIN
       AND pg_catalog.has_table_privilege(ClassDB.foldPgID('ins0_removeFromTeam'),
             ClassDB.foldPgID('team0_removeFromTeam.TestTable'), 'select'))
    THEN
-      RETURN 'FAIL: Code 4';
+      RETURN 'FAIL: Code 5';
+   END IF;
+
+   --Drop student, table in team schema should remain 
+   PERFORM ClassDB.dropStudent('stu1_removeFromTeam', TRUE, TRUE, 'drop_c');
+   
+   IF NOT(EXISTS(SELECT * FROM pg_catalog.pg_tables
+                 WHERE tableName = 'testtable'
+                 AND schemaName = 'team0_removefromteam'
+                 AND tableOwner = 'team0_removefromteam'
+                )
+         )
+   THEN
+      RETURN 'FAIL: Code 6';
    END IF;
    
    RETURN 'PASS';
