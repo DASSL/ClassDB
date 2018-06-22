@@ -135,7 +135,7 @@ GRANT SELECT ON ClassDB.DBManager TO ClassDB_Instructor, ClassDB_DBManager;
 -- creates a derived table containing all teams for a self-join
 CREATE OR REPLACE VIEW ClassDB.TeamMember AS
   SELECT Team.RoleName Team, Member.RoleName Member
-  FROM Classdb.RoleBase Member
+  FROM ClassDB.RoleBase Member
   JOIN ClassDB.RoleBase Team ON ClassDB.isMember(Member.RoleName, Team.RoleName)
   WHERE NOT Member.IsTeam AND Team.IsTeam
   ORDER BY Team;
@@ -147,7 +147,7 @@ GRANT SELECT ON ClassDB.TeamMember TO ClassDB_Instructor, ClassDB_DBManager;
 
 --Define a view to return known teams with thier RoleName, FullName, SchemaName,
 -- ExtraInfo and Member count
--- creates derived a table w/ team-specific aggregate MemberCount over the view
+-- uses a scalar-value sub-query to computer the MemberCount using the view
 -- ClassDB.TeamMember
 CREATE OR REPLACE VIEW ClassDB.Team AS
   SELECT RoleName AS TeamName,
