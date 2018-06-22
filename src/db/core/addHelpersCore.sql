@@ -659,4 +659,18 @@ ALTER FUNCTION ClassDB.isColumnDefined(ClassDB.IDNameDomain,
    ClassDB.IDNameDomain, ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
+
+
+--Define a function that returns the SessionID of the calling user
+CREATE OR REPLACE FUNCTION ClassDB.getSessionID()
+$$
+   SELECT to_hex(trunc(EXTRACT(EPOCH FROM backend_start))::integer) || '.' ||
+          to_hex(pid)
+   FROM pg_stat_activity
+   WHERE pid = pg_backend_pid();
+$$ LANGUAGE sql
+   STABLE;
+
+
+
 COMMIT;
