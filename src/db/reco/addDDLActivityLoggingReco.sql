@@ -80,7 +80,8 @@ BEGIN
          -- DDL statement starting time stamp, DDL statement performed, and object
          -- affected by the statement
          INSERT INTO ClassDB.DDLActivity VALUES
-         (SESSION_USER, statement_timestamp() AT TIME ZONE 'utc', TG_TAG, objId);
+         (SESSION_USER, statement_timestamp() AT TIME ZONE 'utc', TG_TAG, objId,
+            ClassDB.getSessionID());
       END IF;
    END IF;
 END;

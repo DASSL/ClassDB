@@ -663,6 +663,7 @@ ALTER FUNCTION ClassDB.isColumnDefined(ClassDB.IDNameDomain,
 
 --Define a function that returns the SessionID of the calling user
 CREATE OR REPLACE FUNCTION ClassDB.getSessionID()
+   RETURNS VARCHAR(17) AS
 $$
    SELECT to_hex(trunc(EXTRACT(EPOCH FROM backend_start))::integer) || '.' ||
           to_hex(pid)
