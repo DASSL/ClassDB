@@ -77,10 +77,10 @@ GRANT SELECT ON ClassDB.DDLActivity TO ClassDB_Instructor, ClassDB_DBManager;
 -- Renamed AcceptedAtUTC to ActivityAtUTC
 -- New columns ActivityType, SessionID, ApplicationName
 -- PK added  SessionID, ActivityType
---Code to upgraded v2.0 schema/data to v2.1 follows table definition
+--Code to upgrade v2.0 schema/data to v2.1 follows the table definition
 CREATE TABLE IF NOT EXISTS ClassDB.ConnectionActivity
 (
-    UserName ClassDB.IDNameDomain NOT NULL, --session user creating the connection
+    UserName ClassDB.IDNameDomain NOT NULL, --session user who created the connection
     ActivityAtUTC TIMESTAMP NOT NULL, --time at which server accepted connection
     ActivityType CHAR(1) NOT NULL CHECK(ActivityType IN ('C', 'D')),
     SessionID VARCHAR(17) NOT NULL CHECK(TRIM(SessionID) <> ''),
@@ -95,7 +95,7 @@ GRANT SELECT ON ClassDB.ConnectionActivity TO ClassDB_Instructor, ClassDB_DBMana
 
 
 --Define a function to upgrade table ConnectionActivity from v2.0 to 2.1
---Remove this function and its use (see after function definition) when upgrade
+--Remove this function and its use (see after fn definition) when the upgrade
 -- path is removed
 CREATE OR REPLACE FUNCTION pg_temp.upgradeConnectionActivity_20_21()
 RETURNS VOID AS
@@ -136,9 +136,10 @@ BEGIN
       ALTER TABLE ClassDB.ConnectionActivity
       ALTER COLUMN SessionID DROP DEFAULT;
 
-      --create a unique partial index instead of a PK because the PK columns are
-      -- won't have unique values in existing rows due to the dummy session id
-      -- this index forces the PK columns to have unique value in new rows
+      --create a unique partial index instead of a PK because the PK columns
+      -- won't have unique values in existing rows due to dummy session id added
+      -- for already existing rows
+      --this index forces the PK columns to have unique value in new rows
       CREATE UNIQUE INDEX IF NOT EXISTS idx_SessionID_ActivityType
       ON ClassDB.ConnectionActivity(SessionID, ActivityType)
       WHERE SessionID <> '00000000.00000000';
