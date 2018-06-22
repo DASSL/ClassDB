@@ -17,6 +17,13 @@
 
 --This script creates the tables, views, and triggers specific to user management
 -- (not for team management)
+--Although this is a core script, two of the tables defined in this file
+-- (ClassDB.DDLActivity and ClassDB.ConnectionActivity) are primarily related
+-- to reco components. They are required to be defined as in a core scripts because
+-- the core user views (ClassDB.User and its derivatives) are dependant on
+-- the activity tables. We have determined that it is more maintainable to define
+-- the activity tables for all installations than it is to make the ClassDB.User
+-- view modular.
 
 START TRANSACTION;
 
