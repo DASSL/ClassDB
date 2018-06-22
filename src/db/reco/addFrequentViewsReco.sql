@@ -272,12 +272,12 @@ CREATE OR REPLACE FUNCTION ClassDB.getUserDDLActivity(
    userName ClassDB.IDNameDomain DEFAULT NULL)
 RETURNS TABLE
 (
-   UserName ClassDB.IDNameDomain, StatementStartedAt TIMESTAMP,
-   DDLOperation VARCHAR, DDLObject VARCHAR, SessionID VARCHAR(17)
+   UserName ClassDB.IDNameDomain, StatementStartedAt TIMESTAMP, SessionID VARCHAR(17),
+   DDLOperation VARCHAR, DDLObject VARCHAR
 ) AS
 $$
    SELECT UserName, ClassDB.changeTimeZone(StatementStartedAtUTC) StatementStartedAt,
-          DDLOperation, DDLObject, SessionID
+          SessionID, DDLOperation, DDLObject
    FROM ClassDB.DDLActivity
    WHERE UserName LIKE COALESCE(ClassDB.foldPgID($1), '%')
    ORDER BY UserName, StatementStartedAt DESC;
@@ -298,11 +298,11 @@ GRANT EXECUTE ON FUNCTION ClassDB.getUserDDLActivity(ClassDB.IDNameDomain)
 CREATE OR REPLACE FUNCTION public.getMyDDLActivity()
 RETURNS TABLE
 (
-   StatementStartedAt TIMESTAMP, DDLOperation VARCHAR, DDLObject VARCHAR,
-   SessionID VARCHAR(17)
+   StatementStartedAt TIMESTAMP, SessionID VARCHAR(17), DDLOperation VARCHAR,
+   DDLObject VARCHAR
 ) AS
 $$
-   SELECT StatementStartedAt, DDLOperation, DDLObject, SessionID
+   SELECT StatementStartedAt, SessionID, DDLOperation, DDLObject
    FROM ClassDB.getUserDDLActivity(SESSION_USER::ClassDB.IDNameDomain);
 $$ LANGUAGE sql
    STABLE
@@ -315,7 +315,7 @@ ALTER FUNCTION public.getMyDDLActivity() OWNER TO ClassDB;
 --This view wraps getMyDDLActivity() for easier student access
 CREATE OR REPLACE VIEW public.MyDDLActivity AS
 (
-   SELECT StatementStartedAt, DDLOperation, DDLObject, SessionID
+   SELECT StatementStartedAt, SessionID, DDLOperation, DDLObject
    FROM public.getMyDDLActivity()
 );
 
