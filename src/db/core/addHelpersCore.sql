@@ -448,12 +448,13 @@ GRANT EXECUTE ON FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain)
 -- corresponding table
 --Descendant tables of reassigned tables do not have their ownership changed
 --objectName must be an object in the current db, schema qualified if necessary
+-- IMPORTANT: objectNames for functions must have parameters
 --newOwner must be a valid server role
 --okIfNotExists determines whether exceptions are raised if the object does not
 -- exist (if true, notices are raised if the object does not exist)
 CREATE OR REPLACE FUNCTION
    ClassDB.reassignObjectOwnership(objectType VARCHAR(20),
-                                   objectName VARCHAR(63),
+                                   objectName VARCHAR,
                                    newOwner ClassDB.IDNameDomain
                                     DEFAULT CURRENT_USER,
                                    okIfNotExists BOOLEAN DEFAULT FALSE
@@ -481,17 +482,17 @@ BEGIN
    IF $1 = 'foreign table' THEN
       RAISE EXCEPTION 'transferring ownership of foreign tables is not currently'
                        ' supported'
-            USING DETAIL  = 'foreign table name: "%"; requested new owner: "%"',
-                              $2, $3
-            USING HINT = 'manually transfer ownership using ALTER FOREIGN TABLE';
+            USING DETAIL = FORMAT('foreign table name: "%s" requested new owner:'
+                                  ' "%s"', $2, $3),
+                  HINT = 'manually transfer ownership using ALTER FOREIGN TABLE';
    END IF;
    
    --match value of objectType to objects types that can be reassigned
    IF $1 = 'table' THEN $1 = 'TABLE';
    ELSEIF $1 = 'sequence' THEN $1 = 'SEQUENCE';
    ELSEIF $1 = 'view' THEN $1 = 'VIEW';
-   ELSEIF OR $1 = 'materialized view' THEN $1 = 'MATERIALIZED VIEW';
-   ELSEIF OR $1 = 'type' THEN $1 = 'TYPE';
+   ELSEIF $1 = 'materialized view' THEN $1 = 'MATERIALIZED VIEW';
+   ELSEIF $1 = 'type' THEN $1 = 'TYPE';
    ELSEIF $1 = 'function' THEN $1 = 'FUNCTION';
    ELSE
       --invalid type provided
@@ -510,7 +511,7 @@ BEGIN
    ELSEIF $4 THEN
       EXECUTE FORMAT('ALTER %s IF EXISTS %s OWNER TO %s', $1, $2, $3);
    ELSE
-      EXECUTE FORMAT('ALTER %s %s OWNER TO $s', $1, $2, $3);
+      EXECUTE FORMAT('ALTER %s %s OWNER TO %s', $1, $2, $3);
    END IF;
 END;
 $$ LANGUAGE plpgsql
@@ -536,10 +537,33 @@ CREATE OR REPLACE FUNCTION
    RETURNS VOID AS
 $$
 BEGIN
-   --reassign ownership of each owned object in the specified schema
-   SELECT ClassDB.reassignObjectOwnership(lob.kind, $1 || '.' || lob.object, $3)
+   --reassign ownership of each owned relation in the specified schema. Indexes
+   -- and TOASTs do not need to be reassigned
+   PERFORM ClassDB.reassignObjectOwnership(lob.kind, $1 || '.' || lob.object, $3)
    FROM ClassDB.listOwnedObjects($2) lob
-   WHERE lob.schema = ClassDB.foldPgID($1) AND lob.kind NOT IN('Index', 'TOAST');
+   WHERE lob.schema = ClassDB.foldPgID($1)
+         AND lob.kind NOT IN('Index', 'TOAST', 'Function');
+   
+   --reassign function ownership: signatures are obtained via OID aliases, and
+   -- are automatically schema qualified when needed. See: 
+   -- https://www.postgresql.org/docs/9.3/static/datatype-oid.html
+   --Encapsulation with PERFORM needed in order to use CTE
+   PERFORM * FROM 
+   (
+   WITH functionNames AS (
+      SELECT DISTINCT lob.object AS object
+      FROM ClassDB.listOwnedObjects($2) lob
+      WHERE lob.schema = ClassDB.foldPgID($1) AND lob.kind = 'Function'
+   )
+   SELECT ClassDB.reassignObjectOwnership('Function',
+             p.oid::regProcedure::VARCHAR, $3)
+   FROM functionNames f LEFT JOIN pg_catalog.pg_proc p ON
+      f.object = p.proName AND p.proNamespace = (
+         SELECT oid 
+         FROM pg_catalog.pg_namespace
+         WHERE nspName = ClassDB.foldPgID($1)
+                                                )
+   ) AS subquery;
 END;
 $$ LANGUAGE plpgsql
    RETURNS NULL ON NULL INPUT;
