@@ -368,6 +368,8 @@ BEGIN
    CREATE TYPE shared_testOwnership.sharedTestType AS (testType VARCHAR);
    CREATE FUNCTION shared_testOwnership.sharedTestFunction(f1 VARCHAR)
       RETURNS VOID AS '' LANGUAGE SQL;
+   CREATE FUNCTION shared_testOwnership.sharedTestFunction(f1 BOOLEAN)
+      RETURNS VOID AS '' LANGUAGE SQL;
 
    CREATE TABLE public.publicTestTable(col1 VARCHAR);
    CREATE INDEX publicTestIndex ON public.publicTestTable (col1);
@@ -379,10 +381,12 @@ BEGIN
    CREATE TYPE public.publicTestType AS (testType VARCHAR);
    CREATE FUNCTION public.publicTestFunction(f1 VARCHAR)
       RETURNS VOID AS '' LANGUAGE SQL;
+   CREATE FUNCTION public.publicTestFunction(f1 BOOLEAN)
+      RETURNS VOID AS '' LANGUAGE SQL;
 
    RESET SESSION AUTHORIZATION;
    
-   --verify user 1 owns the 7 objects in shared schema
+   --verify user 1 owns the 8 objects in shared schema
    IF NOT(6 = (SELECT COUNT(*) FROM pg_catalog.pg_class --6 objects in pg_class
                WHERE relName IN (ClassDB.foldPgID('sharedTestTable'),
                                  ClassDB.foldPgID('sharedTestIndex'),
@@ -391,11 +395,11 @@ BEGIN
                                  ClassDB.foldPgID('sharedTestMatView'),
                                  ClassDB.foldPgID('sharedTestType'))
                 AND relOwner = user1OID AND relNamespace = sharedSchemaOID
-               )
-      AND EXISTS(SELECT * FROM pg_catalog.pg_proc --1 object in pg_proc
-                 WHERE proname = ClassDB.foldPgID('sharedTestFunction')
-                       AND proOwner = user1OID AND proNamespace = sharedSchemaOID
-                )
+              )
+      AND 2 = (SELECT COUNT(*) FROM pg_catalog.pg_proc --2 objects in pg_proc
+               WHERE proname = ClassDB.foldPgID('sharedTestFunction')
+                     AND proOwner = user1OID AND proNamespace = sharedSchemaOID
+              )
          )
    THEN
       RETURN 'FAIL: Code 5';
@@ -425,8 +429,8 @@ BEGIN
    PERFORM ClassDB.reassignOwnedInSchema('shared_testOwnership',
       'user1_testOwnership', 'user0_testOwnership');
 
-   --verify that user 0 now owns the 7 objects in the shared schema
-   IF NOT((FALSE OR 6 = (SELECT COUNT(*) FROM pg_catalog.pg_class --6 objects in pg_class
+   --verify that user 0 now owns the 8 objects in the shared schema
+   IF NOT((6 = (SELECT COUNT(*) FROM pg_catalog.pg_class --6 objects in pg_class
                WHERE relName IN (ClassDB.foldPgID('sharedTestTable'),
                                  ClassDB.foldPgID('sharedTestIndex'),
                                  ClassDB.foldPgID('sharedTestSequence'),
@@ -435,10 +439,10 @@ BEGIN
                                  ClassDB.foldPgID('sharedTestType'))
                 AND relOwner = user0OID AND relNamespace = sharedSchemaOID
                ))
-      AND (TRUE OR EXISTS(SELECT * FROM pg_catalog.pg_proc --1 object in pg_proc
+      AND (2 = (SELECT COUNT(*) FROM pg_catalog.pg_proc --1 object in pg_proc
                  WHERE proname = ClassDB.foldPgID('sharedTestFunction')
                        AND proOwner = user0OID AND proNamespace = sharedSchemaOID
-                ))
+               ))
          )
    THEN
       RETURN 'FAIL: Code 7';
