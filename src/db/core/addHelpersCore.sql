@@ -677,7 +677,10 @@ $$
    WHERE pid = pg_backend_pid();
 $$ LANGUAGE sql
    STABLE
-   SECURITY DEFINER;
+   SECURITY DEFINER; --This function is executed with superuser permissions because
+                     -- only superusers have full access to pg_stat_activity.
+                     -- Executing as a regular user results in unexpected
+                     -- return of NULL in some contexts 
 
 REVOKE ALL ON FUNCTION ClassDB.getSessionID() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ClassDB.getSessionID()
