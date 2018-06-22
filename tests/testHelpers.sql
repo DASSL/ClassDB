@@ -215,9 +215,12 @@ $$ LANGUAGE plpgsql;
 --reassignment: ClassDB.reassignObjectOwnership and ClassDB.reassignOwnedInSchema
 CREATE OR REPLACE FUNCTION pg_temp.testOwnershipReassignment() RETURNS TEXT AS
 $$
+DECLARE
+   user0OID oid; --internal OID of user 0
+   user1OID oid; --internal OID of user 1
+   sharedSchemaOID oid; --internal OID of shared schema
+   publicSchemaOID oid; --internal OID of public schema
 BEGIN
-   RETURN 'NOT IMPLEMENTED';
-
 --------------------------------------------------------------------------------
 --Test expected fundamental behavior of DB and ClassDB.reassignObjectOwnership
    
@@ -276,8 +279,10 @@ BEGIN
 
    --create third user to perform the reassignment. Both roles are granted to
    -- this user since this is a requirement for reassigning ownership
+   --classdb_instructor is granted to call the function being tested
    CREATE USER user2_testOwnership;
    GRANT user0_testOwnership, user1_testOwnership TO user2_testOwnership;
+   GRANT ClassDB_Instructor TO user2_testOwnership;
 
    --reassign public object from user 0 to user 1
    SET SESSION AUTHORIZATION user2_testOwnership;
@@ -299,27 +304,26 @@ BEGIN
       RETURN 'FAIL: Code 3';
    END IF;
 
-   --reassign private object from user 1 to user 0, should be possible, despite
-   -- user 0 still not having access due to schema-level restrictions
+   --reassign private object from user 1 to user 2
    SET SESSION AUTHORIZATION user2_testOwnership;
    PERFORM ClassDB.reassignObjectOwnership('Table',
                                            'user1_testOwnership.privateTestTable',
-                                           'user0_testOwnership');
+                                           'user2_testOwnership');
    RESET SESSION AUTHORIZATION;
 
    --verify object reassignment
-   IF NOT(pg_catalog.has_table_privilege(ClassDB.foldPgID('user0_testOwnership'),
+   IF NOT(pg_catalog.has_table_privilege(ClassDB.foldPgID('user2_testOwnership'),
                ClassDB.foldPgID('user1_testOwnership.privateTestTable'), 'insert')
       AND EXISTS(
                   SELECT * FROM pg_catalog.pg_tables
-                  WHERE schemaName = 'user1_testOwnership'
+                  WHERE schemaName = 'user1_testownership'
                         AND tableName = 'privatetesttable'
-                        AND tableOwner = 'user0_testownership'
+                        AND tableOwner = 'user2_testownership'
                 )
       AND NOT pg_catalog.has_table_privilege(ClassDB.foldPgID('user1_testOwnership'),
                ClassDB.foldPgID('user1_testOwnership.privateTestTable'), 'select')
       AND NOT pg_catalog.has_table_privilege(ClassDB.foldPgID('user0_testOwnership'),
-               ClassDB.foldPgID('public.publicTestTable'), 'select'))
+               ClassDB.foldPgID('user1_testOwnership.privateTestTable'), 'select'))
    THEN
       RETURN 'FAIL: Code 4';
    END IF;
@@ -334,7 +338,7 @@ BEGIN
 
    --create shared schema, granting access to user 0 and user 1
    CREATE SCHEMA shared_testOwnership;
-   GRANT CREATE ON shared_testOwnership
+   GRANT CREATE, USAGE ON SCHEMA shared_testOwnership
       TO user0_testOwnership, user1_testOwnership;
 
    --create test object of each type as user 1 in shared and public schema
@@ -348,8 +352,8 @@ BEGIN
       (SELECT * FROM shared_testOwnership.sharedTestTable);
    CREATE MATERIALIZED VIEW shared_testOwnership.sharedTestMatView AS
       (SELECT * FROM shared_testOwnership.sharedTestTable);
-   CREATE TYPE shared_testOwnership.sharedTestType AS ENUM ('testValue');
-   CREATE FUNCTION shared_testOwnership.sharedTestFunction
+   CREATE TYPE shared_testOwnership.sharedTestType AS (testType VARCHAR);
+   CREATE FUNCTION shared_testOwnership.sharedTestFunction()
       RETURNS VOID AS '' LANGUAGE SQL;
 
    CREATE TABLE public.publicTestTable(col1 VARCHAR);
@@ -359,38 +363,130 @@ BEGIN
       (SELECT * FROM public.publicTestTable);
    CREATE MATERIALIZED VIEW public.publicTestMatView AS
       (SELECT * FROM public.publicTestTable);
-   CREATE TYPE public.publicTestType AS ENUM ('testValue');
-   CREATE FUNCTION public.publicTestFunction
+   CREATE TYPE public.publicTestType AS (testType VARCHAR);
+   CREATE FUNCTION public.publicTestFunction()
       RETURNS VOID AS '' LANGUAGE SQL;
 
    RESET SESSION AUTHORIZATION;
+   
+   --get OIDs for easier identification of object owners and schema
+   user0OID = (SELECT oid FROM pg_catalog.pg_roles
+               WHERE rolname = ClassDB.foldPgID('user0_testOwnership'));
+   user1OID = (SELECT oid FROM pg_catalog.pg_roles
+               WHERE rolname = ClassDB.foldPgID('user1_testOwnership'));
+   sharedSchemaOID = (SELECT oid FROM pg_catalog.pg_namespace
+                      WHERE nspName = ClassDB.foldPgID('shared_testOwnership'));
+   publicSchemaOID = (SELECT oid FROM pg_catalog.pg_namespace
+                      WHERE nspName = 'public');
+   
+   --verify user 1 owns the 7 objects in shared schema
+   IF NOT(6 = (SELECT COUNT(*) FROM pg_catalog.pg_class --6 objects in pg_class
+               WHERE relName IN (ClassDB.foldPgID('sharedTestTable'),
+                                 ClassDB.foldPgID('sharedTestIndex'),
+                                 ClassDB.foldPgID('sharedTestSequence'),
+                                 ClassDB.foldPgID('sharedTestView'),
+                                 ClassDB.foldPgID('sharedTestMatView'),
+                                 ClassDB.foldPgID('sharedTestType'))
+                AND relOwner = user1OID AND relNamespace = sharedSchemaOID
+               )
+      AND EXISTS(SELECT * FROM pg_catalog.pg_proc --1 object in pg_proc
+                 WHERE proname = ClassDB.foldPgID('sharedTestFunction')
+                       AND proOwner = user1OID AND proNamespace = sharedSchemaOID
+                )
+         )
+   THEN
+      RETURN 'FAIL: Code 5';
+   END IF;
+   
+   --verify user 0 does not own the objects in public schema
+   IF NOT(NOT EXISTS(SELECT * FROM pg_catalog.pg_class
+               WHERE relName IN (ClassDB.foldPgID('publicTestTable'),
+                                 ClassDB.foldPgID('publicTestIndex'),
+                                 ClassDB.foldPgID('publicTestSequence'),
+                                 ClassDB.foldPgID('publicTestView'),
+                                 ClassDB.foldPgID('publicTestMatView'),
+                                 ClassDB.foldPgID('publicTestType'))
+                AND relOwner = user0OID AND relNamespace = publicSchemaOID
+               )
+      AND NOT EXISTS(SELECT * FROM pg_catalog.pg_proc
+                  WHERE proName = ClassDB.foldPgID('publicTestFunction')
+                  AND proOwner = user0OID
+                  AND proNamespace = publicSchemaOID)
+         )
+   THEN
+      RETURN 'FAIL: Code 6';
+   END IF;
 
    --reassign objects owned by user 1 in shared schema to user 0, objects that
    -- were in public schema should remain owned by user 1
    PERFORM ClassDB.reassignOwnedInSchema('shared_testOwnership',
       'user1_testOwnership', 'user0_testOwnership');
+      
+   RAISE INFO 'BLAH: %', (SELECT COUNT(*) FROM pg_catalog.pg_class --6 objects in pg_class
+               WHERE relName IN (ClassDB.foldPgID('sharedTestTable'),
+                                 ClassDB.foldPgID('sharedTestIndex'),
+                                 ClassDB.foldPgID('sharedTestSequence'),
+                                 ClassDB.foldPgID('sharedTestView'),
+                                 ClassDB.foldPgID('sharedTestMatView'),
+                                 ClassDB.foldPgID('sharedTestType'))
+                AND relOwner = user0OID AND relNamespace = sharedSchemaOID
+               );
 
-   --verify that user 0 now owns the objects
-   IF NOT (# = SELECT COUNT(*) FROM pg_catalog.pg_class 
-           WHERE relName IN (ClassDB.foldPgID('sharedTestTable'),
-                             ClassDB.foldPgID('sharedTestIndex'),
-                             ClassDB.foldPgID('sharedTestSequence'),
-                             ClassDB.foldPgID('sharedTestView'),
-                             ClassDB.foldPgID('sharedTestMatView'),
-                             ClassDB.foldPgID('sharedTestTable'),
-                             ClassDB.foldPgID('sharedTestType
-                              
-            
+   --verify that user 0 now owns the 7 objects in the shared schema
+   IF NOT((FALSE OR 6 = (SELECT COUNT(*) FROM pg_catalog.pg_class --6 objects in pg_class
+               WHERE relName IN (ClassDB.foldPgID('sharedTestTable'),
+                                 ClassDB.foldPgID('sharedTestIndex'),
+                                 ClassDB.foldPgID('sharedTestSequence'),
+                                 ClassDB.foldPgID('sharedTestView'),
+                                 ClassDB.foldPgID('sharedTestMatView'),
+                                 ClassDB.foldPgID('sharedTestType'))
+                AND relOwner = user0OID AND relNamespace = sharedSchemaOID
+               ))
+      AND (TRUE OR EXISTS(SELECT * FROM pg_catalog.pg_proc --1 object in pg_proc
+                 WHERE proname = ClassDB.foldPgID('sharedTestFunction')
+                       AND proOwner = user0OID AND proNamespace = sharedSchemaOID
+                ))
+         )
+   THEN
+      RETURN 'FAIL: Code 7';
+   END IF;
 
-   --test all object types
-   --test in shared schema
-   --test different capitalizations and valid inputs
-   --test assigning to default role
-   --test assigning to group role
-   --test okIfExists
+   --verify that user 1 still owns objects in public schema
+   IF NOT(6 = (SELECT COUNT(*) FROM pg_catalog.pg_class
+               WHERE relName IN (ClassDB.foldPgID('publicTestTable'),
+                                 ClassDB.foldPgID('publicTestIndex'),
+                                 ClassDB.foldPgID('publicTestSequence'),
+                                 ClassDB.foldPgID('publicTestView'),
+                                 ClassDB.foldPgID('publicTestMatView'),
+                                 ClassDB.foldPgID('publicTestType'))
+                AND relOwner = user1OID AND relNamespace = publicSchemaOID
+               )
+      AND EXISTS(SELECT COUNT(*) FROM pg_catalog.pg_proc
+                  WHERE proName = ClassDB.foldPgID('publicTestFunction')
+                  AND proOwner = user1OID
+                  AND proNamespace = publicSchemaOID)
+         )
+   THEN
+      RETURN 'FAIL: Code 8';
+   END IF;
+   
+   RETURN 'PARTIAL PASS - not all functionalty tested';
+--------------------------------------------------------------------------------
+--Test additional functionality, including default role (CURRENT_USER) and 
+-- allowing of non-existent objects
+
+
+--------------------------------------------------------------------------------
+--Misc. edge cases: different capitalizations, no objects in schema
+
+
+--------------------------------------------------------------------------------
+--Expected rejections/exceptions
+
+
    RETURN 'PASS';
 END;
-$$ LANGUGAE plpgsql;
+$$ LANGUAGE plpgsql;
 
 --Define a driver function to test helper functions
 CREATE OR REPLACE FUNCTION pg_temp.testHelperFunctions() RETURNS VOID AS
@@ -443,4 +539,4 @@ $$  LANGUAGE plpgsql;
 SELECT pg_temp.testHelperFunctions();
 
 
-COMMIT;
+ROLLBACK;
