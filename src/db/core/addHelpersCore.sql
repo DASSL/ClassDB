@@ -362,7 +362,7 @@ $$
    CASE --Output the full name of each relation type from the char code
       WHEN c.relkind = 'r' THEN 'Table'
       WHEN c.relkind = 'i' THEN 'Index'
-      WHEN c.relkind = 's' THEN 'Sequence'
+      WHEN c.relkind = 'S' THEN 'Sequence'
       WHEN c.relkind = 'v' THEN 'View'
       WHEN c.relkind = 'm' THEN 'Materialized View'
       WHEN c.relkind = 'c' THEN 'Type'
