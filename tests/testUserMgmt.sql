@@ -52,7 +52,9 @@ BEGIN
    --table DDLActivity should reject rows for non-Classdb users
    BEGIN
       INSERT INTO ClassDB.DDLActivity
-      VALUES ('nosuchuser', CURRENT_TIMESTAMP, 'test_DDL_op', 'test_DDL_object');
+      VALUES ('nosuchuser', CURRENT_TIMESTAMP,
+              'test_DDL_op', 'test_DDL_object', ClassDB.getSessionID()
+             );
 
       RAISE INFO '%   DDLActivity reject non-user insert', 'FAIL; Code 2';
    EXCEPTION
@@ -67,7 +69,7 @@ BEGIN
    --table ConnectionActivity should reject rows for non-Classdb users
    BEGIN
       INSERT INTO ClassDB.ConnectionActivity
-      VALUES ('nosuchuser', CURRENT_TIMESTAMP);
+      VALUES ('nosuchuser', CURRENT_TIMESTAMP, 'C', ClassDB.getSessionID(), '');
 
       RAISE INFO '%   ConnectionActivity reject non-user insert', 'FAIL; Code 3';
    EXCEPTION
@@ -85,7 +87,9 @@ BEGIN
 
    BEGIN
       INSERT INTO ClassDB.DDLActivity
-      VALUES ('s1', CURRENT_TIMESTAMP, 'test_DDL_op', 'test_DDL_object');
+      VALUES ('s1', CURRENT_TIMESTAMP,
+              'test_DDL_op', 'test_DDL_object', ClassDB.getSessionID()
+             );
 
       RAISE INFO '%   DDLActivity accept user insert', 'PASS';
    EXCEPTION
@@ -99,7 +103,8 @@ BEGIN
 
    --table ConnectionActivity should permit rows for known ClassDB users
    BEGIN
-      INSERT INTO ClassDB.ConnectionActivity VALUES ('s1', CURRENT_TIMESTAMP);
+      INSERT INTO ClassDB.ConnectionActivity
+      VALUES ('s1', CURRENT_TIMESTAMP, 'C', ClassDB.getSessionID(), '');
 
       RAISE INFO '%   ConnectionActivity accept user insert', 'PASS';
    EXCEPTION
