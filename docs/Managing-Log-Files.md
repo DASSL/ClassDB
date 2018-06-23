@@ -8,12 +8,12 @@ _Author: Steven Rollo_
 ClassDB's connection logging facilities rely on the external Postgres server log files. This document explains how ClassDB configures Postgres' logging system and how to monitor log file usage. This information most relevant to ClassDB deployments using the connection logging facility.  
 
 ## ClassDB Log File Configuration
-If [connection logging is enabled](Activity-Logging), ClassDB makes several modifications to the Postgres instance's settings. These changes allow ClassDB to retrieve connection information from the logs. The following SQL statements from `enableServerLogging.sql` are used to configure Postgres' log system, followed by a table describing each setting:
+If [connection logging is enabled](Activity-Logging), ClassDB makes several modifications to the Postgres instance's settings. These changes allow ClassDB to retrieve connection information from the logs. The following SQL statements from `enableConnectionLoggingReco.sql` are used to configure Postgres' log system, followed by a table describing each setting:
 ```sql
 ALTER SYSTEM SET log_connections TO 'on';
 ALTER SYSTEM SET log_destination TO 'csvlog';
 ALTER SYSTEM SET log_filename TO 'postgresql-%m.%d.log';
-SELECT pg_reload_conf();
+ALTER SYSTEM SET logging_collector TO 'on'
 ```
 
 | Setting | Description |
@@ -21,8 +21,9 @@ SELECT pg_reload_conf();
 | `log_connections TO 'on'` | Causes Postgres to write one line to the log file for each connection established to the DBMS |
 | `log_destination TO 'csvlog'` | Causes Postgres to write logs in a csv format instead of plain text |
 | `log_filename TO 'postgresql-%m.%d.log'` | Sets the log file name.  `%m` and `%d` are placeholders for the current month and day, respectively |
+| `logging_collector TO 'on'` | Causes Postgres to direct all log output to external files |
 
-The function `pg_reload_conf()` applies these settings without having to restart the DBMS.
+Note that if `logging_collector` is initially set to `off`, a server restart is required after setting it to `on`. `enableConnectionLoggingReco.psql` informs users if this step is required. All other settings are updated at runtime using pg_reload_conf()`. 
 
 The above log_filename setting creates one log file for each day of the year.  Postgres automatically rotates the log every day, writing to the appropriate file. For example, on a June 5th, Postgres will write to the log file `postgresql-6.5.log`. At midnight on June 6th, Postgres will stop writing to that file, and begin writing to `postgresql-6.6.log`. Existing files will be truncated and reused. With this system, a maximum of 366 logs will be stored at any given time, one for each possible day of the year.
 
@@ -47,7 +48,7 @@ SHOW log_directory;
 ```
 The next query shows the latest connection date imported from the logs. This date also corresponds to the last log file that was imported. Log files matching dates earlier than the one returned may be safely deleted.
 ```sql
-date((SELECT ClassDB.ChangeTimeZone(MAX(AcceptedAtUTC))
+DATE((SELECT ClassDB.ChangeTimeZone(MAX(AcceptedAtUTC))
       FROM ClassDB.ConnectionActivity));
 ```
 

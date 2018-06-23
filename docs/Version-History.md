@@ -7,6 +7,12 @@ _Author: Steven Rollo_
 
 This page lists the key changes in each version of ClassDB.
 
+## [v2.1.0](https://github.com/DASSL/ClassDB/releases/tag/v2.1.0) (6/22/2018)
+- Resolved many outstanding issues. See [here](https://github.com/DASSL/ClassDB/issues?q=is%3Aissue+milestone%3A%22M3+%28V+2.1%29%22+is%3Aclosed) for a full list
+- Added support for [teams](Teams)
+- Disconnections are now logged
+- Activity logging now records user session IDs
+
 ## [v2.0.0](https://github.com/DASSL/ClassDB/releases/tag/v2.0.0) (1/20/2018)
 - Resolved many outstanding issues. See [here](https://github.com/DASSL/ClassDB/issues?utf8=%E2%9C%93&q=is%3Aissue+milestone%3A%22M2+%28V+2.0.0%29%22+) for a full list
 - Changed ClassDB role management API - changes are incompatible with v1.0.0

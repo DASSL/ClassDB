@@ -12,17 +12,16 @@ The `src` folder is organized in a hierarchy designed to clarify the usage of ea
 
 | Name | Description |
 | ---- | ----------- |
-| `db` | The scripts in this folder contain the database-level components of ClassDB. They must be run once per database. |  
-| `server` | The scripts in this folder contain the server-level components of ClassDB. They only need to be ran once per server. |
+| [`db`](#database-level) | The scripts in this folder contain the database-level components of ClassDB. They must be run once per database. |  
+| [`server`](#server-level) | The scripts in this folder contain the server-level components of ClassDB. They only need to be ran once per server. |
 
 Each of these directories contains up to three sub-directories. Additionally, each contains install and uninstall script for all components located in the sub-directories.
 
 | Name | Description |
 | ---- | ----------- |
-| `core` | These scripts install components that are required for ClassDB to function |
-| `opt` | These scripts install components that are useful, but are not necessary to use ClassDB to its full potential |
-| `reco` | These scripts install components that significantly increase the utility of ClassDB, but are not necessary for ClassDB to function |
-
+| [`core`](#core-scripts) | These scripts install components that are required for ClassDB to function |
+| [`opt`](#optional-scripts) | These scripts install components that are useful, but are not necessary to use ClassDB to its full potential |
+| [`reco`](#recommend-scripts) | These scripts install components that significantly increase the utility of ClassDB, but are not necessary for ClassDB to function |
 
 
 ## Database-Level
@@ -85,10 +84,15 @@ Each of these directories contains up to three sub-directories. Additionally, ea
 
 ### Recommend Scripts
 
-#### initializeDBReco.psql
+#### addAllDBReco.psql.psql
 - Permissions Required: `superuser`
 
-`initializeDBReco.psql` is a psql helper script that runs all of the recommend database-level installation scripts at once.
+`addAllDBReco.psql` is a psql helper script that runs all of the recommend database-level installation scripts at once.
+
+#### addDisallowSchemaDropReco.sql
+- Permissions Required: `superuser`
+
+`addDisallowSchemaDropReco.sql` provides functions to let instructors and dbmanagers control whether students can drop any schema. This script by default disallows students from dropping any schema. When schema-drop is disallowed, students are prevented from executing the statements `DROP SCHEMA` and `DROP OWNED BY`.
 
 #### addConnectionActivityLoggingReco.sql
 - Permissions Required: `superuser`
@@ -126,10 +130,10 @@ Each of these directories contains up to three sub-directories. Additionally, ea
 
 `addAllServerCore.psql` is a psql helper script that install all of the core server-level components at once.
 
-#### prepareServerCore.sql
+#### initalizeServerCore.sql
 - Permissions Required: `superuser`
 
-`prepareServerCore.sql` performs server level configuration for ClassDB, and should be run once per Postgres instance. It creates the four user roles that are used by ClassDB:
+`initalizeServerCore.sql` performs server level configuration for ClassDB, and should be run once per Postgres instance. It creates the four user roles that are used by ClassDB:
 
 - `classdb_instructor`
 - `classdb_student`

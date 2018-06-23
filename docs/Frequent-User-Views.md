@@ -94,7 +94,9 @@ This view displays activity records for all students using `ClassDB.getStudentAc
 | ------ | ---- | ----------- |
 | `UserName` | `ClassDB.IDNameDomain` | The user name of the user |
 | `ActivityAt` | `TIMESTAMP` | The time (at local time) the activity occured |
-| `ActivityType` | `VARCHAR` | The type of activity - either `DDL` or `Connection` |
+| `ActivityType` | `VARCHAR` | The type of activity - `Connection`, `Disconnection`, or `DDL Query` |
+| `SessionID` | `VARCHAR(17)` | The unique session ID of the user generating the activity |
+| `ApplicationName` | `ClassDB.IDNameDomain` | The application name provided by the client used |
 | `DDLOperation` | `VARCHAR` | The DDL operation the user performed (ex. `CREATE TABLE`). Always `NULL` for connection activities |
 | `DDLObject` | `VARCHAR` | The schema-qualified name of the object modified by the user's DDL operation. Always `NULL` for connection activities |
 
@@ -111,7 +113,9 @@ This view displays anonymized activity records for all students using `ClassDB.g
 | Column | Type | Description |
 | ------ | ---- | ----------- |
 | `ActivityAt` | `TIMESTAMP` | The time (at local time) the activity occured |
-| `ActivityType` | `VARCHAR` | The type of activity - either `DDL` or `Connection` |
+| `ActivityType` | `VARCHAR` | The type of activity - `Connection`, `Disconnection`, or `DDL Query` |
+| `SessionID` | `VARCHAR(17)` | The unique session ID of the user generating the activity |
+| `ApplicationName` | `ClassDB.IDNameDomain` | The application name provided by the client used |
 | `DDLOperation` | `VARCHAR` | The DDL operation the user performed (ex. `CREATE TABLE`). Always `NULL` for connection activities |
 | `DDLObject` | `VARCHAR` | The sname of the object modified by the user's DDL operation. The schema name is explicitly remove to protect privacy. Always `NULL` for connection activities |
 
@@ -149,6 +153,7 @@ This view displays a list of the user's DDL activities by calling `public.getMyD
 | Column | Type | Description |
 | ------ | ---- | ----------- |
 | `StatementStartedAt` | `TIMESTAMP` | The time (at local time) the DDL operation was started |
+| `SessionID` | `VARCHAR(17)` | The unique session ID of the user generating the activity |
 | `DDLOperation` | `VARCHAR` | The DDL operation the user performed (ex. `CREATE TABLE`) |
 | `DDLObject` | `VARCHAR` | The schema-qualified name of the object modified by the user's DDL operation |
 
@@ -164,7 +169,10 @@ This view displays a list of the user's connection activities by calling `public
 
 | Column | Type | Description |
 | ------ | ---- | ----------- |
-| `ConnectionAcceptedAt` | `TIMESTAMP` | The time (at local time) the connection was accepted by the server |
+| `ActivityAt` | `TIMESTAMP` | The time (at local time) the connection was accepted by the server |
+| `ActivityType` | `VARCHAR` | The type of activity - `Connection`, `Disconnection` |
+| `SessionID` | `VARCHAR(17)` | The unique session ID of the user generating the activity |
+| `ApplicationName` | `ClassDB.IDNameDomain` | The application name provided by the client used |
 
 
 ### Combined User Activity
@@ -179,7 +187,9 @@ This view displays a list of the user's connection and DDL activities by calling
 | Column | Type | Description |
 | ------ | ---- | ----------- |
 | `ActivityAt` | `TIMESTAMP` | The time (at local time) the activity occured |
-| `ActivityType` | `VARCHAR` | The type of activity - either `DDL` or `Connection` |
+| `ActivityType` | `VARCHAR` | The type of activity - `Connection`, `Disconnection`, or `DDL Query` |
+| `SessionID` | `VARCHAR(17)` | The unique session ID of the user generating the activity |
+| `ApplicationName` | `ClassDB.IDNameDomain` | The application name provided by the client used |
 | `DDLOperation` | `VARCHAR` | The DDL operation the user performed (ex. `CREATE TABLE`). Always `NULL` for connection activities |
 | `DDLObject` | `VARCHAR` | The schema-qualified name of the object modified by the user's DDL operation. Always `NULL` for connection activities |
 
