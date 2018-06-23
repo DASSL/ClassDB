@@ -82,7 +82,7 @@ WHERE col1 = 'test';
 
 DELETE FROM ptTeam0.FirstTeamTable;
 
-DELETE ptTeam0.FirstTeamTable;
+DROP TABLE ptTeam0.FirstTeamTable;
 
 
 --Create table in team schema to test read by instructor, CRUD by other member
