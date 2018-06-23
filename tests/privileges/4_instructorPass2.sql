@@ -27,4 +27,7 @@ SELECT listTables('ptstu0');
 SELECT describe('testInsPub', 'public');
 SELECT describe('testStuUsr', 'ptstu0');
 
+--Read shared team table
+SELECT * FROM ptteam0.SharedTable;
+
 COMMIT;

@@ -25,4 +25,8 @@ SELECT ClassDB.createStudent('ptstu1', 'Student 1');
 SELECT ClassDB.createDBManager('ptdbm0', 'DB Manager 0');
 SELECT ClassDB.createDBManager('ptdbm1', 'DB Manager 1');
 
+--Create team for testing access to team resources
+SELECT ClassDB.createTeam('ptTeam0', 'Team 0');
+
+
 COMMIT;

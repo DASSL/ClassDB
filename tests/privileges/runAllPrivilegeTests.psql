@@ -19,12 +19,9 @@
 -- to be run, along with having the cleanup process complete
 \set ON_ERROR_STOP off
 
-
---Remember the current user so we can switch back at the end
--- Currently, this is assuming the starting superuser account is 'postgres'
--- you must change this if you want to switch back to a different superuser account
--- at the end of the script
-\set psqlCurrentUser postgres
+--Stores the original user the original executing user from psql's :USER
+-- environment variable
+\set POSTGRES_USER :USER
 
 
 \echo 'The following tests should complete without any errors'
@@ -32,15 +29,20 @@
 
 \ir 0_setup.sql
 
+--PGPASSWORD environment variable allows auto-login using the set password
+\setenv PGPASSWORD ptins0
 \connect - ptins0
 \ir 1_instructorPass.sql
 
+\setenv PGPASSWORD ptstu0
 \connect - ptstu0
 \ir 2_studentPass.sql
 
+\setenv PGPASSWORD ptdbm0
 \connect - ptdbm0
 \ir 3_dbmanagerPass.sql
 
+\setenv PGPASSWORD ptins1
 \connect - ptins1
 \ir 4_instructorPass2.sql
 
@@ -50,14 +52,18 @@
 
 \ir 5_instructorFail.sql
 
+\setenv PGPASSWORD ptstu1
 \connect - ptstu1
 \ir 6_studentFail.sql
 
+\setenv PGPASSWORD ptdbm1
 \connect - ptdbm1
 \ir 7_dbmanagerFail.sql
 
 \echo 'Initiating cleanup'
 \prompt 'Press enter to continue...' unusedInputVariable
 
-\connect - :psqlCurrentUser
+--Reset stored password to allow user to log in with original role
+\setenv PGPASSWORD
+\connect - :POSTGRES_USER
 \ir 8_cleanup.sql

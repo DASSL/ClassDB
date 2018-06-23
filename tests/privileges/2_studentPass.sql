@@ -25,10 +25,11 @@ SELECT describe('test');
 DROP TABLE test;
 
 
---Test frequent views access
-SELECT * FROM MyActivitySummary;
-SELECT * FROM MyDDLActivity;
-SELECT * FROM MyConnectionActivity;
+--Read from public frequent views
+SELECT * FROM public.myActivitySummary;
+SELECT * FROM public.MyDDLActivity;
+SELECT * FROM public.MyConnectionActivity;
+SELECT * FROM public.myActivity;
 
 
 --CRUD on tables created by the student. This table should be placed in their own schema
@@ -50,6 +51,51 @@ WHERE TRUE;
 
 DELETE FROM test;
 DROP TABLE test;
+
+
+--CRUD on tables owned by student in team schema
+CREATE TABLE ptteam0.SharedTable
+(
+   col1 VARCHAR(10)
+);
+
+INSERT INTO ptteam0.SharedTable VALUES ('test');
+
+SELECT * FROM ptteam0.SharedTable;
+
+UPDATE ptteam0.SharedTable
+SET col1 = 'TEST'
+WHERE col1 = 'test';
+
+DELETE FROM ptteam0.SharedTable;
+DROP TABLE ptteam0.SharedTable;
+
+
+--CRUD on tables owned by team in team schema
+CREATE TABLE ptteam0.FirstTeamTable
+(
+   col1 VARCHAR(10)
+);
+INSERT INTO ptteam0.FirstTeamTable VALUES('test');
+
+SELECT * FROM ptteam0.FirstTeamTable;
+
+UPDATE ptteam0.FirstTeamTable
+SET col1 = 'TEST'
+WHERE col1 = 'test';
+
+DELETE FROM ptTeam0.FirstTeamTable;
+
+DROP TABLE ptTeam0.FirstTeamTable;
+
+
+--Create table in team schema to test read by instructor, CRUD by other member
+CREATE TABLE ptteam0.SharedTable
+(
+   col1 VARCHAR(20)
+);
+
+INSERT INTO ptteam0.SharedTable VALUES ('In Team''s scheama');
 
 
 --Read on tables in the public schema created by Instructor

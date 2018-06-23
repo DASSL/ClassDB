@@ -25,25 +25,37 @@ SET col1 = 'Hello';
 
 DELETE FROM public.testInsPublic;
 
+--Not read from team's table
+SELECT * FROM ptteam0.SharedTable;
+
+--Not create on team's schema
+CREATE TABLE ptteam0.StudentTestTable(col1 VARCHAR);
+
 
 --Not access any objects in classdb schema, should be prevented by not having
 -- USAGE on the classdb schema anyway
-SELECT ClassDB.createUser('testuser', 'password');
-SELECT ClassDB.dropUser('testuser');
+SELECT ClassDB.createStudent('teststu_pt', 'testname');
+SELECT ClassDB.resetPassword('teststu_pt');
+SELECT ClassDB.listUserConnections('teststu_pt');
+SELECT ClassDB.killUserConnections('teststu_pt');
+SELECT ClassDB.createTeam('testteam_pt');
+SELECT ClassDB.addToTeam('teststu_pt', 'testteam_pt');
+SELECT ClassDB.removeFromTeam('teststu_pt', 'testteam_pt');
+SELECT ClassDB.revokeTeam('testteam_pt');
+SELECT ClassDB.dropTeam('testteam_pt');
+SELECT ClassDB.revokeStudent('teststu_pt');
+SELECT ClassDB.dropStudent('teststu_pt', TRUE, TRUE, 'drop_c');
 
-SELECT ClassDB.createStudent('teststu', 'noname');
-SELECT ClassDB.resetUserPassword('teststu');
-SELECT ClassDB.listUserConnections('teststu');
-SELECT ClassDB.killUserConnections('teststu');
-SELECT ClassDB.dropStudent('teststu');
+SELECT ClassDB.createInstructor('testins_pt', 'testname');
+SELECT ClassDB.revokeInstructor('testins_pt');
+SELECT ClassDB.dropInstructor('testins_pt', TRUE, TRUE, 'drop_c');
 
-SELECT ClassDB.createInstructor('testins', 'noname');
-SELECT ClassDB.dropInstructor('testins');
+SELECT ClassDB.createDBManager('testman_pt', 'noname');
+SELECT ClassDB.revokeDBManager('testman_pt');
+SELECT ClassDB.dropDBManager('testman_pt', TRUE, TRUE, 'drop_c');
 
-SELECT ClassDB.createDBManager('testman', 'noname');
-SELECT ClassDB.dropDBManager('testman');
+SELECT ClassDB.importConnectionLog();
 
-SELECT ClassDB.dropAllStudents();
 
 
 --Not read Student or Instructor tables (non-access to classdb schema should also prevent this)
