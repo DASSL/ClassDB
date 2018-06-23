@@ -57,13 +57,12 @@ Contains the source code for ClassDB. All files need to install ClassDB are in t
 
 ## tests (./tests)
 This folder contains scripts to test the functionality of ClassDB, along with the privileges sub-folder
-- `testAddConnectionActivityLogging.psql`
-- `testAddConnectionActivityLoggingCleanup.sql`
-- `testAddDDLActivityLogging.sql`
+- `testConnectionActivityLogging.psql`
+- `testDDLActivityLogging.sql`
 - `testClassDBRolesMgmt.sql`
 - `testHelpers.sql`
-- `testUserMgmt.sql`
 - `testRoleBaseMgmt.sql`
+- `testUserMgmt.sql`
 
 ### privileges (./tests/privileges)
 This folder contains a sequence of scripts to test the functionality of ClassDB's privilege management

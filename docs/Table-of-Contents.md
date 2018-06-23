@@ -17,6 +17,7 @@
   * [Adding users](Adding-Users)
   * [Revoking roles](Revoking-Roles)
   * [Removing users](Removing-Users)
+  * [Managing teams](Teams)
   * [Viewing users](Viewing-Registered-Users)
   * [Changing and resetting passwords](Changing-Passwords)
   * [Setting connection limits and query timeout](Student-Limitations)

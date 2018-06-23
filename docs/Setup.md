@@ -35,7 +35,7 @@ The following sections outline how to install ClassDB components. Core component
 ClassDB provides two convince scripts that install all ClassDB components. If you wish to install all components, you may simply run these two scripts, and then skip to the `Verifying Installation` section.
 1. Run `src/server/addAllToServer.psql`. Since this is a server level component, it may be installed while connected to any database on the DBMS
 2. Run the command: `CREATE DATABASE <databaseName> WITH OWNER = ClassDB;`, substituting the desired name of a database to install ClassDB on. All `DB` scripts should be run while connected to this database
-3. Run `src/db/addAlTolDB.psql`
+3. Run `src/db/addAllToDB.psql`
  
 
 ## Individual Components
@@ -47,8 +47,8 @@ The following sections detail how to install individual ClassDB components.
 1. Run `src/server/core/addAllServerCore.psql`. Since this is a server level component, it may be installed while connected to any database on the DBMS
 
 #### Database Core
-1. Run the command: `CREATE DATABASE <databaseName> WITH OWNER = ClassDB;`, substituting the desired name of a database to install ClassDB on. All `DB` scripts should be run while connected to this database
-2. Run `src/db/core/addAllDBCore.psql`
+1. Run the command: `CREATE DATABASE <databaseName> WITH OWNER = ClassDB;`, substituting the desired name of a database to install ClassDB on
+2. Connect to the database where ClassDB is to be installed and run `src/db/core/addAllDBCore.psql`
 
 
 ### Recommended Components [Not Required]
@@ -58,27 +58,31 @@ ClassDB provides two utility scripts for automatically installing all recommend 
 1. Run `src/server/reco/addAllServerReco.psql`
 2. Run `src/db/reco/addAllDBReco.psql`
 
-If you want to install individual components instead, see the next sections.
+See the following sections to install only some recommended components instead of installing all of them.
+
+#### Disallowing student-initiated schema drop
+Run `/src/db/reco/addDisallowSchemaDropReco.sql`  
 
 #### Connection Activity Logging
-1. Run `src/server/reco/enableConnectionLoggingReco.psql`. This script is sever level, and need only be run once per Postgres server
+1. Run `src/server/reco/enableConnectionLoggingReco.psql`. This script is sever level, and need only be run once per Postgres server. Note, you will need to restart your Postgres instance if prompted. (see [Managing Log Files](Managing-Log-Files) for additional information)
 2. Run `src/db/reco/addConnectionActivityLoggingReco.sql`
-- Note: If you wish to disable connection logging in the future, run `src/server/reco/disableConnectionLoggingReco.psql`. Like `enableConnectionLoggingReco.psql`, this script only needs to be run once per Postgres instance
+
+**Note:** To disable connection logging, run `src/server/reco/disableConnectionLoggingReco.psql`. Like `enableConnectionLoggingReco.psql`, this script only needs to be run once per Postgres instance.
 
 #### Connection Management
-1. Run `/src/db/reco/addConnectionMgmtReco.sql`  
+Run `/src/db/reco/addConnectionMgmtReco.sql`  
 
 #### DDL Activity Logging
-1. Run `src/db/reco/addDDLActivityLoggingReco.sql`
+Run `src/db/reco/addDDLActivityLoggingReco.sql`
 
 #### Frequent User Views
-1. Run `src/db/reco/addFrequentViewsReco.sql`
+Run `src/db/reco/addFrequentViewsReco.sql`
 
 
 ### Optional Components [Not Required]
 
 #### Catalog Management Functions
-1. Run `src/db/opt/addCatalogMgmtOpt.sql`
+Run `src/db/opt/addCatalogMgmtOpt.sql`
 
 
 
@@ -94,8 +98,11 @@ The following scripts test the core components of ClassDB:
 
 Additionally, the Privileges test suite tests thoroughly tests that the access controls for each ClassDB role are working correctly. Note that this test is somewhat more involved to run than the previous tests. Please see `tests/privileges/testPrivilegesREADME.txt` for more information.
 
+### Disallowing student-initiated schema drop
+Run `testDisallowSchemaDrop.sql`.
+
 ### Connection Activity Logging
-To test connection activity logging, run `testAddConnectionActivityLogging.psql`. Note that this script requires some manual user interaction, see the source code for more information.
+Run `testAddConnectionActivityLogging.psql`.
 
 ### Connection Management Functions 
 While connected to the ClassDB database, you should be able to execute the function `ClassDB.listUserConnections('<username>')`.
@@ -138,6 +145,6 @@ The uninstaller will not attempt to remove any objects except the ones listed ab
 There is an additional case where this script may fail. If an Instructor or DBManager creates objects in the public schema, and is subsequently dropped, those objects will be assigned to `ClassDB_Instructor` or `ClassDB_DBManager`, respectively. These objects are considered 'orphan' objects, and will not be touched by the removal script. This will cause the script to fail, because it will be unable to fully remove permissions of the ClassDB roles. A user encountering this error can run `classdb.listOrphans()`, which will provide a list of these objects. They must be either dropped or assigned to a non-ClassDB role before the removal script will execute successfully.
 
 ### Removing from Server
-`src/server/removeAllFromServer.sql` removes the server level components of ClassDB. This drops the ClassDB roles from the server. `removeAlllFromDB.sql` must be run in every database ClassDB was installed in before `removeAllFromServer.sql` can be run. Once run, ClassDB will have been completely removed from the instance.
+`src/server/removeAllFromServer.sql` removes the server level components of ClassDB. This drops the ClassDB roles from the server. `removeAllFromDB.sql` must be run in every database ClassDB was installed in before `removeAllFromServer.sql` can be run. Once run, ClassDB will have been completely removed from the instance.
 
 ---
