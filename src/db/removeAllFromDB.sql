@@ -91,10 +91,18 @@ DROP OWNED BY ClassDB_Student;
 -- For example, event triggers and functions requiring superuser permissions
 DROP EVENT TRIGGER IF EXISTS triggerDDLCommandEnd;
 DROP EVENT TRIGGER IF EXISTS triggerDDLCommandSqlDrop;
+DROP EVENT TRIGGER IF EXISTS triggerDropSchemaDDLStart;
+
 DROP FUNCTION IF EXISTS ClassDB.listUserConnections(VARCHAR);
 DROP FUNCTION IF EXISTS ClassDB.enableDDLActivityLogging();
 DROP FUNCTION IF EXISTS ClassDB.disableDDLActivityLogging();
 DROP FUNCTION IF EXISTS ClassDB.importConnectionLog(DATE);
+
+DROP FUNCTION IF EXISTS ClassDB.disallowSchemaDrop();
+DROP FUNCTION IF EXISTS ClassDB.allowSchemaDrop();
+
+DROP FUNCTION IF EXISTS ClassDB.getSessionID();
+
 
 --Try to drop all ClassDB owned functions in ClassDB schema
 DROP OWNED BY ClassDB;
@@ -116,7 +124,7 @@ BEGIN
    RAISE NOTICE 'Drop user schemas or adjust their privilege';
    RAISE NOTICE 'Adjust privileges on PUBLIC schema if appropriate';
    RAISE NOTICE 'Run DROP DATABASE statement to remove the database if appropriate';
-   RAISE NOTICE 'Run removeFromServer.sql after removing ClassDB '
+   RAISE NOTICE 'Run removeAllFromServer.sql after removing ClassDB '
                 'from other databases';
 END
 $$;

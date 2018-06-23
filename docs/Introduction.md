@@ -139,4 +139,23 @@ whose login name is `bell001`.
 ```sql
 SELECT ClassDB.resetPassword('bell001');
 ```
+
+#### Create a team
+Create a student team named `thunderbolt`.
+
+```sql
+SELECT ClassDB.createTeam('thunderbolt');
+```
+Expanded versions of the [functions to create teams](Adding-Teams#functions) are
+available to store more information about teams as well as to customize certain
+parameters related to teams.
+
+
+#### Add a student to a team
+Add a student whose login name is `bell001` to the team named `thunderbolt`.
+
+```sql
+SELECT ClassDB.addToTeam('bell001', 'thunderbolt');
+```
+
 ---

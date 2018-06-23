@@ -12,6 +12,7 @@ The following is a list of common tasks that occur while using or managing an in
 * [Adding users](Adding-Users) - Add Instructors, Students, and optionally, DBManagers to an instance of ClassDB
 * [Revoking roles](Revoking-Roles) - Revoke a ClassDB group role from a user
 * [Removing users](Removing-Users) - Remove users from an instance of ClassDB
+* [Managing teams](Teams) - Add and remove teams, as well as add and remove student membership
 * [Viewing users](Viewing-Registered-Users) - Obtain a list of users who are registered in the current instance of ClassDB
 * [Changing and resetting passwords](Changing-Passwords) - Change the password for the current user, and reset forgotten passwords
 * [Setting connection limits and query timeout](Student-Limitations) - Learn about two restrictions on Student users and modify their values or disable them altogether

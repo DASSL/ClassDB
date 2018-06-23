@@ -27,6 +27,7 @@
 -- used rather then the program's current directory
 
 \set ON_ERROR_STOP on
+\ir addDisallowSchemaDropReco.sql
 \ir addConnectionActivityLoggingReco.sql
 \ir addConnectionMgmtReco.sql
 \ir addDDLActivityLoggingReco.sql

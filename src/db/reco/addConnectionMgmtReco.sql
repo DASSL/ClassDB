@@ -11,7 +11,7 @@
 
 --This script requires the current user to be a superuser
 
---This script should be run after initializeDB.sql
+--This script should be run after initializeDBCore.sql
 
 --This script will create procedures used to manage user connections.
 

@@ -15,21 +15,36 @@ START TRANSACTION;
 
 --Execute appropriate ClassDB functions (these tests do not verify correctness
 -- of each function)
-SELECT ClassDB.createStudent('teststu', 'noname');
-SELECT ClassDB.resetPassword('teststu');
-SELECT ClassDB.listUserConnections('teststu');
-SELECT ClassDB.killUserConnections('teststu');
-SELECT ClassDB.dropStudent('teststu', TRUE, TRUE, 'drop_c');
-
+SELECT ClassDB.createStudent('teststu_pt', 'testname');
+SELECT ClassDB.resetPassword('teststu_pt');
+SELECT ClassDB.listUserConnections('teststu_pt');
+SELECT ClassDB.killUserConnections('teststu_pt');
+SELECT ClassDB.createTeam('testteam_pt');
+SELECT ClassDB.addToTeam('teststu_pt', 'testteam_pt');
+SELECT ClassDB.removeFromTeam('teststu_pt', 'testteam_pt');
+SELECT ClassDB.revokeTeam('testteam_pt');
+SET LOCAL client_min_messages TO WARNING;
+SELECT ClassDB.dropTeam('testteam_pt', TRUE, TRUE, 'drop_c');
+RESET client_min_messages;
+SELECT ClassDB.revokeStudent('teststu_pt');
+SET LOCAL client_min_messages TO WARNING;
+SELECT ClassDB.dropStudent('teststu_pt', TRUE, TRUE, 'drop_c');
+RESET client_min_messages;
 --ClassDB.dropAllStudents is not being tested here because it would drop the
 -- test students that will later be used to connect to the DB
 --SELECT ClassDB.dropAllStudents(TRUE, TRUE, 'drop_c');
 
-SELECT ClassDB.createInstructor('testins', 'noname');
-SELECT ClassDB.dropInstructor('testins', TRUE, TRUE, 'drop_c');
+SELECT ClassDB.createInstructor('testins_pt', 'testname');
+SELECT ClassDB.revokeInstructor('testins_pt');
+SET LOCAL client_min_messages TO WARNING;
+SELECT ClassDB.dropInstructor('testins_pt', TRUE, TRUE, 'drop_c');
+RESET client_min_messages;
 
-SELECT ClassDB.createDBManager('testman', 'noname');
-SELECT ClassDB.dropDBManager('testman', TRUE, TRUE, 'drop_c');
+SELECT ClassDB.createDBManager('testman_pt', 'noname');
+SELECT ClassDB.revokeDBManager('testman_pt');
+SET LOCAL client_min_messages TO WARNING;
+SELECT ClassDB.dropDBManager('testman_pt', TRUE, TRUE, 'drop_c');
+RESET client_min_messages;
 
 SELECT ClassDB.importConnectionLog();
 
@@ -74,6 +89,10 @@ SET Col1 = 'goodbye';
 DELETE FROM public.PublicTest;
 DROP TABLE public.PublicTest;
 
+--Create and drop schema
+CREATE SCHEMA ptins0schema;
+DROP SCHEMA ptins0schema;
+
 
 --Read from columns in RoleBase table
 SELECT * FROM ClassDB.RoleBase;
@@ -84,6 +103,25 @@ SELECT * FROM ClassDB.User;
 SELECT * FROM ClassDB.DBManager;
 SELECT * FROM ClassDB.Student;
 SELECT * FROM ClassDB.Instructor;
+
+--Read from team views
+SELECT * FROM ClassDB.TeamMember;
+SELECT * FROM ClassDB.Team;
+
+--Read from frequent views
+SELECT * FROM ClassDB.StudentTable;
+SELECT * FROM ClassDB.StudentTableCount;
+SELECT * FROM ClassDB.StudentActivitySummary;
+SELECT * FROM ClassDB.StudentActivitySummaryAnon;
+SELECT * FROM ClassDB.StudentActivity;
+SELECT * FROM ClassDB.StudentActivityAnon;
+
+--Read from public frequent views
+SELECT * FROM public.myActivitySummary;
+SELECT * FROM public.MyDDLActivity;
+SELECT * FROM public.MyConnectionActivity;
+SELECT * FROM public.myActivity;
+
 
 
 --Update FullName and ExtraInfo in RoleBase table
@@ -111,6 +149,9 @@ CREATE TABLE TestInsUsr
 );
 
 INSERT INTO testInsUsr VALUES('Read by: ptins0');
+
+--Add test student 0 to team 0
+SELECT ClassDB.addToTeam('ptstu0', 'ptteam0');
 
 
 COMMIT;

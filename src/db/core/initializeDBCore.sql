@@ -24,6 +24,9 @@
 
 START TRANSACTION;
 
+--Suppress NOTICE messages for this script: won't apply to functions created here
+-- hides unimportant but possibly confusing msgs generated as the script executes
+SET LOCAL client_min_messages TO WARNING;
 
 --Make sure the current user has sufficient privilege to run this script
 -- privilege required: superuser
@@ -50,11 +53,11 @@ BEGIN
    SELECT COUNT(*)
    FROM pg_catalog.pg_roles
    WHERE rolname IN ('classdb', 'classdb_instructor',
-                     'classdb_dbmanager', 'classdb_student'
+                     'classdb_dbmanager', 'classdb_student', 'classdb_team'
                     )
    INTO classDBRoleCount;
 
-   IF classDBRoleCount <> 4 THEN
+   IF classDBRoleCount <> 5 THEN
       RAISE EXCEPTION
          'Missing roles: one or more expected of the expected ClassDB roles '
          'are undefined';
@@ -80,9 +83,9 @@ BEGIN
    EXECUTE format('GRANT CONNECT ON DATABASE %I TO ClassDB_Instructor, '
                   'ClassDB_Student, ClassDB_DBManager', currentDB);
 
-   --Allow ClassDB to create schemas on the current database
-   -- all schema-creation operations are done only by this role in this app
-   EXECUTE format('GRANT CREATE ON DATABASE %I TO ClassDB', currentDB);
+   --Allow ClassDB and ClassDB users to create schemas on the current database
+   EXECUTE format('GRANT CREATE ON DATABASE %I TO ClassDB, ClassDB_Instructor,'
+                  ' ClassDB_DBManager, ClassDB_Student', currentDB);
 END
 $$;
 

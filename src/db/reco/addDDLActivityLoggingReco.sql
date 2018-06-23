@@ -12,7 +12,7 @@
 
 --This script must be run as superuser.
 --This script should be run in every database in which DDL activity monitoring is required
--- it should be run after running addUserMgmt.sql
+-- it should be run after running addUserMgmtCore.sql
 
 --This script adds the ClassDB DDL statement monitoring system.  Two event triggers
 -- log the last DDL statement executed for each student in the student table
@@ -80,7 +80,8 @@ BEGIN
          -- DDL statement starting time stamp, DDL statement performed, and object
          -- affected by the statement
          INSERT INTO ClassDB.DDLActivity VALUES
-         (SESSION_USER, statement_timestamp() AT TIME ZONE 'utc', TG_TAG, objId);
+         (SESSION_USER, statement_timestamp() AT TIME ZONE 'utc', TG_TAG, objId,
+            ClassDB.getSessionID());
       END IF;
    END IF;
 END;

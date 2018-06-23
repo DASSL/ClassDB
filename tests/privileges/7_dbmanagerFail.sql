@@ -46,7 +46,7 @@ WHERE UserName = 'ptstu0';
 INSERT INTO ClassDB.ConnectionActivity VALUES ('ptsu0', '2000-01-01 00:00');
 
 UPDATE ClassDB.ConnectionActivity
-SET AcceptedAtUTC = '1999-12-31 00:00'
+SET ActivityAtUTC = '1999-12-31 00:00'
 WHERE UserName = 'ptstu0';
 
 DELETE FROM ClassDB.ConnectionActivity
@@ -57,6 +57,9 @@ WHERE UserNAme = 'ptstu0';
 SELECT * FROM ptins0.testInsUsr;
 SELECT * FROM ptdbm0.testDbmUsr;
 
+--Not read from team table
+SELECT * FROM ptteam0.sharedTable;
+
 
 --Not execute internal functions
 SELECT ClassDB.createRole('testrole', 'Test name', FALSE);
@@ -64,6 +67,23 @@ SELECT ClassDB.revokeClassDBRole('ptstu0', 'classdb_student');
 SELECT ClassDB.dropRole('ptstu0');
 SELECT ClassDB.logDDLActivity();
 SELECT ClassDB.rejectOperation();
+
+--Not drop ClassDB tables and views
+DROP TABLE ClassDB.DDLActivity;
+DROP TABLE ClassDB.RoleBase;
+DROP VIEW public.MyActivity;
+DROP VIEW ClassDB.StudentActivityAnon;
+DROP VIEW ClassDB.StudentActivity;
+DROP VIEW public.MyConnectionActivity;
+DROP VIEW public.MyDDLActivity;
+DROP VIEW ClassDB.User;
+DROP VIEW ClassDB.Instructor;
+DROP VIEW ClassDB.Student;
+DROP VIEW ClassDB.DBManager;
+DROP VIEW ClassDB.StudentTable;
+DROP VIEW ClassDB.StudentTableCount;
+DROP VIEW ClassDB.StudentActivitySummary;
+DROP VIEW ClassDB.StudentActivitySummaryAnon;
 
 
 --Not drop ClassDB functions (also covers ALTER and REPLACE)
@@ -139,3 +159,29 @@ DROP FUNCTION IF EXISTS classdb.revokeclassdbrole(ClassDB.IDNameDomain,
 DROP FUNCTION IF EXISTS classdb.revokedbmanager(ClassDB.IDNameDomain);
 DROP FUNCTION IF EXISTS classdb.revokeinstructor(ClassDB.IDNameDomain);
 DROP FUNCTION IF EXISTS classdb.revokestudent(ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.createteam(ClassDB.IDNameDomain,VARCHAR,
+                                           ClassDB.IDNameDomain,
+                                           VARCHAR, BOOLEAN, BOOLEAN);
+DROP FUNCTION IF EXISTS classdb.revoketeam(ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.dropteam(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN,
+                                         VARCHAR, ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.dropallteams(BOOLEAN, BOOLEAN, VARCHAR,
+                                             ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.isteammember(ClassDB.IDNameDomain,
+                                             ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.addtoteam(ClassDB.IDNameDomain,
+                                          ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.removefromteam(ClassDB.IDNameDomain,
+                                               ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.removeallfromteam(ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.reassignobjectownership(VARCHAR, VARCHAR,
+                                                        ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.reassignownedinschema(ClassDB.IDNameDomain,
+                                                      ClassDB.IDNameDomain,
+                                                      ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.isconnectionloggingenabled();
+DROP FUNCTION IF EXISTS classdb.isloggingcollectorenabled();
+DROP FUNCTION IF EXISTS classdb.handledropschemaddlstart();
+DROP FUNCTION IF EXISTS classdb.disallowschemadrop();
+DROP FUNCTION IF EXISTS classdb.allowschemadrop();
+DROP FUNCTION IF EXISTS classdb.isschemadropallowed();

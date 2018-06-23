@@ -14,7 +14,7 @@
 --This script requires the current user to be a superuser
 
 --This script should be run in every database to which ClassDB is to be added
--- it should be run after running initializeDB.sql
+-- it should be run after running initializeDBCore.sql
 
 --This script creates some helper functions for ClassDB operations
 -- makes ClassDB role the owner of all functions so only that role can drop or
@@ -126,7 +126,7 @@ CREATE OR REPLACE FUNCTION
    RETURNS ClassDB.IDNameDomain AS
 $$
    --this query generally works but was observed as failing in one circumstance
-   --yet keeping it because unit tests pass and usage in addRoleBaseMgmt.sql works
+   --yet keeping it because unit tests pass and usage in addRoleBaseMgmtCore.sql works
    --use the pg_catalog workaround shown below if necessary
    SELECT schema_owner::ClassDB.IDNameDomain
    FROM information_schema.schemata
@@ -149,13 +149,14 @@ ALTER FUNCTION ClassDB.getSchemaOwnerName(ClassDB.IDNameDomain) OWNER TO ClassDB
 
 --Define a function to test if a role name is a ClassDB role name
 -- tests if the name supplied is one of the following strings:
---  'classdb_student', 'classdb_instructor', 'classdb_manager'
+--  'classdb_student', 'classdb_instructor', 'classdb_manager', 'classdb_team'
 CREATE OR REPLACE FUNCTION
    ClassDB.isClassDBRoleName(roleName ClassDB.IDNameDomain)
    RETURNS BOOLEAN AS
 $$
    SELECT ClassDB.foldPgID($1)
-          IN ('classdb_instructor', 'classdb_student', 'classdb_dbmanager');
+          IN ('classdb_instructor', 'classdb_student',
+              'classdb_dbmanager', 'classdb_team');
 $$ LANGUAGE sql
    IMMUTABLE
    RETURNS NULL ON NULL INPUT;
@@ -212,8 +213,7 @@ $$
          SELECT * FROM pg_catalog.pg_roles
          WHERE pg_catalog.pg_has_role(ClassDB.foldPgID($1), oid, 'member')
                AND
-               rolname IN
-               ('classdb_instructor', 'classdb_student', 'classdb_dbmanager')
+               ClassDB.isClassDBRoleName(rolname::ClassDB.IDNameDomain)
       );
 $$ LANGUAGE sql
    STABLE
@@ -345,7 +345,6 @@ ALTER FUNCTION ClassDB.grantRole(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
 
-
 --Define a function to list all objects owned by a role. This query uses
 -- pg_class which lists all objects Postgres considers relations (tables, views,
 -- and types) and UNIONs with pg_proc include functions
@@ -363,7 +362,7 @@ $$
    CASE --Output the full name of each relation type from the char code
       WHEN c.relkind = 'r' THEN 'Table'
       WHEN c.relkind = 'i' THEN 'Index'
-      WHEN c.relkind = 's' THEN 'Sequence'
+      WHEN c.relkind = 'S' THEN 'Sequence'
       WHEN c.relkind = 'v' THEN 'View'
       WHEN c.relkind = 'm' THEN 'Materialized View'
       WHEN c.relkind = 'c' THEN 'Type'
@@ -391,7 +390,6 @@ REVOKE ALL ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain) FROM PUBLI
 
 GRANT EXECUTE ON FUNCTION ClassDB.listOwnedObjects(ClassDB.IDNameDomain)
       TO ClassDB_Instructor, ClassDB_DBManager;
-
 
 
 --Define a function to list all 'orphan' objects owned by ClassDB_Instructor and
@@ -437,8 +435,130 @@ ALTER FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain) OWNER TO ClassDB;
 REVOKE ALL ON FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain)
-      TO ClassDB_Instructor, ClassDB_DBManager;
+   TO ClassDB_Instructor, ClassDB_DBManager;
 
+
+--Define a function to reassign ownership of an object. The executing user must
+-- have appropriate privileges to run statements that alter the object's
+-- ownership. This includes privileges for the object, schema, and new owner
+--objectType must be one of the types that are identified by
+-- ClassDB.listOwnedObjects() NOTE: Foreign tables are not currently supported
+--Note that reassignment of TOAST tables and indexes is not necessary, nor
+-- possible. They are automatically handled via the ownership of their
+-- corresponding table
+--Descendant tables of reassigned tables do not have their ownership changed
+--objectName must be an object in the current db, schema qualified if necessary
+-- IMPORTANT: objectNames for functions must have parameters
+--newOwner must be a valid server role
+CREATE OR REPLACE FUNCTION
+   ClassDB.reassignObjectOwnership(objectType VARCHAR(20),
+                                   objectName VARCHAR,
+                                   newOwner ClassDB.IDNameDomain
+                                    DEFAULT CURRENT_USER
+                                  )
+   RETURNS VOID AS
+$$
+BEGIN
+
+   --stop if objectType matches TOAST table
+   $1 = UPPER(TRIM($1));
+   IF $1 = 'TOAST' THEN
+      RAISE WARNING 'ownership of a TOAST tables is managed through ownership'
+                    ' of its user table';
+      RETURN;
+   END IF;
+
+   --stop if objectType matches Index
+   IF $1 = 'INDEX' THEN
+      RAISE WARNING 'ownership of an index is managed though ownership of its'
+                    ' underlying table';
+      RETURN;
+   END IF;
+
+   --stop if objectType matches Foreign table (not tested)
+   IF $1 = 'FOREIGN TABLE' THEN
+      RAISE EXCEPTION 'transferring ownership of foreign tables is not currently'
+                       ' supported'
+            USING DETAIL = FORMAT('foreign table name: "%s" requested new owner:'
+                                  ' "%s"', $2, $3),
+                  HINT = 'manually transfer ownership using ALTER FOREIGN TABLE';
+   END IF;
+
+   --match value of objectType to objects types that can be reassigned
+   IF $1 NOT IN ('TABLE', 'SEQUENCE', 'VIEW', 'MATERIALIZED VIEW', 'TYPE',
+                  'FUNCTION')
+   THEN
+      --invalid type provided
+      RAISE EXCEPTION 'objectType "%" is not a valid object type for'
+                      ' ownership reassignment', $1;
+   END IF;
+
+   --execute command to reassign ownership. A separate statement is used for
+   -- tables to avoid reassigning descendant tables
+   IF $1 = 'TABLE' THEN
+      EXECUTE FORMAT('ALTER TABLE ONLY %s OWNER TO %s', $2, $3);
+   ELSE
+      EXECUTE FORMAT('ALTER %s %s OWNER TO %s', $1, $2, $3);
+   END IF;
+END;
+$$ LANGUAGE plpgsql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.reassignObjectOwnership(VARCHAR, VARCHAR,
+                                               ClassDB.IDNameDomain)
+   OWNER TO ClassDB;
+
+
+--Define a function to reassign ownership of objects within a specific schema
+-- that are owned by a specific role
+--schemaName must be an existing schema in the current database
+--oldOwner and newOwner must be existing server roles
+--Executes with the privileges of the executing user, meaning that the current
+-- security context must allow transferring the owned objects in question
+CREATE OR REPLACE FUNCTION
+   ClassDB.reassignOwnedInSchema(schemaName ClassDB.IDNameDomain,
+                                 oldOwner ClassDB.IDNameDomain,
+                                 newOwner ClassDB.IDNameDomain
+                                  DEFAULT CURRENT_USER
+                                )
+   RETURNS VOID AS
+$$
+BEGIN
+   --reassign ownership of each owned relation in the specified schema. Indexes
+   -- and TOASTs do not need to be reassigned
+   PERFORM ClassDB.reassignObjectOwnership(lob.kind, $1 || '.' || lob.object, $3)
+   FROM ClassDB.listOwnedObjects($2) lob
+   WHERE lob.schema = ClassDB.foldPgID($1)
+         AND lob.kind NOT IN('Index', 'TOAST', 'Function');
+
+   --reassign function ownership: signatures are obtained via OID aliases, and
+   -- are automatically schema qualified when needed. See:
+   -- https://www.postgresql.org/docs/9.3/static/datatype-oid.html
+   --Encapsulation with PERFORM needed in order to use CTE
+   PERFORM * FROM
+   (
+   WITH functionNames AS (
+      SELECT DISTINCT lob.object AS object
+      FROM ClassDB.listOwnedObjects($2) lob
+      WHERE lob.schema = ClassDB.foldPgID($1) AND lob.kind = 'Function'
+   )
+   SELECT ClassDB.reassignObjectOwnership('Function',
+             p.oid::regProcedure::VARCHAR, $3)
+   FROM functionNames f LEFT JOIN pg_catalog.pg_proc p ON
+      f.object = p.proName AND p.proNamespace = (
+         SELECT oid
+         FROM pg_catalog.pg_namespace
+         WHERE nspName = ClassDB.foldPgID($1)
+                                                )
+   ) AS subquery;
+END;
+$$ LANGUAGE plpgsql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION
+   ClassDB.reassignOwnedInSchema(ClassDB.IDNameDomain, ClassDB.IDNameDomain,
+                                 ClassDB.IDNameDomain)
+   OWNER TO ClassDB;
 
 
 --Changes a timestamp in fromTimeZone to toTimeZone
@@ -461,29 +581,231 @@ ALTER FUNCTION
 
 
 
---Define a function to retrieve specific capabilities a user has
--- use this function to get status of different capabilities in one call
+--Define a function to get the value of any server setting
+--Queries the catalog view pg_settings to avoid exceptions if the setting name
+-- supplied is not found
+--Returns NULL if the setting name supplied is not found
+CREATE OR REPLACE FUNCTION
+   ClassDB.getServerSetting(settingName VARCHAR)
+   RETURNS VARCHAR AS
+$$
+   SELECT setting FROM pg_catalog.pg_settings
+   WHERE name = $1;
+$$ LANGUAGE sql
+   RETURNS NULL ON NULL INPUT;
 
---Commenting out the function because a unit test is yet to be developed
---CREATE OR REPLACE FUNCTION
---   ClassDB.getRoleCapabilities(roleName ClassDB.IDNameDomain,
---                               OUT isSuperUser BOOLEAN,
---                               OUT hasCreateRole BOOLEAN,
---                               OUT canCreateDatabase BOOLEAN)
---   AS
---$$
---BEGIN
---   SELECT rolsuper, rolcreaterole, rolcreatedb FROM pg_catalog.pg_roles
---   WHERE rolname = $1;
---END;
---$$ LANGUAGE plpgsql;
+ALTER FUNCTION ClassDB.getServerSetting(VARCHAR) OWNER TO ClassDB;
 
---ALTER FUNCTION
---   ClassDB.getRoleCapabilities(roleName ClassDB.IDNameDomain,
---                               OUT isSuperUser BOOLEAN,
---                               OUT hasCreateRole BOOLEAN,
---                               OUT canCreateDatabase BOOLEAN)
---   OWNER TO ClassDB;
+
+
+--Define a function to get the server's version number
+--Removes additional info a distro may have suffixed to the version number
+-- e.g., Ubuntu's distro is known to return '10.3 (Ubuntu 10.3-1)', whereas
+-- a Postgres distro returns just '10.3'
+CREATE OR REPLACE FUNCTION ClassDB.getServerVersion()
+   RETURNS VARCHAR AS
+$$
+   --get value of setting 'server_version' and remove any distro-added suffix
+   SELECT TRIM(split_part(ClassDB.getServerSetting('server_version'), '(', 1));
+$$ LANGUAGE sql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.getServerVersion() OWNER TO ClassDB;
+
+
+
+--Define a function to compare any two Postgres server version numbers
+--Compatible with Postgres versioning policy
+-- https://www.postgresql.org/support/versioning
+--Optionally ignores the second part in a version number, e.g.: '6' in '9.6'
+--Always ignores third part of a version number, e.g., ignores the 3 in "9.6.3"
+--Return value:
+-- simply returns the integer difference between corresponding parts of version#
+-- negative number if version1 precedes version2
+-- positive number if version1 succeeds version2
+-- zero if the two versions are the same
+CREATE OR REPLACE FUNCTION
+   ClassDB.compareServerVersion(version1 VARCHAR, version2 VARCHAR,
+                                testPart2 BOOLEAN DEFAULT TRUE
+                               )
+   RETURNS INTEGER AS
+$$
+DECLARE
+   verson1Parts VARCHAR ARRAY;
+   verson2Parts VARCHAR ARRAY;
+   major1 INTEGER;
+   major2 INTEGER;
+BEGIN
+
+   $1 = TRIM($1);
+   IF ($1 = '') THEN
+      RAISE EXCEPTION 'invalid argument: version1 is empty';
+   END IF;
+
+   $2 = TRIM($2);
+   IF ($2 = '') THEN
+      RAISE EXCEPTION 'invalid argument: version2 is empty';
+   END IF;
+
+   --remove any distro-specific suffix from the version number
+   -- see function getServerVersion for details
+   $1 = TRIM(split_part($1, '(', 1));
+   $2 = TRIM(split_part($2, '(', 1));
+
+   --adjust version numbers to always have two parts so later code is easier
+   -- e.g., change '10' to '10.0'
+   IF (POSITION('.' IN $1) = 0) THEN
+      $1 = $1 || '.0';
+   END IF;
+
+   IF (POSITION('.' IN $2) = 0) THEN
+      $2 = $2 || '.0';
+   END IF;
+
+   --convert each version number to an array for ease of comparison
+   verson1Parts = string_to_array($1, '.');
+   verson2Parts = string_to_array($2, '.');
+
+   --cast the major version number (e.g., '9' in '9.6') to a number
+   -- causes exception if input is not really numeric
+   major1 = TRIM(verson1Parts[1])::INTEGER;
+   major2 = TRIM(verson2Parts[1])::INTEGER;
+
+   IF (major1 <> major2) THEN
+      RETURN major1 - major2;
+   ELSIF $3 THEN
+      RETURN TRIM(verson1Parts[2])::INTEGER - TRIM(verson2Parts[2])::INTEGER;
+   ELSE
+      RETURN 0;
+   END IF;
+
+END;
+$$ LANGUAGE plpgsql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION
+   ClassDB.compareServerVersion(VARCHAR, VARCHAR, BOOLEAN) OWNER TO ClassDB;
+
+--Limit to ClassDB to prevent exceptions due to incorrect args
+-- too much development effort to prevent all possible exceptions
+REVOKE ALL ON FUNCTION
+   ClassDB.compareServerVersion(VARCHAR, VARCHAR, BOOLEAN) FROM PUBLIC;
+
+
+--Define a function to compare some Postgres server version number to this server's
+--See version of this fn that compares any two server version numbers for details
+CREATE OR REPLACE FUNCTION
+   ClassDB.compareServerVersion(version1 VARCHAR,
+                                testPart2 BOOLEAN DEFAULT TRUE
+                               )
+   RETURNS INTEGER AS
+$$
+   SELECT ClassDB.compareServerVersion($1, ClassDB.getServerVersion(), $2);
+$$ LANGUAGE sql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.compareServerVersion(VARCHAR, BOOLEAN) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.compareServerVersion(VARCHAR, BOOLEAN) FROM PUBLIC;
+
+
+
+--Define a shortcut fn to test if the server's version precedes the given version
+CREATE OR REPLACE FUNCTION
+   ClassDB.isServerVersionBefore(version VARCHAR, testPart2 BOOLEAN DEFAULT TRUE)
+   RETURNS BOOLEAN AS
+$$
+   SELECT ClassDB.compareServerVersion($1, $2) > 0;
+$$ LANGUAGE sql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.isServerVersionBefore(VARCHAR, BOOLEAN) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.isServerVersionBefore(VARCHAR, BOOLEAN) FROM PUBLIC;
+
+
+
+--Define a shortcut fn to test if the server's version succeeds the given version
+CREATE OR REPLACE FUNCTION
+   ClassDB.isServerVersionAfter(version VARCHAR, testPart2 BOOLEAN DEFAULT TRUE)
+   RETURNS BOOLEAN AS
+$$
+   SELECT ClassDB.compareServerVersion($1, $2) < 0;
+$$ LANGUAGE sql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.isServerVersionAfter(VARCHAR, BOOLEAN) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.isServerVersionAfter(VARCHAR, BOOLEAN) FROM PUBLIC;
+
+
+
+--Define a shortcut fn to test if the server's version matches the given version
+CREATE OR REPLACE FUNCTION
+   ClassDB.isServerVersion(version VARCHAR, testPart2 BOOLEAN DEFAULT TRUE)
+   RETURNS BOOLEAN AS
+$$
+   SELECT ClassDB.compareServerVersion($1, $2) = 0;
+$$ LANGUAGE sql
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.isServerVersion(VARCHAR, BOOLEAN) OWNER TO ClassDB;
+
+REVOKE ALL ON FUNCTION
+   ClassDB.isServerVersion(VARCHAR, BOOLEAN) FROM PUBLIC;
+
+
+
+--Returns TRUE if columnName in schemaName.tableName exists
+CREATE OR REPLACE FUNCTION ClassDB.isColumnDefined(schemaName ClassDB.IDNameDomain,
+   tableName ClassDB.IDNameDomain, columnName ClassDB.IDNameDomain)
+   RETURNS BOOLEAN AS
+$$
+BEGIN
+    RETURN EXISTS (SELECT column_name
+                   FROM INFORMATION_SCHEMA.COLUMNS
+                   WHERE table_schema = ClassDB.foldPgID(schemaName)
+                   AND   table_name   = ClassDB.foldPgID(tableName)
+                   AND   column_Name  = ClassDB.foldPgID(columnName));
+END
+$$ LANGUAGE plpgsql
+   STABLE
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.isColumnDefined(ClassDB.IDNameDomain,
+   ClassDB.IDNameDomain, ClassDB.IDNameDomain)
+   OWNER TO ClassDB;
+
+
+
+--Define a function that returns the SessionID of the calling user
+--Postgres provides no function to obtain SessionID, however the creation of SessionID
+-- is described in the documentation for log_line_prefix:
+--https://www.postgresql.org/docs/9.6/static/runtime-config-logging.html
+--SessionID is made up of the hex encoding of the epoch time of the connection
+-- start timestamp and hex encoding of the connection PID concatenated with a
+-- '.' in between
+CREATE OR REPLACE FUNCTION ClassDB.getSessionID()
+   RETURNS VARCHAR(17) AS
+$$
+   SELECT to_hex(trunc(EXTRACT(EPOCH FROM backend_start))::integer) || '.' ||
+          to_hex(pid)
+   FROM pg_stat_activity
+   WHERE pid = pg_backend_pid();
+$$ LANGUAGE sql
+   STABLE
+   SECURITY DEFINER; --This function is executed with superuser permissions because
+                     -- only superusers have full access to pg_stat_activity.
+                     -- Executing as a regular user results in unexpected
+                     -- return of NULL in some contexts
+
+REVOKE ALL ON FUNCTION ClassDB.getSessionID() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ClassDB.getSessionID()
+   TO ClassDB_Instructor, ClassDB_DBManager, ClassDB;
+
 
 
 COMMIT;
