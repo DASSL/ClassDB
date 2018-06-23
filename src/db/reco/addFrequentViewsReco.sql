@@ -38,6 +38,34 @@ END
 $$;
 
 
+
+--UPGRADE FROM 2.0 TO 2.1
+-- These statements are needed when upgrading ClassDB from 2.0 to 2.1
+-- These can be removed in a future version of ClassDB
+
+--Remove functions which have had their return types changed and their dependents
+-- We avoid using DROP...CASACDE in case users have created custom objects based on
+-- ClassDB objects
+DROP VIEW IF EXISTS public.MyActivity;
+DROP FUNCTION IF EXISTS public.getMyActivity();
+
+DROP VIEW IF EXISTS ClassDB.StudentActivityAnon;
+DROP FUNCTION IF EXISTS ClassDB.getStudentActivityAnon(ClassDB.IDNameDomain);
+
+DROP VIEW IF EXISTS ClassDB.StudentActivity;
+DROP FUNCTION IF EXISTS ClassDB.getStudentActivity(ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS ClassDB.getUserActivity(ClassDB.IDNameDomain);
+
+DROP VIEW IF EXISTS public.MyConnectionActivity;
+DROP FUNCTION IF EXISTS public.getMyConnectionActivity();
+DROP FUNCTION IF EXISTS ClassDB.getUserConnectionActivity(ClassDB.IDNameDomain);
+
+DROP VIEW IF EXISTS public.MyDDLActivity;
+DROP FUNCTION IF EXISTS public.getMyDDLActivity();
+DROP FUNCTION IF EXISTS ClassDB.getUserDDLActivity(ClassDB.IDNameDomain);
+
+
+
 --This view returns all tables and views owned by student users
 -- uses pg_catalog instead of INFORMATION_SCHEMA because the latter does not
 -- support the case where a table owner and the containing schema's owner are
@@ -244,12 +272,12 @@ CREATE OR REPLACE FUNCTION ClassDB.getUserDDLActivity(
    userName ClassDB.IDNameDomain DEFAULT NULL)
 RETURNS TABLE
 (
-   UserName ClassDB.IDNameDomain, StatementStartedAt TIMESTAMP,
+   UserName ClassDB.IDNameDomain, StatementStartedAt TIMESTAMP, SessionID VARCHAR(17),
    DDLOperation VARCHAR, DDLObject VARCHAR
 ) AS
 $$
    SELECT UserName, ClassDB.changeTimeZone(StatementStartedAtUTC) StatementStartedAt,
-          DDLOperation, DDLObject
+          SessionID, DDLOperation, DDLObject
    FROM ClassDB.DDLActivity
    WHERE UserName LIKE COALESCE(ClassDB.foldPgID($1), '%')
    ORDER BY UserName, StatementStartedAt DESC;
@@ -270,10 +298,11 @@ GRANT EXECUTE ON FUNCTION ClassDB.getUserDDLActivity(ClassDB.IDNameDomain)
 CREATE OR REPLACE FUNCTION public.getMyDDLActivity()
 RETURNS TABLE
 (
-   StatementStartedAt TIMESTAMP, DDLOperation VARCHAR, DDLObject VARCHAR
+   StatementStartedAt TIMESTAMP, SessionID VARCHAR(17), DDLOperation VARCHAR,
+   DDLObject VARCHAR
 ) AS
 $$
-   SELECT StatementStartedAt, DDLOperation, DDLObject
+   SELECT StatementStartedAt, SessionID, DDLOperation, DDLObject
    FROM ClassDB.getUserDDLActivity(SESSION_USER::ClassDB.IDNameDomain);
 $$ LANGUAGE sql
    STABLE
@@ -286,7 +315,7 @@ ALTER FUNCTION public.getMyDDLActivity() OWNER TO ClassDB;
 --This view wraps getMyDDLActivity() for easier student access
 CREATE OR REPLACE VIEW public.MyDDLActivity AS
 (
-   SELECT StatementStartedAt, DDLOperation, DDLObject
+   SELECT StatementStartedAt, SessionID, DDLOperation, DDLObject
    FROM public.getMyDDLActivity()
 );
 
@@ -295,19 +324,23 @@ GRANT SELECT ON public.MyDDLActivity TO PUBLIC;
 
 
 
---This function returns all connection activity for a specified user. Passing
--- NULL returns data for all users
+--This function returns all connection activity for a specified user. This includes
+-- all connections and disconnections. Passing NULL returns data for all users
 CREATE OR REPLACE FUNCTION ClassDB.getUserConnectionActivity(
    userName ClassDB.IDNameDomain DEFAULT NULL)
 RETURNS TABLE
 (
-   UserName ClassDB.IDNameDomain, AcceptedAt TIMESTAMP
+   UserName ClassDB.IDNameDomain, ActivityAt TIMESTAMP, ActivityType VARCHAR,
+   SessionID VARCHAR(17), ApplicationName ClassDB.IDNameDomain
 ) AS
 $$
-   SELECT UserName, ClassDB.changeTimeZone(AcceptedAtUTC) AcceptedAt
+   SELECT UserName, ClassDB.changeTimeZone(ActivityAtUTC) ActivityAt,
+          CASE WHEN ActivityType = 'C' THEN 'Connection'
+          ELSE 'Disconnection' END ActivityType,
+          SessionID, ApplicationName
    FROM ClassDB.ConnectionActivity
    WHERE UserName LIKE COALESCE(ClassDB.foldPgID($1), '%')
-   ORDER BY UserName, AcceptedAt DESC;
+   ORDER BY UserName, ActivityAt DESC;
 $$ LANGUAGE sql
    STABLE
    SECURITY DEFINER;
@@ -325,10 +358,11 @@ GRANT EXECUTE ON FUNCTION ClassDB.getUserConnectionActivity(ClassDB.IDNameDomain
 CREATE OR REPLACE FUNCTION public.getMyConnectionActivity()
 RETURNS TABLE
 (
-   AcceptedAt TIMESTAMP
+   ActivityAt TIMESTAMP, ActivityType VARCHAR, SessionID VARCHAR(17),
+   ApplicationName ClassDB.IDNameDomain
 ) AS
 $$
-   SELECT AcceptedAt
+   SELECT ActivityAt, ActivityType, SessionID, ApplicationName
    FROM ClassDB.getUserConnectionActivity(SESSION_USER::ClassDB.IDNameDomain);
 $$ LANGUAGE sql
    STABLE
@@ -341,7 +375,7 @@ ALTER FUNCTION public.getMyConnectionActivity() OWNER TO ClassDB;
 --This view wraps getMyConnectionActivity for easier student access
 CREATE OR REPLACE VIEW public.MyConnectionActivity AS
 (
-   SELECT AcceptedAt
+   SELECT ActivityAt, ActivityType, SessionID, ApplicationName
    FROM public.getMyConnectionActivity()
 );
 
@@ -352,21 +386,25 @@ GRANT SELECT ON public.MyConnectionActivity TO PUBLIC;
 
 --This function returns all activity for a specified user. Passing NULL provides
 -- data for all users. This function returns both connection and DDL activity.
--- The ActivityType column specifies this, either 'Connection' or 'DDL'. For
--- connection activity rows, the DDLOperation and DDLObject columns are not
--- applicable, will be NULL
+-- The ActivityType column specifies this, either 'Connection', 'Disconnection',
+-- or 'DDL Query'. For connection activity rows, the DDLOperation and DDLObject columns
+-- are not applicable, will be NULL. Likewise, SessionID and ApplicationID are
+-- not applicable to DDL activity.
 CREATE OR REPLACE FUNCTION ClassDB.getUserActivity(userName ClassDB.IDNameDomain
    DEFAULT NULL)
 RETURNS TABLE
 (
-   UserName ClassDB.IDNameDomain, ActivityAt TIMESTAMP, ActivityType VARCHAR(10),
-   DDLOperation VARCHAR, DDLObject VARCHAR
+   UserName ClassDB.IDNameDomain, ActivityAt TIMESTAMP, ActivityType VARCHAR,
+   SessionID VARCHAR(17), ApplicationName ClassDB.IDNameDomain, DDLOperation VARCHAR,
+   DDLObject VARCHAR
 ) AS
 $$
-   SELECT UserName, StatementStartedAt AS ActivityAt, 'DDL', DDLOperation, DDLObject
+   --Postgres requires casting NULL to IDNameDomain, it will not do this coercion
+   SELECT UserName, StatementStartedAt AS ActivityAt, 'DDL Query', SessionID,
+          NULL::ClassDB.IDNameDomain, DDLOperation, DDLObject
    FROM ClassDB.getUserDDLActivity(COALESCE($1, '%'))
    UNION ALL
-   SELECT UserName, AcceptedAt, 'Connection', NULL, NULL
+   SELECT UserName, ActivityAt, ActivityType, SessionID, ApplicationName, NULL, NULL
    FROM ClassDB.getUserConnectionActivity(COALESCE($1, '%'))
    ORDER BY UserName, ActivityAt DESC;
 $$ LANGUAGE sql
@@ -386,11 +424,12 @@ CREATE OR REPLACE FUNCTION ClassDB.getStudentActivity(userName ClassDB.IDNameDom
    DEFAULT NULL)
 RETURNS TABLE
 (
-   UserName ClassDB.IDNameDomain, ActivityAt TIMESTAMP, ActivityType VARCHAR(10),
-   DDLOperation VARCHAR, DDLObject VARCHAR
+   UserName ClassDB.IDNameDomain, ActivityAt TIMESTAMP, ActivityType VARCHAR,
+   SessionID VARCHAR(17), ApplicationName ClassDB.IDNameDomain, DDLOperation VARCHAR,
+   DDLObject VARCHAR
 ) AS
 $$
-   SELECT UserName, ActivityAt, ActivityType, DDLOperation, DDLObject
+   SELECT UserName, ActivityAt, ActivityType, SessionID, ApplicationName, DDLOperation, DDLObject
    FROM ClassDB.getUserActivity(COALESCE($1, '%'))
    WHERE ClassDB.isStudent(UserName);
 $$ LANGUAGE sql
@@ -407,7 +446,7 @@ GRANT EXECUTE ON FUNCTION ClassDB.getStudentActivity(ClassDB.IDNameDomain)
 --A view that wraps getStudentActivity() for easier access
 CREATE OR REPLACE VIEW ClassDB.StudentActivity AS
 (
-   SELECT UserName, ActivityAt , ActivityType, DDLOperation, DDLObject
+   SELECT UserName, ActivityAt, ActivityType, SessionID, ApplicationName, DDLOperation, DDLObject
    FROM   ClassDB.getStudentActivity()
 );
 
@@ -423,11 +462,11 @@ CREATE OR REPLACE FUNCTION ClassDB.getStudentActivityAnon(
    userName ClassDB.IDNameDomain DEFAULT NULL)
 RETURNS TABLE
 (
-   ActivityAt TIMESTAMP, ActivityType VARCHAR(10), DDLOperation VARCHAR,
-   DDLObject VARCHAR
+   ActivityAt TIMESTAMP, ActivityType VARCHAR, SessionID VARCHAR(17),
+   ApplicationName ClassDB.IDNameDomain, DDLOperation VARCHAR, DDLObject VARCHAR
 ) AS
 $$
-   SELECT ActivityAt, ActivityType, DDLOperation,
+   SELECT ActivityAt, ActivityType, SessionID, ApplicationName, DDLOperation,
           SUBSTRING(DDLObject, POSITION('.' IN DDLObject)+1) DDLObject
    FROM ClassDB.getStudentActivity(COALESCE($1, '%'));
 $$ LANGUAGE sql
@@ -446,7 +485,7 @@ GRANT EXECUTE ON FUNCTION ClassDB.getStudentActivityAnon(ClassDB.IDNameDomain)
 --A view that wraps getStudentActivityAnon() for easier access
 CREATE OR REPLACE VIEW ClassDB.StudentActivityAnon AS
 (
-   SELECT ActivityAt , ActivityType, DDLOperation, DDLObject
+   SELECT ActivityAt, ActivityType, SessionID, ApplicationName, DDLOperation, DDLObject
    FROM   ClassDB.getStudentActivityAnon()
 );
 
@@ -460,11 +499,11 @@ GRANT SELECT ON ClassDB.StudentActivityAnon TO ClassDB_Instructor;
 CREATE OR REPLACE FUNCTION public.getMyActivity()
 RETURNS TABLE
 (
-   ActivityAt TIMESTAMP, ActivityType VARCHAR(10), DDLOperation VARCHAR,
-   DDLObject VARCHAR
+   ActivityAt TIMESTAMP, ActivityType VARCHAR, SessionID VARCHAR(17),
+   ApplicationName ClassDB.IDNameDomain, DDLOperation VARCHAR, DDLObject VARCHAR
 ) AS
 $$
-   SELECT ActivityAt, ActivityType, DDLOperation, DDLObject
+   SELECT ActivityAt, ActivityType, SessionID, ApplicationName, DDLOperation, DDLObject
    FROM ClassDB.getUserActivity(SESSION_USER::ClassDB.IDNameDomain);
 $$ LANGUAGE sql
    STABLE
@@ -477,7 +516,7 @@ ALTER FUNCTION public.getMyActivity() OWNER TO ClassDB;
 --This view wraps getMyActivity() for easier student access
 CREATE OR REPLACE VIEW public.MyActivity AS
 (
-   SELECT ActivityAt, ActivityType, DDLOperation, DDLObject
+   SELECT ActivityAt, ActivityType, SessionID, ApplicationName, DDLOperation, DDLObject
    FROM public.getMyActivity()
 );
 
