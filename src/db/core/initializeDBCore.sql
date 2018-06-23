@@ -83,8 +83,7 @@ BEGIN
    EXECUTE format('GRANT CONNECT ON DATABASE %I TO ClassDB_Instructor, '
                   'ClassDB_Student, ClassDB_DBManager', currentDB);
 
-   --Allow ClassDB to create schemas on the current database
-   -- all schema-creation operations are done only by this role in this app
+   --Allow ClassDB and ClassDB users to create schemas on the current database
    EXECUTE format('GRANT CREATE ON DATABASE %I TO ClassDB, ClassDB_Instructor,'
                   ' ClassDB_DBManager, ClassDB_Student', currentDB);
 END
