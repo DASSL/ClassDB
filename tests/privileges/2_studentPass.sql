@@ -52,6 +52,8 @@ WHERE TRUE;
 DELETE FROM test;
 DROP TABLE test;
 
+--Create (but not drop) schema
+CREATE SCHEMA ptstu0schema;
 
 --CRUD on tables owned by student in team schema
 CREATE TABLE ptteam0.SharedTable

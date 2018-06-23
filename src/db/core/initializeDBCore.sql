@@ -85,7 +85,8 @@ BEGIN
 
    --Allow ClassDB to create schemas on the current database
    -- all schema-creation operations are done only by this role in this app
-   EXECUTE format('GRANT CREATE ON DATABASE %I TO ClassDB', currentDB);
+   EXECUTE format('GRANT CREATE ON DATABASE %I TO ClassDB, ClassDB_Instructor,'
+                  ' ClassDB_DBManager, ClassDB_Student', currentDB);
 END
 $$;
 

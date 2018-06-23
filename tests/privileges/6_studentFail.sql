@@ -31,6 +31,8 @@ SELECT * FROM ptteam0.SharedTable;
 --Not create on team's schema
 CREATE TABLE ptteam0.StudentTestTable(col1 VARCHAR);
 
+--Not drop own schema
+DROP SCHEMA ptstu1;
 
 --Not access any objects in classdb schema, should be prevented by not having
 -- USAGE on the classdb schema anyway

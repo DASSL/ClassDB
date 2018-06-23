@@ -89,6 +89,10 @@ SET Col1 = 'goodbye';
 DELETE FROM public.PublicTest;
 DROP TABLE public.PublicTest;
 
+--Create and drop schema
+CREATE SCHEMA ptins0schema;
+DROP SCHEMA ptins0schema;
+
 
 --Read from columns in RoleBase table
 SELECT * FROM ClassDB.RoleBase;
