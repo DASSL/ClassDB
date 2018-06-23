@@ -37,6 +37,10 @@ BEGIN
 END
 $$;
 
+--Suppress NOTICE messages for this script only, this will not apply to functions
+-- defined within. This hides messages that are unimportant, but possibly confusing
+SET LOCAL client_min_messages TO WARNING;
+
 
 
 --UPGRADE FROM 2.0 TO 2.1
