@@ -21,7 +21,7 @@
 --This script uses ALTER SYSTEM statements to change the Postgres server log settings to
 -- disable the connection logging system. This script only stops connections from being
 -- logged. It does not revert log_destination and log_filname to the original settings
--- prior to running enableServerLogging.sql.
+-- prior to running enableConnectionLoggingReco.sql.
 
 --The following changes are made:
 -- log_connections TO 'off' stops user connections from being recorded in the server log

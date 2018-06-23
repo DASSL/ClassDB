@@ -13,7 +13,6 @@
 
 --This script requires the current user to be a superuser
 
---This script should be run after addConnectionMgmt.sql
 
 --This script creates procedures to interact with ClassDB's user management and
 -- group roles
@@ -559,16 +558,16 @@ $$
 BEGIN
    --record ClassDB role
    PERFORM ClassDB.createRole($1, $2, TRUE, $3, $4, $5, $6);
-   
+
    --get name of role's schema (possibly not the original value of schemaName)
    $3 = ClassDB.getSchemaName($1);
-   
+
    --grant server-level team group role to new team
    PERFORM ClassDB.grantRole('ClassDB_Team', $1);
-   
+
    --grant instructors privileges to the team's schema
    EXECUTE FORMAT('GRANT USAGE ON SCHEMA %s TO ClassDB_Instructor', $3);
-   EXECUTE FORMAT('GRANT SELECT ON ALL TABLES IN SCHEMA %s TO' 
+   EXECUTE FORMAT('GRANT SELECT ON ALL TABLES IN SCHEMA %s TO'
                   ' ClassDB_Instructor', $3);
    EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                   ' GRANT SELECT ON TABLES TO ClassDB_Instructor', $1, $3);
@@ -606,7 +605,7 @@ $$
 BEGIN
    --revoke team ClassDB role
    PERFORM ClassDB.revokeClassDBRole($1, 'ClassDB_Team');
-   
+
    --revoke privileges on the role's schema from instructors
    IF ClassDB.isServerRoleDefined($1) THEN
       EXECUTE FORMAT('REVOKE USAGE ON SCHEMA %s FROM ClassDB_Instructor',
@@ -633,7 +632,7 @@ GRANT EXECUTE ON FUNCTION ClassDB.revokeTeam(ClassDB.IDNameDomain)
 
 
 --Define a function to drop a team
-CREATE OR REPLACE FUNCTION 
+CREATE OR REPLACE FUNCTION
    ClassDB.dropTeam(teamName ClassDB.IDNameDomain,
                     dropFromServer BOOLEAN DEFAULT FALSE,
                     okIfRemainsClassDBRoleMember BOOLEAN DEFAULT TRUE,
@@ -644,7 +643,7 @@ $$
 BEGIN
    --revoke team role (also asserts that teamName is a known team)
    PERFORM ClassDB.revokeTeam($1);
-   
+
    --drop team
    PERFORM ClassDB.dropRole($1, $2, $3, $4, $5);
 END;
@@ -714,11 +713,11 @@ BEGIN
    IF NOT ClassDB.isStudent($1) THEN
       RAISE EXCEPTION 'Role "%" is not a known student', $1;
    END IF;
-   
+
    IF NOT ClassDB.isTeam($2) THEN
       RAISE EXCEPTION 'Role "%" is not a known team', $2;
    END IF;
-   
+
    RETURN ClassDB.isMember($1, $2);
 END;
 $$ LANGUAGE plpgsql;
@@ -752,18 +751,18 @@ BEGIN
    IF NOT ClassDB.isStudent($1) THEN
       RAISE EXCEPTION 'Role "%" is not a known student', $1;
    END IF;
-   
+
    --assert that teamName is a known team
    IF NOT ClassDB.isTeam($2) THEN
       RAISE EXCEPTION 'Role "%" is not a known team', $2;
    END IF;
-   
+
    --grant team to student
    PERFORM ClassDB.grantRole($2, $1);
-   
+
    --get name of team's schema
    teamSchema = ClassDB.getSchemaName($2);
-   
+
    --change default privileges to allow all members to read/modify data
    EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                   ' GRANT ALL PRIVILEGES ON TABLES TO %s',
@@ -777,7 +776,7 @@ BEGIN
    EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                   ' GRANT ALL PRIVILEGES ON TYPES TO %s',
                      $1, teamSchema, $2);
-                     
+
    --change default privileges to allow instructors to read data
    EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                   ' GRANT SELECT ON TABLES TO ClassDB_Instructor',
@@ -796,7 +795,7 @@ $$ LANGUAGE plpgsql
    SECURITY DEFINER;
 
 --Change function ownership and set permissions
-ALTER FUNCTION ClassDB.addToTeam(ClassDB.IDNameDomain, ClassDB.IDNameDomain) 
+ALTER FUNCTION ClassDB.addToTeam(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION
@@ -810,11 +809,11 @@ GRANT EXECUTE ON FUNCTION
 
 --Define a function to remove a student from a team
 --Asserts that studentName is a known student and teamName is a known team
---Revokes privileges, preventing students from accessing shared team data, but 
+--Revokes privileges, preventing students from accessing shared team data, but
 --  leaves any data the student may have created in the team's schema
-CREATE OR REPLACE FUNCTION 
+CREATE OR REPLACE FUNCTION
    ClassDB.removeFromTeam(studentName ClassDB.IDNameDomain,
-                          teamName ClassDB.IDNameDomain) 
+                          teamName ClassDB.IDNameDomain)
    RETURNS VOID AS
 $$
 DECLARE
@@ -824,18 +823,18 @@ BEGIN
    IF NOT ClassDB.isStudent($1) THEN
       RAISE EXCEPTION 'Role "%" is not a known student', $1;
    END IF;
-   
+
    --assert that teamName is a known team
    IF NOT ClassDB.isTeam($2) THEN
       RAISE EXCEPTION 'Role "%" is not a known team', $2;
    END IF;
-   
+
    --get name of team's schema
    teamSchema = ClassDB.getSchemaName($2);
-   
+
    --revoke privileges to role and unset default privileges
    IF ClassDB.isTeamMember($1, $2) THEN
-      --remove default privileges that allowed all members to read/modify data 
+      --remove default privileges that allowed all members to read/modify data
       -- created by this student in the team's schema
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                      ' REVOKE ALL PRIVILEGES ON TABLES FROM %s',
@@ -849,8 +848,8 @@ BEGIN
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                      ' REVOKE ALL PRIVILEGES ON TYPES FROM %s',
                         $1, teamSchema, $2);
-      
-      --remove default privileges that allowed instructors to read data created 
+
+      --remove default privileges that allowed instructors to read data created
       -- by this student in the team's schema
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                      ' REVOKE SELECT ON TABLES FROM ClassDB_Instructor',
@@ -864,12 +863,12 @@ BEGIN
       EXECUTE FORMAT('ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s'
                      ' REVOKE USAGE ON TYPES FROM ClassDB_Instructor',
                         $1, teamSchema);
-      
+
       --Transfer ownership of team objects that were owned by the member being
       -- removed. This avoid issues with future DROP/REASSIGN OWNED BY that
       -- target the removed member (such as when a user is dropped from ClassDB)
       PERFORM ClassDB.reassignOwnedInSchema(teamSchema, $1, $2);
-      
+
       --revoke team from student
       EXECUTE FORMAT('REVOKE %s FROM %s', $2, $1);
    ELSE
@@ -878,11 +877,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql
    SECURITY DEFINER;
-   
+
 
 --Change function ownership and set permissions
 ALTER FUNCTION
-   ClassDB.removeFromTeam(ClassDB.IDNameDomain, ClassDB.IDNameDomain) 
+   ClassDB.removeFromTeam(ClassDB.IDNameDomain, ClassDB.IDNameDomain)
    OWNER TO ClassDB;
 
 REVOKE ALL ON FUNCTION
@@ -897,7 +896,7 @@ GRANT EXECUTE ON FUNCTION
 
 --Define a function to remove all students registers to a team
 --The function calls ClassDB.removeFromTeam for every student who is a member
-CREATE OR REPLACE FUNCTION 
+CREATE OR REPLACE FUNCTION
    ClassDB.removeAllFromTeam(teamName ClassDB.IDNameDomain) RETURNS VOID AS
 $$
 BEGIN
