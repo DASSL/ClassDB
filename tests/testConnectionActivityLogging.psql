@@ -145,7 +145,7 @@ BEGIN
    --We expect 5 connections and 4 disconnections (testins02 is still connected)
    IF (SELECT CASE WHEN numConnections <> 5 THEN TRUE ELSE FALSE END
        OR     CASE WHEN numDisconnections <> 4 THEN TRUE ELSE FALSE END
-       FROM ClassDB.importConnectionLog())
+       FROM ClassDB.importConnectionLog(CURRENT_DATE))
    THEN
       RAISE INFO 'FAIL: Code 1';
    ELSE
