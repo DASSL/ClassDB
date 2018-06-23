@@ -13,7 +13,7 @@
 
 --This script requires the current user to be a superuser
 
---This script should be run after addHelpers.sql
+--This script should be run after addHelpersCore.sql
 
 --This script creates the basic tables and procedures to manage ClassDB users
 

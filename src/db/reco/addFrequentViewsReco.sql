@@ -14,7 +14,7 @@
 -- to the ClassDB and PUBLIC schemas
 
 --This script should be run in every database to which ClassDB is to be added
--- it should be run after running addUserMgmt.sql
+-- it should be run after running addUserMgmtCore.sql
 
 --This script creates several objects (we collectively refer to them as views) to
 -- display summary data related to student activity in the current database.

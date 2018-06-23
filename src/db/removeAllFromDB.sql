@@ -122,7 +122,7 @@ BEGIN
    RAISE NOTICE 'Drop user schemas or adjust their privilege';
    RAISE NOTICE 'Adjust privileges on PUBLIC schema if appropriate';
    RAISE NOTICE 'Run DROP DATABASE statement to remove the database if appropriate';
-   RAISE NOTICE 'Run removeFromServer.sql after removing ClassDB '
+   RAISE NOTICE 'Run removeAllFromServer.sql after removing ClassDB '
                 'from other databases';
 END
 $$;

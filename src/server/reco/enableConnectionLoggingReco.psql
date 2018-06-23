@@ -11,7 +11,7 @@
 --PROVIDED AS IS. NO WARRANTIES EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
 --This script must be run as superuser.
---This script must be run before addConnectionActivityLogging.sql.
+--This script must be run before addConnectionActivityLoggingReco.sql.
 -- This script only needs to be run once per server, however.
 
 --Additionally, this script must be run using a client that will send each statement

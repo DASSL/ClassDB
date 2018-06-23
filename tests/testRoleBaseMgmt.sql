@@ -13,7 +13,7 @@
 
 --This script should be run as a superuser
 
---This script tests the functionality in addRoleBaseMgmt.sql
+--This script tests the functionality in addRoleBaseMgmtCore.sql
 -- only nominal tests are covered presently
 -- need to plan a test for cases that should cause exceptions
 

@@ -14,7 +14,7 @@
 -- to the PUBLIC schema
 
 --This script should be run in every database to which ClassDB is to be added
--- it should be run after running addHelpers.sql
+-- it should be run after running addHelpersCore.sql
 
 --This script creates two publicly accessible functions, intended for students
 -- These functions provide an easy way for students to DESCRIBE a tables
@@ -33,7 +33,7 @@ SET LOCAL client_min_messages TO WARNING;
 -- This function is a duplicate of ClassDB.foldPgID(). Since students cannot access
 -- objects in the ClassDB schema, this version is required so that students can use
 -- the catalog management functions. Any change to foldPgID() must also be made to
--- the version in addHelpers.sql
+-- the version in addHelpersCore.sql
 CREATE OR REPLACE FUNCTION public.foldPgID(identifier VARCHAR(65))
 RETURNS VARCHAR(63) AS
 $$

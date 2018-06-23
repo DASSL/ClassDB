@@ -14,7 +14,7 @@
 --This script requires the current user to be a superuser
 
 --This script should be run in every database to which ClassDB is to be added
--- it should be run after running initializeDB.sql
+-- it should be run after running initializeDBCore.sql
 
 --This script creates some helper functions for ClassDB operations
 -- makes ClassDB role the owner of all functions so only that role can drop or
@@ -126,7 +126,7 @@ CREATE OR REPLACE FUNCTION
    RETURNS ClassDB.IDNameDomain AS
 $$
    --this query generally works but was observed as failing in one circumstance
-   --yet keeping it because unit tests pass and usage in addRoleBaseMgmt.sql works
+   --yet keeping it because unit tests pass and usage in addRoleBaseMgmtCore.sql works
    --use the pg_catalog workaround shown below if necessary
    SELECT schema_owner::ClassDB.IDNameDomain
    FROM information_schema.schemata
@@ -439,7 +439,7 @@ GRANT EXECUTE ON FUNCTION ClassDB.listOrphanObjects(ClassDB.IDNameDomain)
 
 
 --Define a function to reassign ownership of an object. The executing user must
--- have appropriate privileges to run statements that alter the object's 
+-- have appropriate privileges to run statements that alter the object's
 -- ownership. This includes privileges for the object, schema, and new owner
 --objectType must be one of the types that are identified by
 -- ClassDB.listOwnedObjects() NOTE: Foreign tables are not currently supported
@@ -459,15 +459,15 @@ CREATE OR REPLACE FUNCTION
    RETURNS VOID AS
 $$
 BEGIN
-   
+
    --stop if objectType matches TOAST table
    $1 = UPPER(TRIM($1));
    IF $1 = 'TOAST' THEN
-      RAISE WARNING 'ownership of a TOAST tables is managed through ownership' 
+      RAISE WARNING 'ownership of a TOAST tables is managed through ownership'
                     ' of its user table';
       RETURN;
    END IF;
-   
+
    --stop if objectType matches Index
    IF $1 = 'INDEX' THEN
       RAISE WARNING 'ownership of an index is managed though ownership of its'
@@ -483,7 +483,7 @@ BEGIN
                                   ' "%s"', $2, $3),
                   HINT = 'manually transfer ownership using ALTER FOREIGN TABLE';
    END IF;
-   
+
    --match value of objectType to objects types that can be reassigned
    IF $1 NOT IN ('TABLE', 'SEQUENCE', 'VIEW', 'MATERIALIZED VIEW', 'TYPE',
                   'FUNCTION')
@@ -492,7 +492,7 @@ BEGIN
       RAISE EXCEPTION 'objectType "%" is not a valid object type for'
                       ' ownership reassignment', $1;
    END IF;
-   
+
    --execute command to reassign ownership. A separate statement is used for
    -- tables to avoid reassigning descendant tables
    IF $1 = 'TABLE' THEN
@@ -530,12 +530,12 @@ BEGIN
    FROM ClassDB.listOwnedObjects($2) lob
    WHERE lob.schema = ClassDB.foldPgID($1)
          AND lob.kind NOT IN('Index', 'TOAST', 'Function');
-   
+
    --reassign function ownership: signatures are obtained via OID aliases, and
-   -- are automatically schema qualified when needed. See: 
+   -- are automatically schema qualified when needed. See:
    -- https://www.postgresql.org/docs/9.3/static/datatype-oid.html
    --Encapsulation with PERFORM needed in order to use CTE
-   PERFORM * FROM 
+   PERFORM * FROM
    (
    WITH functionNames AS (
       SELECT DISTINCT lob.object AS object
@@ -546,7 +546,7 @@ BEGIN
              p.oid::regProcedure::VARCHAR, $3)
    FROM functionNames f LEFT JOIN pg_catalog.pg_proc p ON
       f.object = p.proName AND p.proNamespace = (
-         SELECT oid 
+         SELECT oid
          FROM pg_catalog.pg_namespace
          WHERE nspName = ClassDB.foldPgID($1)
                                                 )
@@ -578,7 +578,7 @@ $$ LANGUAGE sql
 ALTER FUNCTION
    ClassDB.ChangeTimeZone(ts TIMESTAMP, toTimeZone VARCHAR, fromTimeZone VARCHAR)
    OWNER TO ClassDB;
- 
+
 
 
 --Define a function to get the value of any server setting
@@ -800,7 +800,7 @@ $$ LANGUAGE sql
    SECURITY DEFINER; --This function is executed with superuser permissions because
                      -- only superusers have full access to pg_stat_activity.
                      -- Executing as a regular user results in unexpected
-                     -- return of NULL in some contexts 
+                     -- return of NULL in some contexts
 
 REVOKE ALL ON FUNCTION ClassDB.getSessionID() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ClassDB.getSessionID()

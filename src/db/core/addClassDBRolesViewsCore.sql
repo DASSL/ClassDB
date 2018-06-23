@@ -14,7 +14,7 @@
 --This script requires the current user to be a superuser
 
 --This script should be run in every database to which ClassDB is to be added
--- it should be run after running addClassDBRolesMgmt.sql
+-- it should be run after running addClassDBRolesMgmtCore.sql
 
 --This script creates views for User, Student, Instructor, DBManager and Teams
 -- views add derived attributes to the base data in the associated tables
