@@ -101,8 +101,6 @@ DROP FUNCTION IF EXISTS ClassDB.importConnectionLog(DATE);
 DROP FUNCTION IF EXISTS ClassDB.disallowSchemaDrop();
 DROP FUNCTION IF EXISTS ClassDB.allowSchemaDrop();
 
-DROP FUNCTION IF EXISTS ClassDB.getSessionID();
-
 
 --Try to drop all ClassDB owned functions in ClassDB schema
 DROP OWNED BY ClassDB;
