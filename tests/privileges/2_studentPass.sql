@@ -27,8 +27,8 @@ DROP TABLE test;
 
 --Read from public frequent views
 SELECT * FROM public.myActivitySummary;
-SELECT * FROM public.getMyDDLActivity;
-SELECT * FROM public.getMyConnectionActivity;
+SELECT * FROM public.MyDDLActivity;
+SELECT * FROM public.MyConnectionActivity;
 SELECT * FROM public.myActivity;
 
 
@@ -72,6 +72,10 @@ DROP TABLE ptteam0.SharedTable;
 
 
 --CRUD on tables owned by team in team schema
+CREATE TABLE ptteam0.FirstTeamTable
+(
+   col1 VARCHAR(10)
+);
 INSERT INTO ptteam0.FirstTeamTable VALUES('test');
 
 SELECT * FROM ptteam0.FirstTeamTable;

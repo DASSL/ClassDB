@@ -24,7 +24,7 @@ SELECT ClassDB.addToTeam('teststu_pt', 'testteam_pt');
 SELECT ClassDB.removeFromTeam('teststu_pt', 'testteam_pt');
 SELECT ClassDB.revokeTeam('testteam_pt');
 SET LOCAL client_min_messages TO WARNING;
-SELECT ClassDB.dropTeam('testteam_pt');
+SELECT ClassDB.dropTeam('testteam_pt', TRUE, TRUE, 'drop_c');
 RESET client_min_messages;
 SELECT ClassDB.revokeStudent('teststu_pt');
 SET LOCAL client_min_messages TO WARNING;
@@ -81,8 +81,8 @@ SELECT * FROM ClassDB.Instructor;
 
 --Read from public frequent views
 SELECT * FROM public.myActivitySummary;
-SELECT * FROM public.getMyDDLActivity;
-SELECT * FROM public.getMyConnectionActivity;
+SELECT * FROM public.MyDDLActivity;
+SELECT * FROM public.MyConnectionActivity;
 SELECT * FROM public.myActivity;
 
 

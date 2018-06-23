@@ -46,7 +46,7 @@ WHERE UserName = 'ptstu0';
 INSERT INTO ClassDB.ConnectionActivity VALUES ('ptsu0', '2000-01-01 00:00');
 
 UPDATE ClassDB.ConnectionActivity
-SET AcceptedAtUTC = '1999-12-31 00:00'
+SET ActivityAtUTC = '1999-12-31 00:00'
 WHERE UserName = 'ptstu0';
 
 DELETE FROM ClassDB.ConnectionActivity
@@ -159,14 +159,14 @@ DROP FUNCTION IF EXISTS classdb.revokeclassdbrole(ClassDB.IDNameDomain,
 DROP FUNCTION IF EXISTS classdb.revokedbmanager(ClassDB.IDNameDomain);
 DROP FUNCTION IF EXISTS classdb.revokeinstructor(ClassDB.IDNameDomain);
 DROP FUNCTION IF EXISTS classdb.revokestudent(ClassDB.IDNameDomain);
-DROP FUNCTION IF EXISTS classdb.createteam(ClassDB.IDNameDomain,
-                                           ClassDB.RoleBase.FullName%Type,
+DROP FUNCTION IF EXISTS classdb.createteam(ClassDB.IDNameDomain,VARCHAR,
                                            ClassDB.IDNameDomain,
-                                           ClassDB.RoleBase.ExtraInfo%Type,
-                                           BOOLEAN, BOOLEAN);
+                                           VARCHAR, BOOLEAN, BOOLEAN);
 DROP FUNCTION IF EXISTS classdb.revoketeam(ClassDB.IDNameDomain);
-DROP FUNCTION IF EXISTS classdb.dropteam(ClassDB.IDNameDomain);
-DROP FUNCTION IF EXISTS classdb.dropallteams();
+DROP FUNCTION IF EXISTS classdb.dropteam(ClassDB.IDNameDomain, BOOLEAN, BOOLEAN,
+                                         VARCHAR, ClassDB.IDNameDomain);
+DROP FUNCTION IF EXISTS classdb.dropallteams(BOOLEAN, BOOLEAN, VARCHAR,
+                                             ClassDB.IDNameDomain);
 DROP FUNCTION IF EXISTS classdb.isteammember(ClassDB.IDNameDomain,
                                              ClassDB.IDNameDomain);
 DROP FUNCTION IF EXISTS classdb.addtoteam(ClassDB.IDNameDomain,
@@ -180,7 +180,7 @@ DROP FUNCTION IF EXISTS classdb.reassignownedinschema(ClassDB.IDNameDomain,
                                                       ClassDB.IDNameDomain,
                                                       ClassDB.IDNameDomain);
 DROP FUNCTION IF EXISTS classdb.isconnectionloggingenabled();
-DROP FUNCTION IF EXISTS classdb.isloggingcollecorenabled();
+DROP FUNCTION IF EXISTS classdb.isloggingcollectorenabled();
 DROP FUNCTION IF EXISTS classdb.handledropschemaddlstart();
 DROP FUNCTION IF EXISTS classdb.disallowschemadrop();
 DROP FUNCTION IF EXISTS classdb.allowschemadrop();
