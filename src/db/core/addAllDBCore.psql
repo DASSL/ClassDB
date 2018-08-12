@@ -28,6 +28,7 @@
 \set ON_ERROR_STOP on
 \ir initializeDBCore.sql
 \ir addHelpersCore.sql
+\ir addServerVersionComparersCore.sql
 \ir addRoleBaseMgmtCore.sql
 \ir addClassDBRolesMgmtCore.sql
 \ir addUserMgmtCore.sql
