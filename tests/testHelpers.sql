@@ -178,131 +178,6 @@ $$ LANGUAGE plpgsql;
 
 
 
---Define a temporary function to test functions related to server settings
-CREATE OR REPLACE FUNCTION pg_temp.testServerSettings() RETURNS TEXT AS
-$$
-BEGIN
-
-   --test function to get any setting
-   IF ClassDB.getServerSetting('server_version')
-      <>
-      current_setting('server_version')
-   THEN
-      RETURN 'FAIL: Code 1';
-   END IF;
-
-   --test function to return server's version number
-   --can't test equality because value from current_setting can have distro suffix
-   -- instead, test if value from current_setting starts with server version
-   IF POSITION(ClassDB.getServerVersion()
-      IN current_setting('server_version')) <> 1
-   THEN
-      RETURN 'FAIL: Code 2';
-   END IF;
-
-   --test any two version numbers: test part 2
-   IF ClassDB.compareServerVersion('9.6', '9.5') <= 0 THEN
-      RETURN 'FAIL: Code 3';
-   END IF;
-
-   IF ClassDB.compareServerVersion('9.5', '9.6') >= 0 THEN
-      RETURN 'FAIL: Code 4';
-   END IF;
-
-   IF ClassDB.compareServerVersion('8.5', '9.6') >= 0 THEN
-      RETURN 'FAIL: Code 5';
-   END IF;
-
-   IF ClassDB.compareServerVersion('9.6', '8.5') <= 0 THEN
-      RETURN 'FAIL: Code 6';
-   END IF;
-
-   --test any two version numbers: test distro suffix
-   IF ClassDB.compareServerVersion('10.3', '10.3 (Ubuntu 10.3-1)') <> 0 THEN
-      RETURN 'FAIL: Code 7';
-   END IF;
-
-   IF ClassDB.compareServerVersion('10.3 (Ubuntu 10.3-1)', '10.3') <> 0 THEN
-      RETURN 'FAIL: Code 8';
-   END IF;
-
-   --intentionally no space before opening parenthesis
-   IF ClassDB.compareServerVersion('10.1(distro 1)', '10.2(distro 2)') >= 0 THEN
-      RETURN 'FAIL: Code 9';
-   END IF;
-
-   --test any two version numbers: ignore part 2
-   IF ClassDB.compareServerVersion('9.6', '9.6', FALSE) <> 0 THEN
-      RETURN 'FAIL: Code 10';
-   END IF;
-
-   IF ClassDB.compareServerVersion('9.6', '9.5', FALSE) <> 0 THEN
-      RETURN 'FAIL: Code 11';
-   END IF;
-
-   IF ClassDB.compareServerVersion('9.5', '9.6', FALSE) <> 0 THEN
-      RETURN 'FAIL: Code 12';
-   END IF;
-
-   --test any two version numbers: single-part input
-   IF ClassDB.compareServerVersion('10', '10', FALSE) <> 0 THEN
-      RETURN 'FAIL: Code 13';
-   END IF;
-
-   IF ClassDB.compareServerVersion('10', '9.5', FALSE) <= 0 THEN
-      RETURN 'FAIL: Code 14';
-   END IF;
-
-   IF ClassDB.compareServerVersion('9.5', '10', FALSE) >= 0 THEN
-      RETURN 'FAIL: Code 15';
-   END IF;
-
-   --test some version number with server's version number
-   IF ClassDB.compareServerVersion('9.5')
-      <>
-      ClassDB.compareServerVersion('9.5', current_setting('server_version'))
-   THEN
-      RETURN 'FAIL: Code 16';
-   END IF;
-
-   --shortcut functions
-   IF ClassDB.isServerVersionBefore('0') THEN
-      RETURN 'FAIL: Code 17';
-   END IF;
-
-   IF ClassDB.isServerVersionBefore('0', FALSE) THEN
-      RETURN 'FAIL: Code 18';
-   END IF;
-
-   IF NOT ClassDB.isServerVersionAfter('0') THEN
-      RETURN 'FAIL: Code 19';
-   END IF;
-
-   IF NOT ClassDB.isServerVersionAfter('0', FALSE) THEN
-      RETURN 'FAIL: Code 20';
-   END IF;
-
-   IF NOT ClassDB.isServerVersion(current_setting('server_version')) THEN
-      RETURN 'FAIL: Code 21';
-   END IF;
-
-   IF ClassDB.isServerVersion('0.8') THEN
-      RETURN 'FAIL: Code 22';
-   END IF;
-
-   --the following tests fail when Postgres version reaches 100000.8
-   -- just change the argument at that point, or rewrite the tests
-   IF NOT ClassDB.isServerVersionBefore('100000.8') THEN
-      RETURN 'FAIL: Code 23';
-   END IF;
-
-   IF ClassDB.isServerVersionAfter('100000.8') THEN
-      RETURN 'FAIL: Code 24';
-   END IF;
-
-   RETURN 'PASS';
-END;
-$$ LANGUAGE plpgsql;
 
 
 
@@ -332,6 +207,14 @@ BEGIN
       RETURN 'FAIL: Code 3';
    END IF;
 
+   --test function to get any server setting
+   IF ClassDB.getServerSetting('server_version')
+      <>
+      current_setting('server_version')
+   THEN
+      RETURN 'FAIL: Code 4';
+   END IF;
+
    RETURN 'PASS';
 END;
 $$ LANGUAGE plpgsql;
@@ -350,7 +233,7 @@ DECLARE
 BEGIN
 --------------------------------------------------------------------------------
 --Test expected fundamental behavior of DB and ClassDB.reassignObjectOwnership
-   
+
    --create two users for testing
    CREATE USER user0_testOwnership;
    CREATE USER user1_testOwnership;
@@ -467,7 +350,7 @@ BEGIN
    CREATE SCHEMA shared_testOwnership;
    GRANT CREATE, USAGE ON SCHEMA shared_testOwnership
       TO user0_testOwnership, user1_testOwnership;
-      
+
    --get OIDs for easier identification of object owners and schema in later tests
    user0OID = (SELECT oid FROM pg_catalog.pg_roles
                WHERE rolname = ClassDB.foldPgID('user0_testOwnership'));
@@ -511,7 +394,7 @@ BEGIN
       RETURNS VOID AS '' LANGUAGE SQL;
 
    RESET SESSION AUTHORIZATION;
-   
+
    --verify user 1 owns the 8 objects in shared schema
    IF NOT(6 = (SELECT COUNT(*) FROM pg_catalog.pg_class --6 objects in pg_class
                WHERE relName IN (ClassDB.foldPgID('sharedTestTable'),
@@ -530,7 +413,7 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 5';
    END IF;
-   
+
    --verify user 0 does not own the objects in public schema
    IF NOT(NOT EXISTS(SELECT * FROM pg_catalog.pg_class
                WHERE relName IN (ClassDB.foldPgID('publicTestTable'),
@@ -592,16 +475,16 @@ BEGIN
    THEN
       RETURN 'FAIL: Code 8';
    END IF;
-   
-   
+
+
 --------------------------------------------------------------------------------
 --Test additional functionality: default role (CURRENT_USER)
-   
+
    --reassign objects in public schema to default newOwner (CURRENT_USER)
    SET SESSION AUTHORIZATION user2_testOwnership;
    PERFORM ClassDB.reassignOwnedInSchema('public', 'user1_testOwnership');
    RESET SESSION AUTHORIZATION;
-   
+
    --verify that user 2 now owns objects in public schema
    IF NOT(6 = (SELECT COUNT(*) FROM pg_catalog.pg_class
                WHERE relName IN (ClassDB.foldPgID('publicTestTable'),
@@ -636,24 +519,24 @@ BEGIN
       'public.publicTestMatView', 'user0_testOwnership');
    PERFORM ClassDB.reassignObjectOwnership(' Type               ',
       'public.publicTestType', 'user0_testOwnership');
-   PERFORM ClassDB.reassignObjectOwnership('FUNCTION', 
+   PERFORM ClassDB.reassignObjectOwnership('FUNCTION',
       'public.publicTestFunction(VARCHAR)', 'user0_testOwnership');
-      
+
    --reassign in schema with no objects
    CREATE SCHEMA emptySchema_testOwnership;
    PERFORM ClassDB.reassignOwnedInSchema('emptySchema_testOwnership',
       'user0_testOwnership', 'user1_testOwnership');
-   
+
    --test that descendant tables are not modified
    SET SESSION AUTHORIZATION user0_testOwnership;
    CREATE TABLE public.publicBaseTable(col1 VARCHAR);
    CREATE TABLE public.publicDescTable(col2 VARCHAR)
       INHERITS (public.publicBaseTable);
    RESET SESSION AUTHORIZATION;
-   
-   PERFORM ClassDB.reassignObjectOwnership('Table', 'public.publicBaseTable', 
+
+   PERFORM ClassDB.reassignObjectOwnership('Table', 'public.publicBaseTable',
       'user1_testOwnership');
-      
+
    --verify ownership
    IF NOT(EXISTS(SELECT * FROM pg_catalog.pg_tables
                  WHERE tableName = 'publicbasetable' AND schemaname = 'public'
@@ -713,11 +596,7 @@ BEGIN
    RAISE INFO '%   testMembership',
       pg_temp.testMembership();
 
-   --test functions related to server settings
-   RAISE INFO '%   testServerSettings',
-      pg_temp.testServerSettings();
-
-   --test certain miscellaneous functions
+   --test miscellaneous functions
    RAISE INFO '%   Miscellany',
       pg_temp.testMiscellany();
 
