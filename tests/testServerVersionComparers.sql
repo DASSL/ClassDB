@@ -40,68 +40,68 @@ BEGIN
    IF POSITION(ClassDB.getServerVersion()
       IN current_setting('server_version')) <> 1
    THEN
-      RETURN 'FAIL: Code 2';
+      RETURN 'FAIL: Code 1';
    END IF;
 
 
    --test any two version numbers: test part 2
    IF ClassDB.compareServerVersion('9.6', '9.5') <= 0 THEN
-      RETURN 'FAIL: Code 3';
+      RETURN 'FAIL: Code 2';
    END IF;
 
    IF ClassDB.compareServerVersion('9.5', '9.6') >= 0 THEN
-      RETURN 'FAIL: Code 4';
+      RETURN 'FAIL: Code 3';
    END IF;
 
    IF ClassDB.compareServerVersion('8.5', '9.6') >= 0 THEN
-      RETURN 'FAIL: Code 5';
+      RETURN 'FAIL: Code 4';
    END IF;
 
    IF ClassDB.compareServerVersion('9.6', '8.5') <= 0 THEN
-      RETURN 'FAIL: Code 6';
+      RETURN 'FAIL: Code 5';
    END IF;
 
 
    --test any two version numbers: test distro suffix
    IF ClassDB.compareServerVersion('10.3', '10.3 (Ubuntu 10.3-1)') <> 0 THEN
-      RETURN 'FAIL: Code 7';
+      RETURN 'FAIL: Code 6';
    END IF;
 
    IF ClassDB.compareServerVersion('10.3 (Ubuntu 10.3-1)', '10.3') <> 0 THEN
-      RETURN 'FAIL: Code 8';
+      RETURN 'FAIL: Code 7';
    END IF;
 
    --intentionally no space before opening parenthesis
    IF ClassDB.compareServerVersion('10.1(distro 1)', '10.2(distro 2)') >= 0 THEN
-      RETURN 'FAIL: Code 9';
+      RETURN 'FAIL: Code 8';
    END IF;
 
 
    --test any two version numbers: ignore part 2
    IF ClassDB.compareServerVersion('9.6', '9.6', FALSE) <> 0 THEN
-      RETURN 'FAIL: Code 10';
+      RETURN 'FAIL: Code 9';
    END IF;
 
    IF ClassDB.compareServerVersion('9.6', '9.5', FALSE) <> 0 THEN
-      RETURN 'FAIL: Code 11';
+      RETURN 'FAIL: Code 10';
    END IF;
 
    IF ClassDB.compareServerVersion('9.5', '9.6', FALSE) <> 0 THEN
-      RETURN 'FAIL: Code 12';
+      RETURN 'FAIL: Code 11';
    END IF;
 
 
    --test any two version numbers: single-part input
    IF ClassDB.compareServerVersion('10', '10', FALSE) <> 0 THEN
-      RETURN 'FAIL: Code 13';
+      RETURN 'FAIL: Code 12';
    END IF;
 
    IF ClassDB.compareServerVersion('10', '9.5', FALSE) <= 0 THEN
-      RETURN 'FAIL: Code 14';
+      RETURN 'FAIL: Code 13';
    END IF;
 
    IF ClassDB.compareServerVersion('9.5', '10', FALSE) >= 0 THEN
-      RETURN 'FAIL: Code 15';
+      RETURN 'FAIL: Code 14';
    END IF;
 
 
@@ -110,43 +110,43 @@ BEGIN
       <>
       ClassDB.compareServerVersion('9.5', current_setting('server_version'))
    THEN
-      RETURN 'FAIL: Code 16';
+      RETURN 'FAIL: Code 15';
    END IF;
 
 
    --shortcut functions
    IF ClassDB.isServerVersionBefore('0') THEN
-      RETURN 'FAIL: Code 17';
+      RETURN 'FAIL: Code 16';
    END IF;
 
    IF ClassDB.isServerVersionBefore('0', FALSE) THEN
-      RETURN 'FAIL: Code 18';
+      RETURN 'FAIL: Code 17';
    END IF;
 
    IF NOT ClassDB.isServerVersionAfter('0') THEN
-      RETURN 'FAIL: Code 19';
+      RETURN 'FAIL: Code 18';
    END IF;
 
    IF NOT ClassDB.isServerVersionAfter('0', FALSE) THEN
-      RETURN 'FAIL: Code 20';
+      RETURN 'FAIL: Code 19';
    END IF;
 
    IF NOT ClassDB.isServerVersion(current_setting('server_version')) THEN
-      RETURN 'FAIL: Code 21';
+      RETURN 'FAIL: Code 20';
    END IF;
 
    IF ClassDB.isServerVersion('0.8') THEN
-      RETURN 'FAIL: Code 22';
+      RETURN 'FAIL: Code 21';
    END IF;
 
    --the following tests fail when Postgres version reaches 100000.8
    -- just change the argument at that point, or rewrite the tests
    IF NOT ClassDB.isServerVersionBefore('100000.8') THEN
-      RETURN 'FAIL: Code 23';
+      RETURN 'FAIL: Code 22';
    END IF;
 
    IF ClassDB.isServerVersionAfter('100000.8') THEN
-      RETURN 'FAIL: Code 24';
+      RETURN 'FAIL: Code 23';
    END IF;
 
    RETURN 'PASS';
