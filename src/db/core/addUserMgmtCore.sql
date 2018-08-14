@@ -82,6 +82,8 @@ GRANT SELECT ON ClassDB.DDLActivity TO ClassDB_Instructor, ClassDB_DBManager;
 --Define a function to upgrade table DDLActivity from v2.0 to v.21
 -- Remove this function and its use (see after function definition) when upgrade
 -- path is removed
+--ADD COLUMN does not test IF NOT EXISTS because this function is called only if
+-- none of the columns specific to v2.1 exist
 CREATE OR REPLACE FUNCTION pg_temp.upgradeDDLActivity_20_21()
 RETURNS VOID AS
 $$
@@ -93,9 +95,8 @@ BEGIN
       -- NULL when the column is added (which is an error). We use a temporary
       -- default to get around this problem
       ALTER TABLE IF EXISTS ClassDB.DDLActivity
-      ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL
-                                         DEFAULT '00000000.00000000'
-                                         CHECK(TRIM(SessionID) <> '');
+      ADD COLUMN SessionID VARCHAR(17) NOT NULL DEFAULT '00000000.00000000'
+                           CHECK(TRIM(SessionID) <> '');
 
       --Drop the temporary default. DROP DEFAULT is idempotent
       ALTER TABLE IF EXISTS ClassDB.DDLActivity
@@ -103,8 +104,7 @@ BEGIN
    ELSE
       --Otherwise simply add the new column
       ALTER TABLE IF EXISTS ClassDB.DDLActivity
-      ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL
-                                         CHECK(TRIM(SessionID) <> '');
+      ADD COLUMN SessionID VARCHAR(17) NOT NULL CHECK(TRIM(SessionID) <> '');
    END IF;
 END;
 $$ LANGUAGE plpgsql;
@@ -188,8 +188,7 @@ BEGIN
       -- existing rows; then drop the default so future INSERTs have to
       -- explicitly set a value
       ALTER TABLE ClassDB.ConnectionActivity
-      ADD COLUMN SessionID VARCHAR(17) NOT NULL
-                           DEFAULT '00000000.00000000'
+      ADD COLUMN SessionID VARCHAR(17) NOT NULL DEFAULT '00000000.00000000'
                            CHECK(TRIM(SessionID) <> '');
 
       ALTER TABLE ClassDB.ConnectionActivity
