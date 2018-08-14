@@ -154,6 +154,8 @@ GRANT SELECT ON ClassDB.ConnectionActivity
 --Define a function to upgrade table ConnectionActivity from v2.0 to 2.1
 --Remove this function and its use (see after fn definition) when the upgrade
 -- path is removed
+--ADD COLUMN and CREATE INDEX operations do not test IF NOT EXISTS because this
+-- function is called only if none of the columns being added already exist
 CREATE OR REPLACE FUNCTION pg_temp.upgradeConnectionActivity_20_21()
 RETURNS VOID AS
 $$
@@ -175,8 +177,8 @@ BEGIN
       -- only connection rows; then drop the default so future INSERTs have to
       -- explicitly set a value
       ALTER TABLE ClassDB.ConnectionActivity
-      ADD COLUMN IF NOT EXISTS ActivityType CHAR(1) NOT NULL DEFAULT 'C'
-                                            CHECK(ActivityType IN ('C', 'D'));
+      ADD COLUMN ActivityType CHAR(1) NOT NULL DEFAULT 'C'
+                              CHECK(ActivityType IN ('C', 'D'));
 
       --DROP DEFAULT does not support IF EXISTS, but it is idempotent
       ALTER TABLE ClassDB.ConnectionActivity
@@ -186,9 +188,9 @@ BEGIN
       -- existing rows; then drop the default so future INSERTs have to
       -- explicitly set a value
       ALTER TABLE ClassDB.ConnectionActivity
-      ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL
-                                         DEFAULT '00000000.00000000'
-                                         CHECK(TRIM(SessionID) <> '');
+      ADD COLUMN SessionID VARCHAR(17) NOT NULL
+                           DEFAULT '00000000.00000000'
+                           CHECK(TRIM(SessionID) <> '');
 
       ALTER TABLE ClassDB.ConnectionActivity
       ALTER COLUMN SessionID DROP DEFAULT;
@@ -197,7 +199,7 @@ BEGIN
       -- won't have unique values in existing rows due to dummy session id added
       -- for already existing rows
       --this index forces the PK columns to have unique value in new rows
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_SessionID_ActivityType
+      CREATE UNIQUE INDEX idx_SessionID_ActivityType
       ON ClassDB.ConnectionActivity(SessionID, ActivityType)
       WHERE SessionID <> '00000000.00000000';
 
@@ -205,15 +207,13 @@ BEGIN
       --customize the schema for an empty table
 
       ALTER TABLE ClassDB.ConnectionActivity
-      ADD COLUMN IF NOT EXISTS ActivityType CHAR(1) NOT NULL
-                                            CHECK(ActivityType IN ('C', 'D'));
+      ADD COLUMN ActivityType CHAR(1) NOT NULL CHECK(ActivityType IN ('C', 'D'));
 
       ALTER TABLE ClassDB.ConnectionActivity
-      ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL
-                                         CHECK(TRIM(SessionID) <> '');
+      ADD COLUMN SessionID VARCHAR(17) NOT NULL CHECK(TRIM(SessionID) <> '');
 
       --create a unique index instead of a PK
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_SessionID_ActivityType
+      CREATE UNIQUE INDEX idx_SessionID_ActivityType
       ON ClassDB.ConnectionActivity(SessionID, ActivityType);
 
       --treat the unique index as the PK
@@ -232,6 +232,8 @@ $$ LANGUAGE plpgsql;
 
 --Upgrade table ConnectionActivity from v2.0 to 2.1
 -- test presence of column SessionID to detect if the table is already in v2.1
+-- testing presence of SessionID is a proxy: assume none of the columns new to
+-- v2.1 exist in the table if SessionID does not exist (a reasonable assumption)
 --Remove this block when the upgrade path is removed
 DO
 $$
