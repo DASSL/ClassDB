@@ -91,9 +91,12 @@ BEGIN
          ON ClassDB.RoleBase(ClassDB.foldPgID(RoleName));
       END IF;
    ELSE
-      --works on pg9.5 or later: only this code needed when pg9.4 is unsupported
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_Unique_FoldedRoleName
-      ON ClassDB.RoleBase(ClassDB.foldPgID(RoleName));
+      --query for pg9.5 or later: must be dynamic so it is not processed in
+      -- pre 9.5 versions; change to static (stop using EXECUTE) when pg9.4 is
+      -- no longer supported
+      EXECUTE
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_Unique_FoldedRoleName '
+      'ON ClassDB.RoleBase(ClassDB.foldPgID(RoleName));';
    END IF;
 END
 $$;
