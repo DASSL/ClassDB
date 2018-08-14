@@ -40,12 +40,7 @@ SET LOCAL client_min_messages TO WARNING;
 -- the function is executed, it gets the timestamp, statement, and target object
 -- of the trigger DDL statement, and records those in the triggering student's
 -- record in the student table. It also increments the student's total DDL
--- statement count. If PostgreSQL version is before 9.5 objId will be set to N/A
--- for non-Drop DDL operations. This is done to account for the non-existence of
--- pg_event_trigger_ddl_commands() in those versions
-
---Remove assignment of objId and "AND ClassDB.isServerVersionAfter('9.4')" once
--- support for pg versions prior to 9.5 is dropped
+-- statement count
 
 --This function requires CREATE OR REPLACE for this function because it can't be
 -- dropped if the event triggers already exist.  For example, when re-runing this script
@@ -54,13 +49,12 @@ RETURNS event_trigger AS
 $$
 DECLARE
    --Name of the db object that was targeted by the triggering statement
-   objId VARCHAR(256) := 'N/A';
+   objId VARCHAR(256);
 BEGIN
    --We only want log DDL activity from ClassDB users
    IF ClassDB.isUser(SESSION_USER::ClassDB.IDNameDomain) THEN
-      --Check if the calling event is sql_drop or ddl_command_end and server
-      -- version is after 9.4
-      IF TG_EVENT = 'ddl_command_end' AND ClassDB.isServerVersionAfter('9.4') THEN
+      --Check if the calling event is sql_drop or ddl_command_end
+      IF TG_EVENT = 'ddl_command_end' THEN
          SELECT object_identity --Get the statement target object
          INTO objId
          FROM pg_event_trigger_ddl_commands() --can only be called on non-DROP ops
