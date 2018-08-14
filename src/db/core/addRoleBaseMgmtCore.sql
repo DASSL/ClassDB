@@ -70,10 +70,37 @@ CREATE TABLE IF NOT EXISTS ClassDB.RoleBase
   ExtraInfo VARCHAR --any additional information instructors wish to maintain
 );
 
+
 --Define a unique index on the folded version of role name
 -- this approach to uniqueness makes RoleName compatible w/ Postgres role names
-CREATE UNIQUE INDEX IF NOT EXISTS idx_Unique_FoldedRoleName
-ON ClassDB.RoleBase(ClassDB.foldPgID(RoleName));
+--Guard the use of IF NOT EXISTS because that option was introduced in pg 9.5
+--Remove the guarded code when ClassDB support for pg versions prior to 9.5 stops
+DO
+$$
+BEGIN
+   IF ClassDB.isServerVersionBefore('9.5') THEN
+      --works on any pg version, but intentionally guarding for pre-9.5 versions
+      -- so it is easier to remove the code later
+      IF NOT EXISTS (SELECT indexname FROM pg_catalog.pg_indexes
+                     WHERE schemaname = 'classdb'
+                          AND tablename = 'rolebase'
+                          AND indexname = 'idx_unique_foldedrolename'
+                    )
+      THEN
+         CREATE UNIQUE INDEX idx_Unique_FoldedRoleName
+         ON ClassDB.RoleBase(ClassDB.foldPgID(RoleName));
+      END IF;
+   ELSE
+      --query for pg9.5 or later: must be dynamic so it is not processed in
+      -- pre 9.5 versions; change to static (stop using EXECUTE) when pg9.4 is
+      -- no longer supported
+      EXECUTE
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_Unique_FoldedRoleName '
+      'ON ClassDB.RoleBase(ClassDB.foldPgID(RoleName));';
+   END IF;
+END
+$$;
+
 
 --Change table's owner so ClassDB can perform any operation on it
 ALTER TABLE ClassDB.RoleBase OWNER TO ClassDB;
