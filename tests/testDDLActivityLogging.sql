@@ -35,8 +35,8 @@ $$
 BEGIN
    --Check that no extra activity was logged. GROUP BY UserName and use HAVING COUNT(*)
    -- to check how many new activity rows have been added for each test user.
-   -- If COUNT(*) > 1, then too many connection rows were added for that user.
-   -- For PostgreSQL versions prior to 9.5 If COUNT(*) > 1, then too many
+   -- If COUNT(*) > 2, then too many connection rows were added for that user.
+   -- For PostgreSQL versions prior to 9.5 If COUNT(*) > 3, then too many
    -- connection rows were added for that user since N/A is filled in for blank rows
    --
    --Remove ClassDB.isServerVersionAfter('9.4') when support for pg versions before
@@ -46,7 +46,7 @@ BEGIN
                 FROM ClassDB.DDLActivity
                 WHERE userName IN ('ddltu01', 'ddlins01', 'ddldbm01')
                 GROUP BY UserName
-                HAVING COUNT(*) > 1)
+                HAVING COUNT(*) > 2)
      THEN
         RETURN 'FAIL: Code 1';
      END IF;
