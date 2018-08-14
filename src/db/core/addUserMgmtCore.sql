@@ -223,7 +223,7 @@ BEGIN
 
    --Column ApplicationName is new in v2.1
    ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
-   ADD COLUMN IF NOT EXISTS ApplicationName ClassDB.IDNameDomain;
+   ADD COLUMN ApplicationName ClassDB.IDNameDomain;
 
 END;
 $$ LANGUAGE plpgsql;
