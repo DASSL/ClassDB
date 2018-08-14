@@ -155,7 +155,7 @@ GRANT SELECT ON ClassDB.ConnectionActivity
 --Remove this function and its use (see after fn definition) when the upgrade
 -- path is removed
 --ADD COLUMN and CREATE INDEX operations do not test IF NOT EXISTS because this
--- function is called only if none of the columns being added already exist
+-- function is called only if none of the columns specific to v2.1 exist
 CREATE OR REPLACE FUNCTION pg_temp.upgradeConnectionActivity_20_21()
 RETURNS VOID AS
 $$
