@@ -36,14 +36,31 @@ BEGIN
    --Check that no extra activity was logged. GROUP BY UserName and use HAVING COUNT(*)
    -- to check how many new activity rows have been added for each test user.
    -- If COUNT(*) > 1, then too many connection rows were added for that user.
-   IF EXISTS (SELECT UserName
-              FROM ClassDB.DDLActivity
-              WHERE userName IN ('ddltu01', 'ddlins01', 'ddldbm01')
-              GROUP BY UserName
-              HAVING COUNT(*) > 2)
-   THEN
-      RETURN 'FAIL: Code 1';
+   -- For PostgreSQL versions prior to 9.5 If COUNT(*) > 1, then too many
+   -- connection rows were added for that user since N/A is filled in for blank rows
+   --
+   --Remove ClassDB.isServerVersionAfter('9.4') when support for pg versions before
+   -- 9.5 is dropped
+   IF ClassDB.isServerVersionAfter('9.4') THEN
+     IF EXISTS (SELECT UserName
+                FROM ClassDB.DDLActivity
+                WHERE userName IN ('ddltu01', 'ddlins01', 'ddldbm01')
+                GROUP BY UserName
+                HAVING COUNT(*) > 1)
+     THEN
+        RETURN 'FAIL: Code 1';
+     END IF;
+   ELSE
+     IF EXISTS (SELECT UserName
+                FROM ClassDB.DDLActivity
+                WHERE userName IN ('ddltu01', 'ddlins01', 'ddldbm01')
+                GROUP BY UserName
+                HAVING COUNT(*) > 3)
+     THEN
+        RETURN 'FAIL: Code 1';
+     END IF;
    END IF;
+
 
 
    --Check that all test users have activity logged. This test will fail one or
@@ -137,7 +154,17 @@ BEGIN
 
    RESET SESSION AUTHORIZATION;
 
+   --grant temporary access to functions to compare versions so that above tests
+   -- will work properly on pg versions prior to 9.5. Remove GRANTs once support
+   -- for pg versions prior to 9.5 is dropped.
+   GRANT EXECUTE ON FUNCTION ClassDB.isServerVersionAfter(VARCHAR, BOOLEAN)
+      TO ClassDB_Instructor, ClassDB_DBManager;
 
+   GRANT EXECUTE ON FUNCTION ClassDB.compareServerVersion(VARCHAR, BOOLEAN)
+      TO ClassDB_Instructor, ClassDB_DBManager;
+
+   GRANT EXECUTE ON FUNCTION ClassDB.compareServerVersion(VARCHAR, VARCHAR, BOOLEAN)
+      TO ClassDB_Instructor, ClassDB_DBManager;
 
    RAISE INFO '%, checkDDLActivityTable() (superuser)', pg_temp.checkDDLActivityTable();
 
