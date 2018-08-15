@@ -77,15 +77,24 @@ $$ LANGUAGE sql
    SECURITY DEFINER;
 
 --Change function ownership and set execution permissions
-ALTER FUNCTION
-   classdb.killConnection(INT)
-   OWNER TO ClassDB;
-REVOKE ALL ON FUNCTION
-   classdb.killConnection(INT)
-   FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION
-   classdb.killConnection(INT)
-   TO ClassDB_Instructor, ClassDB_DBManager;
+
+--killing a connection requires membership in server role pg_signal_backend
+-- that role was introduced in pg9.6
+-- let the superuser who created the function remain the owner in pre9.6 versions
+DO
+$$
+BEGIN
+   IF ClassDB.isServerVersionAfter('9.5') THEN
+      --remove the guard and keep only the following line when pg9.5 is unsupported
+      ALTER FUNCTION classdb.killConnection(INT) OWNER TO ClassDB;
+   END IF;
+END
+$$;
+
+REVOKE ALL ON FUNCTION classdb.killConnection(INT) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION classdb.killConnection(INT)
+TO ClassDB_Instructor, ClassDB_DBManager;
 
 
 --Kills all open connections for a specific user
