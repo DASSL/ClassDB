@@ -58,7 +58,7 @@ BEGIN
          --Function pg_event_trigger_ddl_commands was introduced in pg9.5.
          -- Remove the test for server version when support for pg9.4 ends
          IF ClassDB.isServerVersionBefore('9.5') THEN
-            objId = 'N\A';
+            objId = 'N/A';
          ELSE
             SELECT object_identity --Get the statement target object
             INTO objId
