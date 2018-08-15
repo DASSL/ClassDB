@@ -19,9 +19,10 @@
 -- script because they pack each statement into a single command string.  This causes
 -- ALTER SYSTEM statements to fail.
 
---This script uses ALTER SYSTEM statements to change the Postgres server log
--- settings for the connection logging system. These statements must be run as
--- superuser and outside of any transaction.
+--This script uses ALTER SYSTEM statements to change the Postgres server log settings for
+-- the connection logging system. These statements must be run as superuser, but
+-- can't be run inside a TRANSACTION block, however they will still fail if they
+-- are run with insufficient permissions.
 
 --ALTER SYSTEM statements were not available prior to Postgres 9.4 and so these
 -- configuration options must be set manually in postgresql.conf in pg9.3 or
