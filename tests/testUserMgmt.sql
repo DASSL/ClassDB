@@ -33,13 +33,15 @@ DO
 $$
 BEGIN
 
-   --triggers should be defined
-   IF EXISTS (SELECT trigger_name FROM INFORMATION_SCHEMA.triggers
+   --a total of triggers with the given names should be defined
+   IF 6 = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.triggers
               WHERE trigger_schema = 'classdb'
                     AND trigger_name IN('rejectnonuserddlactivityinsert',
                                         'rejectnonuserconnectionactivityinsert',
                                         'rejectddlactivityupdate',
-                                        'rejectconnectionactivityupdate'
+                                        'rejectconnectionactivityupdate',
+                                        'rejectddlactivitydelete',
+                                        'rejectconnectionactivitydelete'
                                        )
              )
    THEN
@@ -118,7 +120,7 @@ BEGIN
    END;
 
 
-   --table DDLActivity should not be updatable
+   --table DDLActivity should not permit update
    BEGIN
       UPDATE ClassDB.DDLActivity SET UserName = CURRENT_USER;
       RAISE INFO '%   DDLActivity reject update', 'FAIL; Code 6';
@@ -130,16 +132,39 @@ BEGIN
                     USING DETAIL = SQLERRM;
    END;
 
+   --table DDLActivity should not permit delete
+   BEGIN
+      DELETE FROM ClassDB.DDLActivity;
+      RAISE INFO '%   DDLActivity reject delete', 'FAIL; Code 7';
+   EXCEPTION
+      WHEN raise_exception THEN
+         RAISE INFO '%   DDLActivity reject delete', 'PASS';
+      WHEN OTHERS THEN
+         RAISE INFO '%   DDLActivity reject delete', 'FAIL; Code 7'
+                    USING DETAIL = SQLERRM;
+   END;
 
-   --table ConnectionActivity should not be updatable
+   --table ConnectionActivity should not permit update
    BEGIN
       UPDATE ClassDB.ConnectionActivity SET UserName = CURRENT_USER;
-      RAISE INFO '%   ConnectionActivity reject update', 'FAIL; Code 7';
+      RAISE INFO '%   ConnectionActivity reject update', 'FAIL; Code 8';
    EXCEPTION
       WHEN raise_exception THEN
          RAISE INFO '%   ConnectionActivity reject update', 'PASS';
       WHEN OTHERS THEN
-         RAISE INFO '%   ConnectionActivity reject update', 'FAIL; Code 7'
+         RAISE INFO '%   ConnectionActivity reject update', 'FAIL; Code 8'
+                    USING DETAIL = SQLERRM;
+   END;
+
+   --table ConnectionActivity should not permit delete
+   BEGIN
+      DELETE FROM ClassDB.ConnectionActivity;
+      RAISE INFO '%   ConnectionActivity reject delete', 'FAIL; Code 9';
+   EXCEPTION
+      WHEN raise_exception THEN
+         RAISE INFO '%   ConnectionActivity reject delete', 'PASS';
+      WHEN OTHERS THEN
+         RAISE INFO '%   ConnectionActivity reject delete', 'FAIL; Code 9'
                     USING DETAIL = SQLERRM;
    END;
 
