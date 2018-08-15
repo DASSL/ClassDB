@@ -75,7 +75,7 @@ BEGIN
    --Query setting directly because helpers fns are unavailable in this script
    IF 90600 <= (SELECT setting::integer FROM pg_catalog.pg_settings
                 WHERE name = 'server_version_num'
-             ) THEN
+               ) THEN
       GRANT pg_signal_backend TO ClassDB;
    END IF;
 
