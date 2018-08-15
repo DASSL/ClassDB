@@ -33,7 +33,7 @@ DO
 $$
 BEGIN
 
-   --a total of triggers with the given names should be defined
+   --a total of six triggers with the given names should be defined
    IF 6 = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.triggers
               WHERE trigger_schema = 'classdb'
                     AND trigger_name IN('rejectnonuserddlactivityinsert',
