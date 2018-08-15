@@ -19,12 +19,34 @@
 -- script because they pack each statement into a single command string.  This causes
 -- ALTER SYSTEM statements to fail.
 
---This script uses ALTER SYSTEM statements to change the Postgres server log settings for
--- the connection logging system. These statements must be run as superuser, but
--- can't be run inside a TRANSACTION block, however they will still fail if they
--- are run with insufficient permissions.
+--This script uses ALTER SYSTEM statements to change the Postgres server log
+-- settings for the connection logging system. These statements must be run as
+-- superuser and outside of any transaction.
 
-
+--ALTER SYSTEM statements were not available prior to Postgres 9.4 and so these
+-- configuration options must be set manually in postgresql.conf in pg9.3 or
+-- below. The following block, including setting on_error_stop, should be
+-- removed when pg9.3 is no longer supported.
+\set ON_ERROR_STOP on
+DO
+$$
+BEGIN
+   --Since this is a server script, ClassDB's server version comparers are not
+   --available. The following conditional reproduces the effect of calling
+   -- ClassDB.isServerVersionBefore('9.4')
+   IF 90400 > (SELECT setting FROM pg_catalog.pg_settings
+               WHERE name = 'server_version_num')::INTEGER
+   THEN
+      RAISE EXCEPTION USING
+         MESSAGE = 'could not set logging-related settings',
+         DETAIL = 'Logging-related settings must be set manually in Postgres'
+                  ' 9.3 and earlier.',
+         HINT = 'See https://dassl.github.io/ClassDB/Setup for more'
+                ' information.';
+   END IF;
+END;
+$$;
+   
 --The following changes are made:
 --log_destination TO 'csvlog' cause the logs to be recorded in a csv format,
 -- making it possible to use the COPY statement on them
