@@ -247,7 +247,7 @@ $$;
 
 
 --Define a trigger function to raise an exception that an operation is disallowed
--- used to prevent non-user inserts to, and any updates to, tables DDLActivity
+-- used to prevent non-user insert and any update or delete over tables DDLActivity
 -- and ConnectionActivity
 -- trigger functions cannot accept parameters, but the 0-based array TG_ARGV will
 -- contain the arguments specified in the corresponding trigger definition
@@ -261,10 +261,10 @@ BEGIN
       RAISE EXCEPTION
          'Constraint violation: value of column %.UserName is not a known user',
          TG_ARGV[1];
-   ELSIF TG_ARGV[0] = 'UPDATE' THEN
+   ELSIF TG_ARGV[0] IN ('UPDATE', 'DELETE') THEN
       RAISE EXCEPTION
-         'Invalid operation: UPDATE operation is not permitted on table "%"',
-         TG_ARGV[1];
+         'Invalid operation: % operation is not permitted on table "%"',
+         TG_ARGV[0], TG_ARGV[1];
    ELSE
       RAISE EXCEPTION 'Invalid use of trigger function';
    END IF;
@@ -278,8 +278,8 @@ REVOKE ALL ON FUNCTION ClassDB.rejectOperation() FROM PUBLIC;
 
 
 
---Define triggers to prevent INSERT for non-user roles, and any UPDATE, to
--- tables DDLActivity and ConnectionActivity
+--Define triggers to prevent INSERT for non-user roles, and any UPDATE or delete
+-- to tables DDLActivity and ConnectionActivity
 -- drop triggers prior to creation because there is no CREATE OR REPLACE TRIGGER
 DO
 $$
@@ -307,15 +307,20 @@ BEGIN
       ClassDB.rejectOperation('INSERT', 'ClassDB.ConnectionActivity');
 
 
-   --reject all updates to DDLActivity
+   --reject update and delete of DDLActivity: truncate still permitted
    DROP TRIGGER IF EXISTS RejectDDLActivityUpdate ON ClassDB.DDLActivity;
 
    CREATE TRIGGER RejectDDLActivityUpdate
    BEFORE UPDATE ON ClassDB.DDLActivity
    EXECUTE PROCEDURE ClassDB.rejectOperation('UPDATE', 'ClassDB.DDLActivity');
 
+   DROP TRIGGER IF EXISTS RejectDDLActivityDelete ON ClassDB.DDLActivity;
 
-   --reject all updates to ConnectionActivity
+   CREATE TRIGGER RejectDDLActivityDelete
+   BEFORE DELETE ON ClassDB.DDLActivity
+   EXECUTE PROCEDURE ClassDB.rejectOperation('DELETE', 'ClassDB.DDLActivity');
+
+   --reject update and delete of ConnectionActivity: truncate still permitted
    DROP TRIGGER IF EXISTS RejectConnectionActivityUpdate
    ON ClassDB.ConnectionActivity;
 
@@ -323,6 +328,14 @@ BEGIN
    BEFORE UPDATE ON ClassDB.ConnectionActivity
    EXECUTE PROCEDURE
       ClassDB.rejectOperation('UPDATE', 'ClassDB.ConnectionActivity');
+
+   DROP TRIGGER IF EXISTS RejectConnectionActivityDelete
+   ON ClassDB.ConnectionActivity;
+
+   CREATE TRIGGER RejectConnectionActivityDelete
+   BEFORE DELETE ON ClassDB.ConnectionActivity
+   EXECUTE PROCEDURE
+      ClassDB.rejectOperation('DELETE', 'ClassDB.ConnectionActivity');
 
 END
 $$;
