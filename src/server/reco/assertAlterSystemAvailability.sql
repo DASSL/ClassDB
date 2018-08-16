@@ -36,8 +36,7 @@ BEGIN
          MESSAGE = 'could not set logging-related settings',
          DETAIL = 'Logging-related settings must be set manually in Postgres'
                   ' 9.3 and earlier.',
-         HINT = 'See https://dassl.github.io/ClassDB/Setup for more'
-                ' information.';
+         HINT = 'Consult ClassDB documentation for more information.';
    END IF;
 END;
 $$;
