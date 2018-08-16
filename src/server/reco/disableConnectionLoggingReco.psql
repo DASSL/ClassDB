@@ -24,6 +24,7 @@
 -- prior to running enableConnectionLoggingReco.sql.
 
 --Assert that ALTER SYSTEM is available for use
+\set ON_ERROR_STOP on
 \ir assertAlterSystemAvailability.sql
 
 --The following changes are made:

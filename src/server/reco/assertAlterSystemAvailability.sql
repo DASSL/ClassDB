@@ -21,8 +21,6 @@
 -- postgresql.conf in pg9.3 or below. This script and any invocations of this
 -- script should be removed when support for pg9.3 is dropped.
 
-\set ON_ERROR_STOP on
-
 DO
 $$
 BEGIN
