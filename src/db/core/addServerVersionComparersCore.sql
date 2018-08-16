@@ -33,17 +33,48 @@ END
 $$;
 
 
+--Define a function to convert an integer pg server version number to string
+--https://www.postgresql.org/docs/10/static/libpq-status.html#LIBPQ-PQSERVERVERSION
+CREATE OR REPLACE FUNCTION ClassDB.intServerVersionToString(v INT)
+RETURNS VARCHAR AS
+$$
+BEGIN
+   IF v >= 100000 THEN
+      --pg10 or later has 2-part numbers such as 10.1 and 11.0, which are encoded
+      -- as numbers with 6 or more digits such as 100001 and 110000
+      RETURN CONCAT((v/10000)::VARCHAR, '.', (v%10000)::VARCHAR);
+   ELSE
+      --pre-pg10 versions are 3-part numbers which are encoded as 5-digit numbers
+      -- with two digits used (0 filled) for each part
+      -- e.g., 9.1.5 and 9.2.0 are encoded as 90105 and 90200 respectively
+      RETURN CONCAT((v/10000)::VARCHAR, '.', (v%10000/100)::VARCHAR, '.',
+                    (v%100)::VARCHAR
+                   );
+   END IF;
+END;
+$$ LANGUAGE plpgsql
+   IMMUTABLE
+   RETURNS NULL ON NULL INPUT;
+
+ALTER FUNCTION ClassDB.intServerVersionToString(INT) OWNER TO ClassDB;
+
+
 
 --Define a function to get the server's version number
---Removes additional info a distro may have suffixed to the version number
--- e.g., Ubuntu's distro is known to return '10.3 (Ubuntu 10.3-1)', whereas
--- a Postgres distro returns just '10.3'
-CREATE OR REPLACE FUNCTION ClassDB.getServerVersion()
-   RETURNS VARCHAR AS
+--Retrieve a "machine-readable server version" which is an integer and convert
+-- it to a human-friendly version-number string
+-- the machine-readable number does not contain any distro-specific information
+-- https://www.postgresql.org/docs/10/static/functions-info.html and
+CREATE OR REPLACE FUNCTION ClassDB.getServerVersion() RETURNS VARCHAR AS
 $$
-   --get value of setting 'server_version' and remove any distro-added suffix
-   SELECT TRIM(split_part(ClassDB.getServerSetting('server_version'), '(', 1));
-$$ LANGUAGE sql
+DECLARE v INT;
+BEGIN
+   --get server version as a number and convert it to string
+   v = ClassDB.getServerSetting('server_version_num')::INT;
+   RETURN ClassDB.intServerVersionToString(v);
+END;
+$$ LANGUAGE plpgsql
+   IMMUTABLE --server version cannot change unless the server is restarted
    RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.getServerVersion() OWNER TO ClassDB;
@@ -87,11 +118,6 @@ BEGIN
       RAISE EXCEPTION 'invalid argument: version2 is empty';
    END IF;
 
-   --remove any distro-specific suffix from the version number
-   -- see function getServerVersion for details
-   $1 = TRIM(split_part($1, '(', 1));
-   $2 = TRIM(split_part($2, '(', 1));
-
    --adjust version numbers to always have two parts so later code is easier
    -- e.g., change '10' to '10.0'
    IF (POSITION('.' IN $1) = 0) THEN
@@ -121,6 +147,7 @@ BEGIN
 
 END;
 $$ LANGUAGE plpgsql
+   IMMUTABLE
    RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION
@@ -140,6 +167,7 @@ CREATE OR REPLACE FUNCTION
 $$
    SELECT ClassDB.compareServerVersion($1, ClassDB.getServerVersion(), $2);
 $$ LANGUAGE sql
+   IMMUTABLE
    RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.compareServerVersion(VARCHAR, BOOLEAN) OWNER TO ClassDB;
@@ -156,6 +184,7 @@ CREATE OR REPLACE FUNCTION
 $$
    SELECT ClassDB.compareServerVersion($1, $2) > 0;
 $$ LANGUAGE sql
+   IMMUTABLE
    RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.isServerVersionBefore(VARCHAR, BOOLEAN) OWNER TO ClassDB;
@@ -172,6 +201,7 @@ CREATE OR REPLACE FUNCTION
 $$
    SELECT ClassDB.compareServerVersion($1, $2) < 0;
 $$ LANGUAGE sql
+   IMMUTABLE
    RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.isServerVersionAfter(VARCHAR, BOOLEAN) OWNER TO ClassDB;
@@ -188,6 +218,7 @@ CREATE OR REPLACE FUNCTION
 $$
    SELECT ClassDB.compareServerVersion($1, $2) = 0;
 $$ LANGUAGE sql
+   IMMUTABLE
    RETURNS NULL ON NULL INPUT;
 
 ALTER FUNCTION ClassDB.isServerVersion(VARCHAR, BOOLEAN) OWNER TO ClassDB;
