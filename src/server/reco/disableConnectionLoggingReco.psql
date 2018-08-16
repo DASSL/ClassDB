@@ -34,8 +34,8 @@ BEGIN
    --Since this is a server script, ClassDB's server version comparers are not
    --available. The following conditional reproduces the effect of calling
    -- ClassDB.isServerVersionBefore('9.4')
-   IF 90400 > (SELECT setting FROM pg_catalog.pg_settings
-               WHERE name = 'server_version_num')::INTEGER
+   IF 90400 > (SELECT setting::integer FROM pg_catalog.pg_settings
+               WHERE name = 'server_version_num')
    THEN
       RAISE EXCEPTION USING
          MESSAGE = 'could not set logging-related settings',
