@@ -39,6 +39,7 @@ BEGIN
       OR ClassDB.intServerVersionToString(110000) <> '11.0'
       OR ClassDB.intServerVersionToString(90105) <> '9.1.5'
       OR ClassDB.intServerVersionToString(90200) <> '9.2.0'
+      OR ClassDB.intServerVersionToString(90005) <> '9.0.5'
       OR ClassDB.intServerVersionToString(91201) <> '9.12.1'
       OR ClassDB.intServerVersionToString(91427) <> '9.14.27'
       OR ClassDB.intServerVersionToString(110046) <> '11.46'
