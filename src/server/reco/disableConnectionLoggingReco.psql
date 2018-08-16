@@ -23,29 +23,8 @@
 -- logged. It does not revert log_destination and log_filname to the original settings
 -- prior to running enableConnectionLoggingReco.sql.
 
---ALTER SYSTEM statements were not available prior to Postgres 9.4 and so these
--- configuration options must be set manually in postgresql.conf in pg9.3 or
--- below. The following block, including setting on_error_stop, should be
--- removed when pg9.3 is no longer supported.
-\set ON_ERROR_STOP on
-DO
-$$
-BEGIN
-   --Since this is a server script, ClassDB's server version comparers are not
-   --available. The following conditional reproduces the effect of calling
-   -- ClassDB.isServerVersionBefore('9.4')
-   IF 90400 > (SELECT setting::integer FROM pg_catalog.pg_settings
-               WHERE name = 'server_version_num')
-   THEN
-      RAISE EXCEPTION USING
-         MESSAGE = 'could not set logging-related settings',
-         DETAIL = 'Logging-related settings must be set manually in Postgres'
-                  ' 9.3 and earlier.',
-         HINT = 'See https://dassl.github.io/ClassDB/Setup for more'
-                ' information.';
-   END IF;
-END;
-$$;
+--Assert that ALTER SYSTEM is available for use
+\ir assertAlterSystemAvailability.sql
 
 --The following changes are made:
 -- log_connections TO 'off' stops user connections from being recorded in the server log
