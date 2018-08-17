@@ -89,17 +89,12 @@ BEGIN
 
    --Grant ClassDB to the current user
    -- allows altering privileges of objects, even after being owned by ClassDB
-   --The use of CURRENT_USER in a GRANT query is permitted from pg9.5
-   -- remove this check when pg9.4 is no longer supported
-   --Directly query the server because helper fns are unavailable in this script
-   IF 90400 >= (SELECT setting::integer FROM pg_catalog.pg_settings
-                WHERE name = 'server_version_num'
-               ) THEN
-      EXECUTE FORMAT('GRANT ClassDB TO %s', CURRENT_USER);
-   ELSE
-      --remove the guard and keep the following code line when pg9.4 is unsupported
-      GRANT ClassDB TO CURRENT_USER;
-   END IF;
+
+   --The use of CURRENT_USER in a GRANT query is permitted only from pg9.5
+   -- Use dynamic SQL on all pg versions so the script compiles on pg9.4 and earlier
+   -- replace dynamic SQL with the commmented out query when pg9.4 is unsupported
+   --GRANT ClassDB TO CURRENT_USER;
+   EXECUTE FORMAT('GRANT ClassDB TO %s', CURRENT_USER);
 
 END
 $$;
