@@ -29,7 +29,7 @@ END
 $$;
 
 --Executes supplied drop query using CURRENT_USER dynamically which is needed
--- pg versions lower then 9.5  which added CURRENT_USER to DROP OWNED quieries.
+-- pg versions lower then 9.5  which added CURRENT_USER to DROP OWNED queries.
 -- 9.4 and lower versions need dynamic queries to work with CURRENT_USER in
 -- DROP OWNED BY queries. Remove this function once support for pg9.4 is dropped
 -- and use the following 'DROP OWNED BY CURRENT_USER' and its variations.
@@ -40,7 +40,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
---------------------------------------------------------------------------------
+
 
 DO
 $$
