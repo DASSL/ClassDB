@@ -134,7 +134,7 @@ BEGIN
 
    --create a server role with NOLOGIN directly, create a schema for the new role
    CREATE ROLE s1 NOLOGIN;
-   GRANT s1 to CURRENT_USER;
+   PERFORM ClassDB.grantRole('s1');
    CREATE SCHEMA s1 AUTHORIZATION s1;
 
    --s1 has no LOGIN (should get LOGIN after createRole)
