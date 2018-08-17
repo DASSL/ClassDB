@@ -23,6 +23,10 @@
 -- logged. It does not revert log_destination and log_filname to the original settings
 -- prior to running enableConnectionLoggingReco.sql.
 
+--Assert that ALTER SYSTEM is available for use
+\set ON_ERROR_STOP on
+\ir assertAlterSystemAvailability.sql
+
 --The following changes are made:
 -- log_connections TO 'off' stops user connections from being recorded in the server log
 ALTER SYSTEM SET log_connections TO 'off';
