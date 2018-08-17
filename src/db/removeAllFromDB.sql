@@ -103,6 +103,8 @@ DROP FUNCTION IF EXISTS ClassDB.allowSchemaDrop();
 
 DROP FUNCTION IF EXISTS ClassDB.getSessionID();
 
+DROP FUNCTION IF EXISTS ClassDB.killConnection(INTEGER);
+
 
 --Try to drop all ClassDB owned functions in ClassDB schema
 DROP OWNED BY ClassDB;
