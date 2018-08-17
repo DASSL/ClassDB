@@ -33,7 +33,7 @@ $$;
 -- 9.4 and lower versions need dynamic queries to work with CURRENT_USER in
 -- DROP OWNED BY queries. Remove this function once support for pg9.4 is dropped
 -- and use the following 'DROP OWNED BY CURRENT_USER' and its variations.
-CREATE OR REPLACE FUNCTION pg_temp.doDropOwnedByCurrentUser(query VARCHAR) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION pg_temp.doDropOwnedByCurrentUser(queryHead VARCHAR) RETURNS VOID AS
 $$
 BEGIN
   EXECUTE FORMAT('%s %s', $1, CURRENT_USER);
