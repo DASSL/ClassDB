@@ -28,11 +28,11 @@ BEGIN
 END
 $$;
 
---Executes supplied drop query function with the CURRENT_USER which is needed
--- because pg version 9.5 added CURRENT_USER to DROP OWNED quieries. All lower,
--- versions need dynamic queries to work with CURRENT_USER in DROP OWNED BY queries.
--- Remove this function once support for pg9.4 is dropped and use the following:
--- 'DROP OWNED BY CURRENT_USER' and its variations.
+--Executes supplied drop query using CURRENT_USER dynamically which is needed
+-- pg versions lower then 9.5  which added CURRENT_USER to DROP OWNED quieries.
+-- 9.4 and lower versions need dynamic queries to work with CURRENT_USER in
+-- DROP OWNED BY queries. Remove this function once support for pg9.4 is dropped
+-- and use the following 'DROP OWNED BY CURRENT_USER' and its variations.
 CREATE OR REPLACE FUNCTION pg_temp.doDropOwnedByCurrentUser(query VARCHAR) RETURNS VOID AS
 $$
 BEGIN
