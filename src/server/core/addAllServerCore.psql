@@ -25,4 +25,4 @@
 -- used rather then the program's current directory
 
 \set ON_ERROR_STOP on
-\ir initalizeServerCore.sql
+\ir initializeServerCore.sql
