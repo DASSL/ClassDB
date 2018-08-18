@@ -9,7 +9,8 @@ This document explains how to install and configure ClassDB on an existing Postg
 
 
 ## Prerequisites
-ClassDB requires an existing instance of Postgres to run on. ClassDB has been primarily tested with the [BigSQL Postgres 9.6.3 distribution](https://www.bigsql.org/) on Windows 10 and Ubuntu Server 16.04. This documentation will not go into further detail on how to install and configure a Postgres instance.
+Running ClassDB requires an existing instance of Postgres (Version 9.3 or later). For details on installing Postgres, please 
+consult the documentation of the Postgres distribution you wish to use. [BigSQL](https://www.bigsql.org/) is an example distributor.
 
 ClassDB currently requires a "fully owned instance" of Postgres to function correctly. A "fully owned instance" is defined as one which you have full control over the host server. This includes Postgres instances running on a local machine, a local virtual machine, or a virtual machine instance in a cloud service such as Amazon EC2 or Azure VM. ClassDB does not support platform as a service (PaaS) instances, such as Amazon RDS or Azure Database for PostgreSQL.
 
@@ -32,7 +33,7 @@ The following sections outline how to install ClassDB components. Core component
 
 
 ### Full Installation
-ClassDB provides two convince scripts that install all ClassDB components. If you wish to install all components, you may simply run these two scripts, and then skip to the `Verifying Installation` section.
+ClassDB provides two convenience scripts that install all ClassDB components. If you wish to install all components, you may simply run these two scripts, and then skip to the `Verifying Installation` section. Due to compatibility issues, the first script cannot be run on Postgres versions 9.3 or earlier. 
 1. Run `src/server/addAllToServer.psql`. Since this is a server level component, it may be installed while connected to any database on the DBMS
 2. Run the command: `CREATE DATABASE <databaseName> WITH OWNER = ClassDB;`, substituting the desired name of a database to install ClassDB on. All `DB` scripts should be run while connected to this database
 3. Run `src/db/addAllToDB.psql`
@@ -55,7 +56,7 @@ The following sections detail how to install individual ClassDB components.
 
 #### Installing All Recommended Components
 ClassDB provides two utility scripts for automatically installing all recommend components.
-1. Run `src/server/reco/addAllServerReco.psql`
+1. Run `src/server/reco/addAllServerReco.psql` - _Cannot be used with Postgres version 9.3 or earlier_
 2. Run `src/db/reco/addAllDBReco.psql`
 
 See the following sections to install only some recommended components instead of installing all of them.
@@ -67,7 +68,10 @@ Run `/src/db/reco/addDisallowSchemaDropReco.sql`
 1. Run `src/server/reco/enableConnectionLoggingReco.psql`. This script is sever level, and need only be run once per Postgres server. Note, you will need to restart your Postgres instance if prompted. (see [Managing Log Files](Managing-Log-Files) for additional information)
 2. Run `src/db/reco/addConnectionActivityLoggingReco.sql`
 
+
 **Note:** To disable connection logging, run `src/server/reco/disableConnectionLoggingReco.psql`. Like `enableConnectionLoggingReco.psql`, this script only needs to be run once per Postgres instance.
+
+**Postgres compatibility:** Enabling and disabling connection activity logging must be done manually in Postgres 9.3 or earlier. See the [Activity Logging](Activity-Logging#connection-activity-logging) page for details.
 
 #### Connection Management
 Run `/src/db/reco/addConnectionMgmtReco.sql`  

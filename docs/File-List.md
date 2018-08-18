@@ -28,33 +28,36 @@ Contains the source code for ClassDB. All files need to install ClassDB are in t
     - `addAllToDB.psql`
     - `removeAllFromDB.sql`
     - `core/`
-      - `initializeDBCore.sql`
       - `addAllDBCore.psql`
       - `addClassDBRolesMgmtCore.sql`
       - `addClassDBRolesViewsCore.sql`
       - `addHelpersCore.sql`
       - `addRoleBaseMgmtCore.sql`
+      - `addServerVersionComparersCore.sql`
       - `addUserMgmtCore.sql`
+      - `initializeDBCore.sql`
     - `opt/`
       - `addAllDBOpt.psql`
       - `addCatalogMgmtOpt.sql`
     - `reco/`
-      - `addFrequentViewsReco.sql`
       - `addAllDBReco.psql`
       - `addConnectionActivityLoggingReco.sql`
       - `addConnectionMgmtReco.sql`
       - `addDDLActivityLoggingReco.sql`
+      - `addDisallowSchemaDropReco.sql`
+      - `addFrequentViewsReco.sql`
   - `server/`
     - `addAllToServer.psql`
     - `removeAllFromServer.sql`
     - `core/`
-      - `prepareServerCore.sql`
       - `addAllServerCore.psql`
+      - `initializeServerCore.sql`
     - `reco/`
-      - `enableConnectionLoggingReco.psql`
       - `addAllServerReco.psql`
+      - `assertAlterSystemAvailability.sql`
       - `disableConnectionLoggingReco.psql`
-
+      - `enableConnectionLoggingReco.psql`
+      
 ## tests (./tests)
 This folder contains scripts to test the functionality of ClassDB, along with the privileges sub-folder
 - `testConnectionActivityLogging.psql`

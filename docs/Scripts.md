@@ -130,14 +130,15 @@ Each of these directories contains up to three sub-directories. Additionally, ea
 
 `addAllServerCore.psql` is a psql helper script that install all of the core server-level components at once.
 
-#### initalizeServerCore.sql
+#### initializeServerCore.sql
 - Permissions Required: `superuser`
 
-`initalizeServerCore.sql` performs server level configuration for ClassDB, and should be run once per Postgres instance. It creates the four user roles that are used by ClassDB:
+`initializeServerCore.sql` performs server level configuration for ClassDB, and should be run once per Postgres instance. It creates the five server-level roles that are used by ClassDB:
 
 - `classdb_instructor`
 - `classdb_student`
 - `classdb_dbmanager`
+- `classdb_team`
 - `classdb`
 
 These roles are explained in detail in the [Roles overview](Roles).
