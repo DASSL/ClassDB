@@ -22,7 +22,7 @@
   * [Changing and resetting passwords](Changing-Passwords)
   * [Setting connection limits and query timeout](Student-Limitations)
   * [Listing and describing tables](Listing-and-Describing-Tables)
-  * [Monitoring user activity](Activity-Logging)
+  * [Logging user activity](Activity-Logging)
   * [Managing user connections](Managing-User-Connections)
   * [Managing log files](Managing-Log-Files)
   * [Frequent User Views](Frequent-User-Views)

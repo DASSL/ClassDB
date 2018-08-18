@@ -56,10 +56,10 @@ the architecture and implementation of ClassDB offers several operational benefi
 5. Uses only SQL for all ClassDB operations
 
 ## Requirements
-ClassDB runs in an instance of PostgreSQL (Postgres). It has been primarily tested
-with [Postgres 9.6.3](https://www.postgresql.org/docs/9.6/static/index.html) on
-Windows 10 and Ubuntu Server 16.04, but it should run in any Postgres instance as
-long as the instance is ["fully owned"](Setup).
+ClassDB runs in an instance of [PostgreSQL](https://www.postgresql.org/) (Postgres) and is 
+compatible with Postgres 9.3 and later versions. It has been primarily tested with 
+[BigSQL distributions of Postgres](https://www.bigsql.org/) on Windows 10, but it should run 
+in any Postgres distribution on any operating system as long as the Postgres instance is ["fully owned"](Setup#prerequisites).
 
 ## Quick Start
 The [Setup page](Setup) provides details, but at a high-level, a full installation of ClassDB requires just three steps (see examples below):

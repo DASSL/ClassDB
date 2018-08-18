@@ -28,6 +28,19 @@ BEGIN
 END
 $$;
 
+--Executes supplied drop query using CURRENT_USER dynamically which is needed
+-- pg versions lower then 9.5  which added CURRENT_USER to DROP OWNED queries.
+-- 9.4 and lower versions need dynamic queries to work with CURRENT_USER in
+-- DROP OWNED BY queries. Remove this function once support for pg9.4 is dropped
+-- and use the following 'DROP OWNED BY CURRENT_USER' and its variations.
+CREATE OR REPLACE FUNCTION pg_temp.doDropOwnedByCurrentUser(queryHead VARCHAR) RETURNS VOID AS
+$$
+BEGIN
+  EXECUTE FORMAT('%s %s', $1, CURRENT_USER);
+END;
+$$ LANGUAGE plpgsql;
+
+
 
 DO
 $$
@@ -104,7 +117,7 @@ BEGIN
    --drop owned objects: should cause exception
    --spelling 'DrOP oWNeD' intentional to test if the event handler ignores case
    BEGIN
-      DrOP oWNeD BY CURRENT_USER;
+      PERFORM pg_temp.doDropOwnedByCurrentUser('DrOP oWNeD BY ');
       RAISE INFO '%   drop owned by student disallowed', 'FAIL: Code 6';
 
    EXCEPTION
@@ -137,7 +150,7 @@ BEGIN
 
    --drop owned objects: should not cause exception
    BEGIN
-      DROP OWNED BY CURRENT_USER;
+      PERFORM pg_temp.doDropOwnedByCurrentUser('DROP OWNED BY ');
       RAISE INFO '%   drop owned by instructor', 'PASS';
 
    EXCEPTION
@@ -167,7 +180,7 @@ BEGIN
 
    --drop owned objects: should not cause exception
    BEGIN
-      DROP OWNED BY CURRENT_USER;
+      PERFORM pg_temp.doDropOwnedByCurrentUser('DROP OWNED BY ');
       RAISE INFO '%   drop owned by DB manager', 'PASS';
 
    EXCEPTION
@@ -198,7 +211,7 @@ BEGIN
 
    --drop owned objects: should not cause exception
    BEGIN
-      DROP OWNED BY CURRENT_USER;
+      PERFORM pg_temp.doDropOwnedByCurrentUser('DROP OWNED BY ');
       RAISE INFO '%   drop owned by non-ClassDB user', 'PASS';
 
    EXCEPTION
@@ -238,7 +251,7 @@ BEGIN
 
    --drop owned objects: should not cause exception
    BEGIN
-      DROP OWNED BY CURRENT_USER;
+      PERFORM pg_temp.doDropOwnedByCurrentUser('DROP OWNED BY ');
       RAISE INFO '%   drop owned by student allowed', 'PASS';
 
    EXCEPTION

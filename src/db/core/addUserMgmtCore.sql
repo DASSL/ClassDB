@@ -82,6 +82,8 @@ GRANT SELECT ON ClassDB.DDLActivity TO ClassDB_Instructor, ClassDB_DBManager;
 --Define a function to upgrade table DDLActivity from v2.0 to v.21
 -- Remove this function and its use (see after function definition) when upgrade
 -- path is removed
+--ADD COLUMN does not test IF NOT EXISTS because this function is called only if
+-- none of the columns specific to v2.1 exist
 CREATE OR REPLACE FUNCTION pg_temp.upgradeDDLActivity_20_21()
 RETURNS VOID AS
 $$
@@ -93,9 +95,8 @@ BEGIN
       -- NULL when the column is added (which is an error). We use a temporary
       -- default to get around this problem
       ALTER TABLE IF EXISTS ClassDB.DDLActivity
-      ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL
-                                         DEFAULT '00000000.00000000'
-                                         CHECK(TRIM(SessionID) <> '');
+      ADD COLUMN SessionID VARCHAR(17) NOT NULL DEFAULT '00000000.00000000'
+                           CHECK(TRIM(SessionID) <> '');
 
       --Drop the temporary default. DROP DEFAULT is idempotent
       ALTER TABLE IF EXISTS ClassDB.DDLActivity
@@ -103,8 +104,7 @@ BEGIN
    ELSE
       --Otherwise simply add the new column
       ALTER TABLE IF EXISTS ClassDB.DDLActivity
-      ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL
-                                         CHECK(TRIM(SessionID) <> '');
+      ADD COLUMN SessionID VARCHAR(17) NOT NULL CHECK(TRIM(SessionID) <> '');
    END IF;
 END;
 $$ LANGUAGE plpgsql;
@@ -154,6 +154,8 @@ GRANT SELECT ON ClassDB.ConnectionActivity
 --Define a function to upgrade table ConnectionActivity from v2.0 to 2.1
 --Remove this function and its use (see after fn definition) when the upgrade
 -- path is removed
+--ADD COLUMN and CREATE INDEX operations do not test IF NOT EXISTS because this
+-- function is called only if none of the columns specific to v2.1 exist
 CREATE OR REPLACE FUNCTION pg_temp.upgradeConnectionActivity_20_21()
 RETURNS VOID AS
 $$
@@ -175,8 +177,8 @@ BEGIN
       -- only connection rows; then drop the default so future INSERTs have to
       -- explicitly set a value
       ALTER TABLE ClassDB.ConnectionActivity
-      ADD COLUMN IF NOT EXISTS ActivityType CHAR(1) NOT NULL DEFAULT 'C'
-                                            CHECK(ActivityType IN ('C', 'D'));
+      ADD COLUMN ActivityType CHAR(1) NOT NULL DEFAULT 'C'
+                              CHECK(ActivityType IN ('C', 'D'));
 
       --DROP DEFAULT does not support IF EXISTS, but it is idempotent
       ALTER TABLE ClassDB.ConnectionActivity
@@ -186,9 +188,8 @@ BEGIN
       -- existing rows; then drop the default so future INSERTs have to
       -- explicitly set a value
       ALTER TABLE ClassDB.ConnectionActivity
-      ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL
-                                         DEFAULT '00000000.00000000'
-                                         CHECK(TRIM(SessionID) <> '');
+      ADD COLUMN SessionID VARCHAR(17) NOT NULL DEFAULT '00000000.00000000'
+                           CHECK(TRIM(SessionID) <> '');
 
       ALTER TABLE ClassDB.ConnectionActivity
       ALTER COLUMN SessionID DROP DEFAULT;
@@ -197,7 +198,7 @@ BEGIN
       -- won't have unique values in existing rows due to dummy session id added
       -- for already existing rows
       --this index forces the PK columns to have unique value in new rows
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_SessionID_ActivityType
+      CREATE UNIQUE INDEX idx_SessionID_ActivityType
       ON ClassDB.ConnectionActivity(SessionID, ActivityType)
       WHERE SessionID <> '00000000.00000000';
 
@@ -205,15 +206,13 @@ BEGIN
       --customize the schema for an empty table
 
       ALTER TABLE ClassDB.ConnectionActivity
-      ADD COLUMN IF NOT EXISTS ActivityType CHAR(1) NOT NULL
-                                            CHECK(ActivityType IN ('C', 'D'));
+      ADD COLUMN ActivityType CHAR(1) NOT NULL CHECK(ActivityType IN ('C', 'D'));
 
       ALTER TABLE ClassDB.ConnectionActivity
-      ADD COLUMN IF NOT EXISTS SessionID VARCHAR(17) NOT NULL
-                                         CHECK(TRIM(SessionID) <> '');
+      ADD COLUMN SessionID VARCHAR(17) NOT NULL CHECK(TRIM(SessionID) <> '');
 
       --create a unique index instead of a PK
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_SessionID_ActivityType
+      CREATE UNIQUE INDEX idx_SessionID_ActivityType
       ON ClassDB.ConnectionActivity(SessionID, ActivityType);
 
       --treat the unique index as the PK
@@ -224,7 +223,7 @@ BEGIN
 
    --Column ApplicationName is new in v2.1
    ALTER TABLE IF EXISTS ClassDB.ConnectionActivity
-   ADD COLUMN IF NOT EXISTS ApplicationName ClassDB.IDNameDomain;
+   ADD COLUMN ApplicationName ClassDB.IDNameDomain;
 
 END;
 $$ LANGUAGE plpgsql;
@@ -232,6 +231,8 @@ $$ LANGUAGE plpgsql;
 
 --Upgrade table ConnectionActivity from v2.0 to 2.1
 -- test presence of column SessionID to detect if the table is already in v2.1
+-- testing presence of SessionID is a proxy: assume none of the columns new to
+-- v2.1 exist in the table if SessionID does not exist (a reasonable assumption)
 --Remove this block when the upgrade path is removed
 DO
 $$
@@ -246,7 +247,7 @@ $$;
 
 
 --Define a trigger function to raise an exception that an operation is disallowed
--- used to prevent non-user inserts to, and any updates to, tables DDLActivity
+-- used to prevent non-user insert and any update or delete over tables DDLActivity
 -- and ConnectionActivity
 -- trigger functions cannot accept parameters, but the 0-based array TG_ARGV will
 -- contain the arguments specified in the corresponding trigger definition
@@ -260,10 +261,10 @@ BEGIN
       RAISE EXCEPTION
          'Constraint violation: value of column %.UserName is not a known user',
          TG_ARGV[1];
-   ELSIF TG_ARGV[0] = 'UPDATE' THEN
+   ELSIF TG_ARGV[0] IN ('UPDATE', 'DELETE') THEN
       RAISE EXCEPTION
-         'Invalid operation: UPDATE operation is not permitted on table "%"',
-         TG_ARGV[1];
+         'Invalid operation: % operation is not permitted on table "%"',
+         TG_ARGV[0], TG_ARGV[1];
    ELSE
       RAISE EXCEPTION 'Invalid use of trigger function';
    END IF;
@@ -277,8 +278,8 @@ REVOKE ALL ON FUNCTION ClassDB.rejectOperation() FROM PUBLIC;
 
 
 
---Define triggers to prevent INSERT for non-user roles, and any UPDATE, to
--- tables DDLActivity and ConnectionActivity
+--Define triggers to prevent INSERT for non-user roles, and any UPDATE or delete
+-- to tables DDLActivity and ConnectionActivity
 -- drop triggers prior to creation because there is no CREATE OR REPLACE TRIGGER
 DO
 $$
@@ -306,15 +307,20 @@ BEGIN
       ClassDB.rejectOperation('INSERT', 'ClassDB.ConnectionActivity');
 
 
-   --reject all updates to DDLActivity
+   --reject update and delete of DDLActivity: truncate still permitted
    DROP TRIGGER IF EXISTS RejectDDLActivityUpdate ON ClassDB.DDLActivity;
 
    CREATE TRIGGER RejectDDLActivityUpdate
    BEFORE UPDATE ON ClassDB.DDLActivity
    EXECUTE PROCEDURE ClassDB.rejectOperation('UPDATE', 'ClassDB.DDLActivity');
 
+   DROP TRIGGER IF EXISTS RejectDDLActivityDelete ON ClassDB.DDLActivity;
 
-   --reject all updates to ConnectionActivity
+   CREATE TRIGGER RejectDDLActivityDelete
+   BEFORE DELETE ON ClassDB.DDLActivity
+   EXECUTE PROCEDURE ClassDB.rejectOperation('DELETE', 'ClassDB.DDLActivity');
+
+   --reject update and delete of ConnectionActivity: truncate still permitted
    DROP TRIGGER IF EXISTS RejectConnectionActivityUpdate
    ON ClassDB.ConnectionActivity;
 
@@ -322,6 +328,14 @@ BEGIN
    BEFORE UPDATE ON ClassDB.ConnectionActivity
    EXECUTE PROCEDURE
       ClassDB.rejectOperation('UPDATE', 'ClassDB.ConnectionActivity');
+
+   DROP TRIGGER IF EXISTS RejectConnectionActivityDelete
+   ON ClassDB.ConnectionActivity;
+
+   CREATE TRIGGER RejectConnectionActivityDelete
+   BEFORE DELETE ON ClassDB.ConnectionActivity
+   EXECUTE PROCEDURE
+      ClassDB.rejectOperation('DELETE', 'ClassDB.ConnectionActivity');
 
 END
 $$;

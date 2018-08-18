@@ -1,4 +1,4 @@
---initalizeServerCore.sql - ClassDB
+--initializeServerCore.sql - ClassDB
 
 --Andrew Figueroa, Steven Rollo, Sean Murthy
 --Data Science & Systems Lab (DASSL)
@@ -66,7 +66,18 @@ BEGIN
    PERFORM pg_temp.createGroupRole('classdb');
 
    ALTER ROLE ClassDB CREATEROLE CREATEDB;
-   GRANT pg_signal_backend TO ClassDB;
+
+   --server role pg_signal_backend was introduced in pg9.6
+   -- remove this check when pg9.5 is no longer supported
+   --The setting server_version_num returns an integer form of version number
+   -- e.g., 90603 for version 9.6.3; 90500 for 9.5.0
+   -- https://www.postgresql.org/docs/10/static/runtime-config-preset.html
+   --Query setting directly because helpers fns are unavailable in this script
+   IF 90600 <= (SELECT setting::integer FROM pg_catalog.pg_settings
+                WHERE name = 'server_version_num'
+               ) THEN
+      GRANT pg_signal_backend TO ClassDB;
+   END IF;
 
    PERFORM pg_temp.createGroupRole('classdb_student');
    PERFORM pg_temp.createGroupRole('classdb_instructor');

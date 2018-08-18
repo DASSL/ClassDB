@@ -55,12 +55,22 @@ BEGIN
    IF ClassDB.isUser(SESSION_USER::ClassDB.IDNameDomain) THEN
       --Check if the calling event is sql_drop or ddl_command_end
       IF TG_EVENT = 'ddl_command_end' THEN
-         SELECT object_identity --Get the statement target object
-         INTO objId
-         FROM pg_event_trigger_ddl_commands() --can only be called on non-DROP ops
-         WHERE object_identity IS NOT NULL
-         ORDER BY object_identity;
-      ELSIF TG_EVENT = 'sql_drop' THEN
+         --Function pg_event_trigger_ddl_commands was introduced in pg9.5.
+         -- Remove the test for server version when support for pg9.4 ends
+         IF ClassDB.isServerVersionBefore('9.5') THEN
+            objId = 'N/A';
+         ELSE
+            SELECT object_identity --Get the statement target object
+            INTO objId
+            FROM pg_event_trigger_ddl_commands() --can only be called on non-DROP ops
+            WHERE object_identity IS NOT NULL
+            ORDER BY object_identity;
+         END IF;
+      --In pg9.4 'ddl_command_end' causes a log to be created with objId of N/A
+      -- to be inserted for a drop. Since there is already a log for drop this
+      -- TG_EVENT should be ignored in version 9.4 to avoid duplicate logs.
+      -- Remove test for server version when support for pg9.4 ends
+      ELSIF TG_EVENT = 'sql_drop' AND ClassDB.isServerVersionAfter('9.4') THEN
          SELECT object_identity --Same thing, but for drop statements
          INTO objId
          FROM pg_event_trigger_dropped_objects() --can only be called on DROP ops

@@ -86,13 +86,20 @@ BEGIN
    --Allow ClassDB and ClassDB users to create schemas on the current database
    EXECUTE format('GRANT CREATE ON DATABASE %I TO ClassDB, ClassDB_Instructor,'
                   ' ClassDB_DBManager, ClassDB_Student', currentDB);
+
+   --Grant ClassDB to the current user
+   -- allows altering privileges of objects, even after being owned by ClassDB
+
+   --The use of CURRENT_USER in a GRANT query is permitted only from pg9.5
+   -- Use dynamic SQL on all pg versions so the script compiles on pg9.4 and earlier
+   -- replace dynamic SQL with the commmented out query when pg9.4 is unsupported
+   --GRANT ClassDB TO CURRENT_USER;
+   EXECUTE FORMAT('GRANT ClassDB TO %s', CURRENT_USER);
+
 END
 $$;
 
 
---Grant ClassDB to the current user
--- allows altering privileges of objects, even after being owned by ClassDB
-GRANT ClassDB TO CURRENT_USER;
 
 --Prevent users who are not instructors from modifying the public schema
 -- public schema contains objects and functions students can read

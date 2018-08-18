@@ -3,9 +3,12 @@
 ---
 # Version History
 
-_Author: Steven Rollo_
-
 This page lists the key changes in each version of ClassDB.
+
+## [v2.2.0](https://github.com/DASSL/ClassDB/releases/tag/v2.2.0) (8/17/2018)
+- Add compatibility with PostgreSQL Version 9.3 and up
+- Prevent deletion of rows in activity tables
+- See list of [enhancements made](https://github.com/DASSL/ClassDB/issues?utf8=%E2%9C%93&q=is%3Aissue+sort%3Aupdated-desc+is%3Aclosed+milestone%3A%22M4+%28V+2.2%29%22+label%3Aenhancement+-label%3Aepic) and [defects fixed](https://github.com/DASSL/ClassDB/issues?q=is%3Aissue+sort%3Aupdated-desc+milestone%3A%22M4+%28V+2.2%29%22+-label%3Aenhancement+-label%3Aepic+is%3Aclosed).
 
 ## [v2.1.0](https://github.com/DASSL/ClassDB/releases/tag/v2.1.0) (6/22/2018)
 - Resolved many outstanding issues. See [here](https://github.com/DASSL/ClassDB/issues?q=is%3Aissue+milestone%3A%22M3+%28V+2.1%29%22+is%3Aclosed) for a full list
