@@ -55,7 +55,7 @@ Disconnections typically consist of a single line with a message showing `discon
 
 Note that ClassDB configures the Postgres instance to store the logs in a CSV format. This allows the `ClassDB.importConnectionLog()` function to easily import the log contents into a temporary table, and then process the log to update connection information.
 
-**Postgres compatability:** The scripts to enable and disable connection logging use features added in Postgres 9.4 and thus cannot be run in Postgres 9.3 or earlier. However, connection logging is supported in Postgres 9.3 provided it is manually configured in the file `postgresql.conf` located in Postgres' data directory. The Postgres server instance should be restarted after manually changing the settings.
+**Postgres compatability:** The scripts to enable and disable connection logging use features added in Postgres 9.4 and thus cannot be run in Postgres 9.3 or earlier. However, connection logging is supported in Postgres 9.3 provided it is manually configured in the file `postgresql.conf` located in Postgres' data directory. The Postgres server instance should be restarted after manually changing the settings. 
 
 To enable connection logging, set:
 
@@ -69,7 +69,7 @@ To disable connection logging, set:
 
 - `logging_collector` = `'off'`
 
-The location of the data directory can be found with the following command:
+In order for settings to take effect, the `#` character, if present, should be removed from the start of the line containing the setting. The location of the data directory can be found with the following command:
 ```sql
 SHOW data_directory;
 ```
