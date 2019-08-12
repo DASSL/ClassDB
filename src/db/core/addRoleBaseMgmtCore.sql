@@ -316,6 +316,16 @@ BEGIN
       EXECUTE FORMAT('ALTER ROLE %s LOGIN', $1);
    END IF;
 
+   --permit the role to connect to this database
+   -- can remove this code segment if db-specific group roles are used (when
+   -- initializing the database) to address Issue #277
+   --this code segment is intentionally not merge/optimize with the preceding
+   -- segment (which grants LOGIN to a user role) for clarity, and to make it
+   -- easier to remove/modify this code when Issue #277 is addressed
+   IF ClassDB.canLogin($1) THEN
+      EXECUTE FORMAT('GRANT CONNECT ON DATABASE %I TO %s', current_database(), $1);
+   END IF;
+
 
    -------- schema management --------------------------------------
 
@@ -425,6 +435,15 @@ BEGIN
 
    --revoke the specified ClassDB role from the role
    EXECUTE FORMAT('REVOKE %s FROM %s', $2, $1);
+
+   --if rolename revoked has no more ClassDB roles, revoke connection to this DB
+   -- can remove this code segment if db-specific group roles are used (when
+   -- initializing the database) to address Issue #277
+   IF (NOT ClassDB.hasClassDBRole($1)) THEN
+      EXECUTE FORMAT('REVOKE CONNECT ON DATABASE %I FROM %s',
+					       current_database(), $1
+					     );
+   END IF;
 
 END;
 $$ LANGUAGE plpgsql
