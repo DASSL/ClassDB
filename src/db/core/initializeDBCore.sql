@@ -78,10 +78,19 @@ BEGIN
    -- Postgres grants CONNECT to all by default
    EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM PUBLIC', currentDB);
 
+
+   --the comment and code segment within lined comments can be reinstated if
+   -- db-specific roles are used to address Issue #277
+   -- at that time also look at related comments and code in functions createRole
+   -- and revokeClassDBRole
+   -- the purpose of the disabled code is to address Issue #278 before Issue #277
+
+--------------------------------------------------------------------------------
    --Let only app-specific roles connect to the DB
    -- no need for ClassDB to connect to the DB
-   EXECUTE format('GRANT CONNECT ON DATABASE %I TO ClassDB_Instructor, '
-                  'ClassDB_Student, ClassDB_DBManager', currentDB);
+   --EXECUTE format('GRANT CONNECT ON DATABASE %I TO ClassDB_Instructor, '
+   --               'ClassDB_Student, ClassDB_DBManager', currentDB);
+--------------------------------------------------------------------------------
 
    --Allow ClassDB and ClassDB users to create schemas on the current database
    EXECUTE format('GRANT CREATE ON DATABASE %I TO ClassDB, ClassDB_Instructor,'
