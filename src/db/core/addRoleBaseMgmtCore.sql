@@ -309,9 +309,9 @@ BEGIN
                     );
    END IF;
 
-   --give the server role LOGIN capability if it is a user
-   --do not remove LOGIN for a team, because instructors may have their reasons
-   -- to make a LOGIN server role a team
+   --in case a pre-existing server role is now registered, give that role LOGIN
+   -- capability if it is a user (in case that privilege was somehow removed);
+   -- but don'o't remove LOGIN from a team: instr. may have reason to let a team login
    IF NOT($3 OR ClassDB.canLogin($1)) THEN
       EXECUTE FORMAT('ALTER ROLE %s LOGIN', $1);
    END IF;
