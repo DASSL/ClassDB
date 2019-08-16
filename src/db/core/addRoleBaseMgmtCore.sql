@@ -311,7 +311,7 @@ BEGIN
 
    --in case a pre-existing server role is now registered, give that role LOGIN
    -- capability if it is a user (in case that privilege was somehow removed);
-   -- but don'o't remove LOGIN from a team: instr. may have reason to let a team login
+   -- but don't remove LOGIN from a team: instr. may have reason to let a team login
    IF NOT($3 OR ClassDB.canLogin($1)) THEN
       EXECUTE FORMAT('ALTER ROLE %s LOGIN', $1);
    END IF;
@@ -352,7 +352,7 @@ BEGIN
    -- if role is already known, set full name and extra info to new values
    -- cannot use ON CONFLICT because table has no PK or constraint
    --  seems the unique index can't be used despite the example in Postgres docs
-   --  for ON CONFLICT ON CONSTRAINT: see the last-but-one example at
+   --  for ON CONFLICT ON CONSTRAINT: see the second-from-last example at
    --  https://www.postgresql.org/docs/9.6/static/sql-insert.html
    IF ClassDB.isRoleKnown($1) THEN
       UPDATE ClassDB.RoleBase R
